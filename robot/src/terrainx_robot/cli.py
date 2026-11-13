@@ -30,6 +30,7 @@ from pathlib import Path
 
 from . import __version__
 from .adapters.base import CaptureError, ConnectionFailed, RobotAdapter
+from .auth.aes_key_manager import DEFAULT_STORE, AesKeyManager, AuthError
 from .config import ConfigError, Settings, load_settings
 from .models import (
     CapabilityReport,
@@ -131,6 +132,77 @@ def _add_source_args(parser: argparse.ArgumentParser, *, replay: bool = True) ->
 # ------------------------------------------------------------------- comandos
 def cmd_info(args, settings: Settings) -> int:
     _print_json({"terrainx_robot": __version__, "settings": settings.describe(), "software": software_versions()})
+    return 0
+
+
+def _key_manager(settings: Settings) -> AesKeyManager:
+    store = settings.go2.aes_key_file or str(DEFAULT_STORE)
+    return AesKeyManager(store, region=settings.go2.region, device_type="Go2")
+
+
+def _prompt_credentials(email_arg: str | None) -> tuple[str, str]:
+    import getpass
+
+    email = (email_arg or input("  Correo de la cuenta Unitree: ")).strip()
+    password = getpass.getpass("  Contraseña (no se muestra): ")
+    if not email or not password:
+        raise AuthError("Se requieren correo y contraseña.")
+    return email, password
+
+
+def cmd_aes_status(args, settings: Settings) -> int:
+    status = _key_manager(settings).status()
+    _print_json(status)
+    return 0 if status.get("configured") else 2
+
+
+def cmd_unitree_devices(args, settings: Settings) -> int:
+    mgr = _key_manager(settings)
+    email, password = _prompt_credentials(args.email)
+    print("\n  Consultando la cuenta en Unitree...")
+    devices = mgr.list_devices(email, password)
+    del password
+    if not devices:
+        print("  No hay robots vinculados a esta cuenta.")
+        return 2
+    print(f"\n  Robots vinculados ({len(devices)}):")
+    for d in devices:
+        online = "en línea" if d.online else ("desconocido" if d.online is None else "desconectado")
+        print(f"    · {d.alias:<18} SN {d.sn:<18} {d.series:<6} {online:<12} "
+              f"{'clave disponible' if d.has_key else 'sin clave'}")
+    print("\n  Para guardar la clave:  ... unitree-fetch-key --serial <SN>")
+    return 0
+
+
+def cmd_unitree_fetch_key(args, settings: Settings) -> int:
+    mgr = _key_manager(settings)
+    sn = args.serial or settings.go2.serial
+    if not sn:
+        print("Error: indique el SN con --serial o TERRAINX_GO2_SERIAL en .env", file=sys.stderr)
+        return 1
+    email, password = _prompt_credentials(args.email)
+    print("\n  Recuperando la clave desde Unitree...")
+    result = mgr.fetch_and_store(email, password, sn)
+    del password
+    print(f"  ✓ Clave configurada para el robot {sn}.")
+    print(f"    Guardada en: {result['store_path']}")
+    print(f"    Huella     : {result['fingerprint']}  (no es la clave)")
+    print("    Añada esa ruta a robot/.env como TERRAINX_GO2_AES_KEY_FILE para conectar.")
+    return 0
+
+
+def cmd_import_aes_key(args, settings: Settings) -> int:
+    mgr = _key_manager(settings)
+    if args.from_file:
+        result = mgr.import_from_file(Path(args.from_file), sn=args.serial)
+    else:
+        import getpass
+
+        raw = getpass.getpass("  Pegue la clave AES de 32 hex (no se muestra): ")
+        result = mgr.import_key(raw, sn=args.serial)
+        del raw
+    print(f"  ✓ Clave importada y guardada en: {result['store_path']}")
+    print(f"    Huella: {result['fingerprint']}  (no es la clave)")
     return 0
 
 
@@ -281,6 +353,18 @@ def cmd_inspect(args, settings: Settings) -> int:
     return 0
 
 
+def cmd_dashboard(args, settings: Settings) -> int:
+    try:
+        from .dashboard.server import run as run_dashboard
+    except ImportError as exc:
+        print(f"Falta FastAPI/uvicorn: instale el extra  .[dashboard]  ({exc})", file=sys.stderr)
+        return 1
+    print(f"Dashboard del Go2 AIR en http://{args.host}:{args.port}  (Ctrl+C para salir)")
+    print("  Abra esa dirección en el navegador. Solo accesible desde este equipo.")
+    run_dashboard(settings, host=args.host, port=args.port)
+    return 0
+
+
 def cmd_export_schemas(args, settings: Settings) -> int:
     out = Path(args.out)
     for name, model in (
@@ -308,6 +392,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("info", help="configuración efectiva y versiones")
     sub.add_parser("check-library", help="verifica la API de unitree_webrtc_connect instalada")
+
+    sub.add_parser("aes-status", help="estado de la clave AES guardada (sin revelarla)")
+    p = sub.add_parser("unitree-devices", help="lista los robots de la cuenta Unitree (pide credenciales)")
+    p.add_argument("--email", help="correo de la cuenta (la contraseña se pide aparte)")
+    p = sub.add_parser("unitree-fetch-key", help="recupera y guarda la clave AES del robot (pide credenciales)")
+    p.add_argument("--serial", help="SN del robot (por defecto, TERRAINX_GO2_SERIAL)")
+    p.add_argument("--email", help="correo de la cuenta")
+    p = sub.add_parser("import-aes-key", help="importa una clave AES de 32 hex obtenida aparte")
+    p.add_argument("--from-file", help="archivo con la clave; si se omite, se pega por teclado")
+    p.add_argument("--serial", help="SN asociado (opcional, solo informativo)")
 
     p = sub.add_parser("demo-session", help="genera una sesión SINTÉTICA")
     p.add_argument("--frames", type=int, default=8)
@@ -342,12 +436,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("target")
     p = sub.add_parser("export-schemas", help="exporta JSON Schema de los modelos")
     p.add_argument("--out", default="contracts/schemas")
+
+    p = sub.add_parser("dashboard", help="lanza el dashboard web del Go2 AIR (solo 127.0.0.1)")
+    p.add_argument("--host", default="127.0.0.1", help="solo 127.0.0.1 / localhost")
+    p.add_argument("--port", type=int, default=8777)
     return parser
 
 
 COMMANDS = {
     "info": cmd_info,
     "check-library": cmd_check_library,
+    "aes-status": cmd_aes_status,
+    "unitree-devices": cmd_unitree_devices,
+    "unitree-fetch-key": cmd_unitree_fetch_key,
+    "import-aes-key": cmd_import_aes_key,
     "demo-session": cmd_demo_session,
     "probe": cmd_probe,
     "record": cmd_record,
@@ -357,6 +459,7 @@ COMMANDS = {
     "export-scan": cmd_export_scan,
     "inspect": cmd_inspect,
     "export-schemas": cmd_export_schemas,
+    "dashboard": cmd_dashboard,
 }
 
 
@@ -375,6 +478,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Conexión fallida [{exc.code}]: {exc}", file=sys.stderr)
         if exc.hint:
             print(f"Sugerencia: {exc.hint}", file=sys.stderr)
+        return 1
+    except AuthError as exc:
+        print(f"Error de autenticación: {exc}", file=sys.stderr)
         return 1
     except (CaptureError, ScanStoreError, SessionError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)

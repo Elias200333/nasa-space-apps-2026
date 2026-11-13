@@ -40,11 +40,75 @@ from .go2_topics import (
     LIDAR_SWITCH,
     VERIFIED_LIBRARY_VERSION,
 )
-from .readonly_guard import ReadOnlyChannelGuard
+from .readonly_guard import (
+    MODE_CONTROL,
+    MODE_READONLY,
+    SAFE_CONTROL_COMMANDS,
+    SPORT_REQUEST_TOPIC,
+    ReadOnlyChannelGuard,
+)
 
 log = logging.getLogger(__name__)
 
 PASSTHROUGH_KEY = "terrainx_raw_payload"
+
+# Topes de velocidad para la teleoperación (defensa en profundidad; el servicio
+# aplica además sus propios límites). Valores conservadores para un ensayo
+# supervisado en interior.
+MAX_VX_MS = 0.6   # avance/retroceso (m/s)
+MAX_VY_MS = 0.4   # lateral (m/s)
+MAX_YAW_RPS = 0.8  # giro (rad/s)
+
+
+def _clamp(value: float, limit: float) -> float:
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    if v != v:  # NaN
+        return 0.0
+    return max(-limit, min(limit, v))
+
+
+class _VideoStore:
+    """Guarda el último fotograma JPEG recibido y mide los FPS (sin bloquear)."""
+
+    def __init__(self) -> None:
+        self._jpeg: bytes | None = None
+        self._count = 0
+        self._started_monotonic: float | None = None
+        self._last_monotonic: float | None = None
+
+    def update(self, jpeg: bytes) -> None:
+        import time
+
+        self._jpeg = jpeg
+        self._count += 1
+        now = time.monotonic()
+        if self._started_monotonic is None:
+            self._started_monotonic = now
+        self._last_monotonic = now
+
+    def latest(self) -> bytes | None:
+        return self._jpeg
+
+    def stats(self) -> dict[str, Any]:
+        import time
+
+        fps = None
+        if self._started_monotonic and self._count > 1:
+            span = (self._last_monotonic or 0) - self._started_monotonic
+            if span > 0:
+                fps = round((self._count - 1) / span, 1)
+        stale = None
+        if self._last_monotonic is not None:
+            stale = round(time.monotonic() - self._last_monotonic, 2)
+        return {
+            "frames": self._count,
+            "fps": fps,
+            "has_frame": self._jpeg is not None,
+            "seconds_since_last_frame": stale,
+        }
 
 # (nombre de la excepción en la librería, código, sugerencia para el operador)
 _ERROR_TABLE: tuple[tuple[str, str, str], ...] = (
@@ -114,6 +178,7 @@ class Go2WebRTCAdapter(RobotAdapter):
         scan_context: ScanContext = ScanContext.CONTROLLED_TEST,
         topics: tuple[str, ...] | None = None,
         explore: bool = False,
+        enable_video: bool = False,
         library_loader: Callable[[], Any] | None = None,
     ) -> None:
         if scan_context is ScanContext.SYNTHETIC:
@@ -127,10 +192,89 @@ class Go2WebRTCAdapter(RobotAdapter):
         self._settings = settings
         self._topics = tuple(topics or DEFAULT_READONLY_TOPICS) + (EXPLORATORY_TOPICS if explore else ())
         self._load_library = library_loader or _import_library
+        self._enable_video = enable_video
         self._conn: Any = None
         self._guard: ReadOnlyChannelGuard | None = None
         self._closing = False
         self.connection_info: dict[str, Any] = {}
+        self.video = _VideoStore()
+
+    # ---------------------------------------------------------------- vídeo
+    async def _video_track_handler(self, track: Any) -> None:
+        """Bucle de recepción de la cámara: cada fotograma se guarda como JPEG."""
+        import cv2  # parte del extra [go2] (opencv-python)
+
+        log.info("Recepción de vídeo iniciada")
+        while True:
+            try:
+                frame = await track.recv()
+            except Exception:  # fin de pista / desconexión
+                break
+            try:
+                img = frame.to_ndarray(format="bgr24")
+                ok, buf = cv2.imencode(".jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+                if ok:
+                    self.video.update(buf.tobytes())
+            except Exception:
+                log.exception("No se pudo convertir un fotograma de vídeo")
+        log.info("Recepción de vídeo detenida")
+
+    def video_stats(self) -> dict[str, Any]:
+        return self.video.stats()
+
+    # --------------------------------------------------------------- control
+    @property
+    def control_enabled(self) -> bool:
+        return self._guard is not None and self._guard.mode == MODE_CONTROL
+
+    def _require_guard(self) -> Any:
+        if self._guard is None or self._conn is None:
+            raise CaptureError("el robot no está conectado")
+        return self._guard
+
+    def enable_control(self) -> None:
+        """Pasa el guardián a modo control (subconjunto ACOTADO de locomoción)."""
+        self._require_guard().set_mode(MODE_CONTROL)
+        log.warning("MODO CONTROL habilitado: se permiten órdenes de locomoción acotadas")
+
+    def disable_control(self) -> None:
+        """Detiene y vuelve a solo lectura. Seguro de llamar siempre."""
+        if self._guard is not None and self._guard.mode == MODE_CONTROL:
+            try:
+                self._send_sport(SAFE_CONTROL_COMMANDS["StopMove"])
+            except Exception:
+                log.exception("No se pudo enviar StopMove al salir de control")
+            self._guard.set_mode(MODE_READONLY)
+            log.warning("MODO CONTROL deshabilitado: de vuelta en solo lectura")
+
+    def _send_sport(self, api_id: int, parameter: Any = None) -> None:
+        import random
+        import time
+
+        gen_id = int(time.time() * 1000) % 2147483648 + random.randint(0, 1000)
+        payload = {
+            "header": {"identity": {"id": gen_id, "api_id": api_id}},
+            "parameter": parameter if isinstance(parameter, str) else json.dumps(parameter or {}),
+        }
+        # Pasa por el guardián: en modo control se permite; en solo lectura se bloquea.
+        self._require_guard()  # asegura conexión
+        self._conn.datachannel.pub_sub.publish_without_callback(SPORT_REQUEST_TOPIC, payload, "req")
+
+    def drive(self, vx: float, vy: float, yaw: float) -> None:
+        """Velocidad de locomoción (m/s, m/s, rad/s), recortada a los topes."""
+        self._send_sport(
+            SAFE_CONTROL_COMMANDS["Move"],
+            {"x": _clamp(vx, MAX_VX_MS), "y": _clamp(vy, MAX_VY_MS), "z": _clamp(yaw, MAX_YAW_RPS)},
+        )
+
+    def stop_move(self) -> None:
+        self._send_sport(SAFE_CONTROL_COMMANDS["StopMove"])
+
+    def posture(self, command: str) -> None:
+        """Órdenes de postura permitidas: BalanceStand, StandUp, StandDown, RecoveryStand, Damp."""
+        if command not in SAFE_CONTROL_COMMANDS or command in ("Move", "StopMove"):
+            raise CaptureError(f"orden de postura no permitida: {command}")
+        self._send_sport(SAFE_CONTROL_COMMANDS[command])
 
     # ------------------------------------------------------------------ errores
     def _secret(self) -> str | None:
@@ -239,6 +383,15 @@ class Go2WebRTCAdapter(RobotAdapter):
             self.connection_info["lidar_switch"] = "on enviado"
         else:
             self.connection_info["lidar_switch"] = "no enviado (TERRAINX_GO2_ENABLE_LIDAR=false)"
+        # 6) Recepción de cámara (opcional, solo lectura de sensor).
+        if self._enable_video:
+            try:
+                conn.video.add_track_callback(self._video_track_handler)
+                datachannel.switchVideoChannel(True)  # envía vid "on" (permitido por el guardián)
+                self.connection_info["video"] = "solicitado"
+            except Exception as exc:
+                self.connection_info["video"] = f"no disponible ({type(exc).__name__})"
+                log.warning("No se pudo activar la cámara: %s", exc)
 
     async def _safe_disconnect(self) -> None:
         conn, self._conn = self._conn, None
@@ -251,6 +404,10 @@ class Go2WebRTCAdapter(RobotAdapter):
             log.warning("Error al cerrar la conexión: %s", redact(str(exc), self._secret()))
 
     async def _close(self) -> None:
+        try:
+            self.disable_control()  # detiene y vuelve a solo lectura (best-effort)
+        except Exception:
+            log.exception("No se pudo salir de modo control al cerrar")
         await self._safe_disconnect()
 
     async def _run_window(self, duration_s: float | None) -> None:

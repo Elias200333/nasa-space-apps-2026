@@ -1026,6 +1026,48 @@ body {
   border-color: var(--mars-accent);
 }
 
+.map-hud-badge.target-reached-badge {
+  background: rgba(16, 185, 129, 0.25);
+  color: #34d399;
+  border-color: #10b981;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+  animation: pulseReached 1.6s infinite;
+}
+
+@keyframes pulseReached {
+  0%, 100% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.3); transform: scale(1); }
+  50% { box-shadow: 0 0 18px rgba(16, 185, 129, 0.6); transform: scale(1.02); }
+}
+
+.map-hud-center {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.center-target-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid var(--border-cyan);
+  color: var(--cyan-glow);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.center-target-btn:hover {
+  background: rgba(34, 211, 238, 0.25);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.4);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
 .map-title-block h2 {
   font-size: 1.15rem;
   font-weight: 700;

@@ -33,6 +33,19 @@ def test_flujo_offline_completo(tmp_path, capsys):
     assert (tmp_path / "data" / "logs" / "terrainx_robot.log").is_file()
 
 
+def test_aes_status_e_importacion_offline(tmp_path, monkeypatch, capsys):
+    keyfile = tmp_path / "fuera_repo" / "go2.aes"
+    monkeypatch.setenv("TERRAINX_GO2_AES_KEY_FILE", str(keyfile))
+    assert _cli(tmp_path, "aes-status") == 2            # sin clave -> degradado
+    src = tmp_path / "clave.txt"
+    src.write_text("0123456789ABCDEF0123456789abcdef\n", encoding="utf-8")
+    assert _cli(tmp_path, "import-aes-key", "--from-file", str(src)) == 0
+    assert _cli(tmp_path, "aes-status") == 0
+    out = capsys.readouterr().out
+    assert "0123456789abcdef0123456789abcdef" not in out  # la clave nunca se imprime
+    assert keyfile.is_file()
+
+
 def test_exportar_esquemas(tmp_path):
     out = tmp_path / "schemas"
     assert _cli(tmp_path, "export-schemas", "--out", str(out)) == 0
