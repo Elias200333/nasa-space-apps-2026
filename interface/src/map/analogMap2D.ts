@@ -5,16 +5,15 @@ import { sound } from '../audio';
 
 export class AnalogMap2DManager {
   private mapContainer: HTMLElement;
-  private transitionOverlay: HTMLElement;
   private map: L.Map | null = null;
   private currentMarker: L.Marker | null = null;
   private currentCircle: L.Circle | null = null;
   private onReturnToOrbitCallback?: () => void;
   private isReturning = false;
+  private isTransitioning = false;
 
-  constructor(mapContainerId: string, transitionOverlayId: string) {
+  constructor(mapContainerId: string) {
     this.mapContainer = document.getElementById(mapContainerId) as HTMLElement;
-    this.transitionOverlay = document.getElementById(transitionOverlayId) as HTMLElement;
   }
 
   public setOnReturnToOrbit(callback: () => void) {
@@ -22,116 +21,151 @@ export class AnalogMap2DManager {
   }
 
   /**
-   * Inicia la secuencia cinematográfica de inmersión y despliega el mapa satelital 2D
+   * Transición de zoom óptico sin cortes entre el planeta 3D y el mapa 2D:
+   * 1. El mapa satelital aparece sutilmente fundido desde la vista 3D a escala regional (zoom 6).
+   * 2. Continúa la inercia del zoom de forma suave hacia la resolución local (zoom 12).
+   * 3. Sin pantallas de carga, sin líneas de escaneo ni efectos de videojuego.
    */
-  public triggerAtmosphericDive(site: AnalogSite) {
+  public triggerSeamlessZoomDive(site: AnalogSite) {
+    if (this.isTransitioning) return;
+    this.isTransitioning = true;
     this.isReturning = false;
-    sound.playTargetLock();
-
-    // 1. Activar efecto sutil de transición
-    this.transitionOverlay.classList.remove('hidden', 'fade-out', 'ascent-effect');
-    this.transitionOverlay.classList.add('active', 'dive-effect');
-
-    setTimeout(() => {
-      sound.playWhoosh();
-    }, 300);
-
-    // 2. Cargar mapa satelital 2D
-    setTimeout(() => {
-      this.display2DMap(site);
-
-      this.transitionOverlay.classList.remove('dive-effect');
-      this.transitionOverlay.classList.add('fade-out');
-
-      setTimeout(() => {
-        this.transitionOverlay.classList.remove('active', 'fade-out');
-        this.transitionOverlay.classList.add('hidden');
-      }, 600);
-    }, 1500);
-  }
-
-  /**
-   * Carga y renderiza el mapa satelital Leaflet con capa Esri World Imagery
-   */
-  private display2DMap(site: AnalogSite) {
-    this.mapContainer.classList.remove('hidden');
-    this.mapContainer.classList.add('active');
 
     const lat = site.coordinates.latitude;
     const lon = site.coordinates.longitude;
 
-    if (!this.map) {
-      this.map = L.map('leafletMap', {
-        center: [lat, lon],
-        zoom: 12,
-        minZoom: 2,
-        zoomControl: false,
-        attributionControl: false
-      });
+    // Mostrar contenedor listo para el crossfade
+    this.mapContainer.classList.remove('hidden');
+    this.mapContainer.style.opacity = '0';
+    this.mapContainer.style.transform = 'scale(0.97)';
+    this.mapContainer.style.transition = 'opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1)';
 
-      // Capa de satélite fotorrealista de alta definición de Esri
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 18,
-        attribution: 'Esri, Maxar, Earthstar Geographics'
-      }).addTo(this.map);
+    this.ensureMapInitialized(lat, lon, 6);
 
-      L.control.zoom({ position: 'bottomright' }).addTo(this.map);
+    // Ajustar vista inicial en zoom regional (sin animación brusca)
+    this.map!.setView([lat, lon], 6, { animate: false });
+    this.map!.invalidateSize();
 
-      // =========================================================================
-      // SOLICITUD CLAVE:
-      // "Cuando me aleje con la ruleta del ratón hasta casi llegar a ver el mapa
-      // de la tierra, quiero que cambie el mapa 2D por la interfaz 3D"
-      // =========================================================================
-      this.map.on('zoomend', () => {
-        if (!this.map || this.isReturning) return;
-        // Si el usuario hace zoom-out con la rueda del ratón hasta nivel 3 o menos (vista casi global)
-        if (this.map.getZoom() <= 3) {
+    // Dibujar marcadores y actualizar datos HUD
+    this.renderSiteMarkers(site);
+    this.updateMapHUD(site);
+
+    // Crossfade suave e inicio del vuelo de cámara
+    requestAnimationFrame(() => {
+      this.mapContainer.classList.add('active');
+      this.mapContainer.style.opacity = '1';
+      this.mapContainer.style.transform = 'scale(1)';
+
+      // Vuelo continuo y fluido hacia el terreno a nivel 12
+      setTimeout(() => {
+        if (this.map && !this.isReturning) {
+          this.map.flyTo([lat, lon], 12, {
+            animate: true,
+            duration: 1.5,
+            easeLinearity: 0.22
+          });
+        }
+        this.isTransitioning = false;
+      }, 80);
+
+      // Abrir tarjeta informativa una vez aterrizada la cámara
+      setTimeout(() => {
+        if (this.currentMarker && !this.isReturning) {
+          this.currentMarker.openPopup();
+        }
+      }, 1600);
+    });
+  }
+
+  /**
+   * Transición de zoom manual cuando el usuario acerca la rueda del ratón
+   */
+  public triggerManualCoordinatesDive(lat: number, lon: number, defaultBody: 'Moon' | 'Mars' = 'Moon') {
+    const exploratorySite: AnalogSite = {
+      id: `manual-${lat.toFixed(2)}-${lon.toFixed(2)}`,
+      name: 'Observación de Terreno Satelital',
+      target_body: defaultBody,
+      region: `${Math.abs(lat).toFixed(2)}° ${lat >= 0 ? 'N' : 'S'}`,
+      country: `${Math.abs(lon).toFixed(2)}° ${lon >= 0 ? 'E' : 'W'}`,
+      coordinates: {
+        latitude: lat,
+        longitude: lon,
+        label: `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`
+      },
+      similarity_score: 88,
+      scientific_justification: 'Inspección de alta resolución mediante satélites de observación de la Tierra.',
+      sources: ['NASA Worldview', 'Esri High-Resolution World Imagery'],
+      status: 'candidate'
+    };
+
+    this.triggerSeamlessZoomDive(exploratorySite);
+  }
+
+  private ensureMapInitialized(lat: number, lon: number, initialZoom = 6) {
+    if (this.map) return;
+
+    this.map = L.map('leafletMap', {
+      center: [lat, lon],
+      zoom: initialZoom,
+      minZoom: 2,
+      maxZoom: 18,
+      zoomControl: false,
+      attributionControl: false
+    });
+
+    // Capa de satélite fotorrealista de alta definición de Esri World Imagery
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 18,
+      attribution: 'Esri, Maxar, Earthstar Geographics'
+    }).addTo(this.map);
+
+    L.control.zoom({ position: 'bottomright' }).addTo(this.map);
+
+    // Detección de alejamiento con rueda del ratón: volver a la esfera 3D al llegar a vista global
+    this.map.on('zoomend', () => {
+      if (!this.map || this.isReturning || this.isTransitioning) return;
+      if (this.map.getZoom() <= 3) {
+        this.returnToSpaceOrbit();
+      }
+    });
+
+    const mapElem = document.getElementById('leafletMap');
+    if (mapElem) {
+      mapElem.addEventListener('wheel', (e) => {
+        if (!this.map || this.isReturning || this.isTransitioning) return;
+        if (e.deltaY > 0 && this.map.getZoom() <= 4) {
           this.returnToSpaceOrbit();
         }
-      });
-
-      // Detectar también el scroll directo hacia afuera si ya está en nivel bajo
-      const mapElem = document.getElementById('leafletMap');
-      if (mapElem) {
-        mapElem.addEventListener('wheel', (e) => {
-          if (!this.map || this.isReturning) return;
-          if (e.deltaY > 0 && this.map.getZoom() <= 4) {
-            this.returnToSpaceOrbit();
-          }
-        }, { passive: true });
-      }
-    } else {
-      this.map.setView([lat, lon], 12, { animate: false });
-      this.map.invalidateSize();
+      }, { passive: true });
     }
+  }
 
-    // Limpiar marcadores anteriores
-    if (this.currentMarker) {
-      this.map.removeLayer(this.currentMarker);
-    }
-    if (this.currentCircle) {
-      this.map.removeLayer(this.currentCircle);
-    }
+  private renderSiteMarkers(site: AnalogSite) {
+    if (!this.map) return;
+    const lat = site.coordinates.latitude;
+    const lon = site.coordinates.longitude;
 
-    // Anillo pulsante de radar sobre el análogo
+    if (this.currentMarker) this.map.removeLayer(this.currentMarker);
+    if (this.currentCircle) this.map.removeLayer(this.currentCircle);
+
     const accentColor = site.target_body === 'Moon' ? '#22d3ee' : '#f97316';
+
     this.currentCircle = L.circle([lat, lon], {
       color: accentColor,
       fillColor: accentColor,
-      fillOpacity: 0.2,
-      radius: 2000,
-      weight: 2
+      fillOpacity: 0.15,
+      radius: 2200,
+      weight: 1.5
     }).addTo(this.map);
 
-    // Marcador personalizado de alta tecnología
     const customIcon = L.divIcon({
       className: 'analog-radar-marker',
       html: `
         <div class="radar-ping" style="border-color:${accentColor};"></div>
-        <div class="radar-core" style="background:${accentColor}; box-shadow:0 0 14px ${accentColor};"></div>
+        <div class="radar-core" style="background:${accentColor}; box-shadow:0 0 12px ${accentColor};"></div>
       `,
-      iconSize: [36, 36],
-      iconAnchor: [18, 18]
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
     });
 
     this.currentMarker = L.marker([lat, lon], { icon: customIcon }).addTo(this.map);
@@ -147,9 +181,7 @@ export class AnalogMap2DManager {
           <strong>${site.similarity_score}%</strong>
         </div>
       </div>
-    `).openPopup();
-
-    this.updateMapHUD(site);
+    `);
   }
 
   private updateMapHUD(site: AnalogSite) {
@@ -168,34 +200,27 @@ export class AnalogMap2DManager {
   }
 
   /**
-   * Regresa desde el mapa 2D a la interfaz 3D en el espacio
+   * Regresa suavemente del mapa 2D a la órbita espacial 3D
    */
   public returnToSpaceOrbit() {
     if (this.isReturning) return;
     this.isReturning = true;
-    sound.playClick(600);
+    sound.playClick(480);
 
-    this.transitionOverlay.classList.remove('hidden', 'fade-out');
-    this.transitionOverlay.classList.add('active', 'ascent-effect');
+    // 1. Desvanecer suavemente el contenedor 2D
+    this.mapContainer.style.transition = 'opacity 0.45s ease-out, transform 0.45s ease-out';
+    this.mapContainer.style.opacity = '0';
+    this.mapContainer.style.transform = 'scale(0.97)';
+
+    // 2. Disparar el ascenso de la cámara 3D de BabylonJS de fondo
+    if (this.onReturnToOrbitCallback) {
+      this.onReturnToOrbitCallback();
+    }
 
     setTimeout(() => {
       this.mapContainer.classList.remove('active');
       this.mapContainer.classList.add('hidden');
-
-      if (this.onReturnToOrbitCallback) {
-        this.onReturnToOrbitCallback();
-      }
-
-      setTimeout(() => {
-        this.transitionOverlay.classList.remove('ascent-effect');
-        this.transitionOverlay.classList.add('fade-out');
-
-        setTimeout(() => {
-          this.transitionOverlay.classList.remove('active', 'fade-out');
-          this.transitionOverlay.classList.add('hidden');
-          this.isReturning = false;
-        }, 500);
-      }, 500);
+      this.isReturning = false;
     }, 450);
   }
 }
