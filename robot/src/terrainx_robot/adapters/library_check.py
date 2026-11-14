@@ -70,18 +70,21 @@ def run_library_checks() -> list[tuple[str, bool, str]]:
         ("gancho del decodificador LiDAR", hook_ok, "datachannel.decoder.decode(binario, metadatos)" if hook_ok else "cambió")
     )
 
-    # Equivalencia con el decodificador native de la librería sobre datos sintéticos.
+    # Equivalencia con el decodificador native de la librería sobre un mapa generado aquí
+    # (suelo + pared en la rejilla 128 × 128 × 38 del robot; no es una medición).
     try:
         from unitree_webrtc_connect.lidar.lidar_decoder_native import LidarDecoder as NativeDecoder
 
-        from ..fixtures.synthetic import generate_frames
-        from ..lidar.voxel_codec import decode_voxel_map
+        from ..lidar.voxel_codec import decode_voxel_map, encode_voxel_map
 
-        frame = generate_frames(1, seed=3)[0]
-        theirs = NativeDecoder().decode(frame.payload, frame.meta)["points"]
-        ours = decode_voxel_map(
-            frame.payload, frame.meta["src_size"], frame.meta["origin"], frame.meta["resolution"]
-        ).points
+        k = np.arange(128)
+        floor = np.column_stack((np.repeat(k, 128), np.tile(k, 128), np.full(128 * 128, 12)))
+        wall = np.column_stack((np.full(128 * 25, 120), np.repeat(k, 25), np.tile(np.arange(13, 38), 128)))
+        payload, src_size = encode_voxel_map(np.vstack((floor, wall)), 38)
+        meta = {"src_size": src_size, "origin": [-3.2, -3.2, -0.6], "resolution": 0.05,
+                "width": [128, 128, 38], "frame_id": "check_library", "stamp": 0.0}
+        theirs = NativeDecoder().decode(payload, meta)["points"]
+        ours = decode_voxel_map(payload, src_size, meta["origin"], meta["resolution"]).points
         same = theirs.shape == ours.shape and np.array_equal(theirs, ours)
         detail = f"{ours.shape[0]} puntos idénticos" if same else f"difieren: {theirs.shape} vs {ours.shape}"
     except Exception as exc:  # noqa: BLE001 - se informa, no se oculta

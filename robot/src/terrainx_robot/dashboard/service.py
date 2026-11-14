@@ -71,7 +71,7 @@ class DashboardService:
             region=settings.go2.region,
             device_type="Go2",
         )
-        # adapter_factory() -> Go2WebRTCAdapter: punto de inyección para pruebas.
+        # adapter_factory() -> Go2WebRTCAdapter (por defecto, el robot real).
         self._adapter_factory = adapter_factory or (
             lambda: Go2WebRTCAdapter(self.settings, self.store, enable_video=True)
         )

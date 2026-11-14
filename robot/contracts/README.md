@@ -8,8 +8,6 @@
   .\.venv\Scripts\python.exe -m terrainx_robot export-schemas
   ```
 
-- **Ejemplos:** `examples/`, producidos por el propio software a partir de una escena **SINTÉTICA** (`evidence_class=synthetic_test`, `demo=true`). No son mediciones.
-
 ## 1. Compatibilidad con el contrato 1.0 del dossier
 
 `RobotScan` 1.0 se conserva **con los mismos nombres y significado**:
@@ -74,7 +72,7 @@ Además: `CapabilityReport` (sondeo), `RobotStatus` (estado y telemetría resumi
    - `units_verification`;
    - `registration.status`;
    - los `caveats`.
-4. Para el visor: el PLY es binario float32. ¿Necesitáis un LOD reducido? El tamaño real por escaneo del Go2 aún no se conoce; la escena sintética de ejemplo tiene unos 19 000 puntos (~225 KB).
+4. Para el visor: el PLY es binario float32. ¿Necesitáis un LOD reducido? Referencia real: un mapa SLAM de Pluffy de 47 809 cubos ocupa 3,0 MB en PLY, 7,0 MB en GLB y 1,1 MB en coordenadas JSON.
 
 **Ciencia y datos (B):**
 

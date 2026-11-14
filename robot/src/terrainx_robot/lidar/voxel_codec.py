@@ -114,12 +114,6 @@ def occupancy_to_indices(buffer: bytes) -> np.ndarray:
     return np.column_stack((x[bits], yy[bits], zz[bits])).astype(np.int64)
 
 
-def indices_to_points(indices: np.ndarray, origin: Sequence[float], resolution: float) -> np.ndarray:
-    """Índices de vóxel -> coordenadas: origin + índice * resolution."""
-    origin_arr, res = _check_origin_resolution(origin, resolution)
-    return indices.astype(np.float64) * res + origin_arr
-
-
 def decode_voxel_map(
     compressed: bytes, src_size: int, origin: Sequence[float], resolution: float
 ) -> DecodedVoxelMap:
@@ -137,16 +131,10 @@ def decode_voxel_map(
     )
 
 
-def points_to_indices(points: np.ndarray, origin: Sequence[float], resolution: float) -> np.ndarray:
-    """Coordenadas -> índice de vóxel más cercano (solo para generar datos de prueba)."""
-    origin_arr, res = _check_origin_resolution(origin, resolution)
-    return np.rint((np.asarray(points, dtype=np.float64) - origin_arr) / res).astype(np.int64)
-
-
 def encode_voxel_map(indices: np.ndarray, z_slices: int) -> tuple[bytes, int]:
     """Índices (N,3) [x,y,z] -> (payload LZ4, src_size). Inversa de decode.
 
-    Se usa para generar sesiones SINTÉTICAS con el formato del robot.
+    La usa ``check-library`` para comparar nuestro decodificador con el de la librería.
     """
     if z_slices <= 0 or z_slices * BYTES_PER_SLICE > MAX_SRC_SIZE:
         raise VoxelDecodeError(f"z_slices fuera de rango: {z_slices}")

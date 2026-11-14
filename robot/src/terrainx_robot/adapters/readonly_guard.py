@@ -103,10 +103,6 @@ def check_readonly(message: Any) -> tuple[bool, str]:
     return False, f"type={msg_type!r} topic={topic!r} bloqueado (solo lectura)"
 
 
-# Alias histórico (usado por tests y por el adaptador).
-check_outgoing = check_readonly
-
-
 def _extract_api_id(payload: dict) -> Any:
     try:
         return payload["data"]["header"]["identity"]["api_id"]
