@@ -14,123 +14,179 @@ let miniMoon: MiniPlanetViewer;
 let miniMars: MiniPlanetViewer;
 let map2DManager: AnalogMap2DManager;
 
-function initApp() {
-  setupIntroSplashScreen();
-  initBabylonScenes();
-  init2DMapManager();
-  setupUIEventListeners();
-  updateLiveTelemetry(0.0000, 0.0000);
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initApp);
-} else {
-  initApp();
-}
-
 /**
- * Pantalla de inicio / Splash Screen cinemática con el logo de IEF Comparation y NASA Space Apps
+ * Coordinador de carga en tiempo real para el splash screen:
+ * - Se mueve continuamente desde 0% ("poco a poco").
+ * - Cuanto más se acerca al 75%, más lento avanza (desaceleración asintótica suave).
+ * - En cuanto termina de cargar la página (recursos + shaders y motor 3D listos),
+ *   recibe un evento que termina de cargar la barra velozmente al 100%.
+ * - Finalmente cambia la ventana (fade-out hacia el globo interactivo 3D).
  */
-function setupIntroSplashScreen() {
-  const splash = document.getElementById('introSplashScreen');
-  const progressBar = document.getElementById('splashProgressBar');
-  const statusText = document.getElementById('splashStatusText');
-  const progressPct = document.getElementById('splashProgressPct');
-  if (!splash) return;
+class SplashLoadingCoordinator {
+  private splashEl: HTMLElement | null;
+  private fillEl: HTMLElement | null;
+  private pctEl: HTMLElement | null;
+  private statusEl: HTMLElement | null;
+  private currentProgress = 0;
+  private isAppReady = false;
+  private isFinished = false;
+  private animId = 0;
+  private lastTimestamp = 0;
+  private customStatus: string | null = null;
 
-  let progress = 0;
-  let isClosed = false;
+  constructor() {
+    this.splashEl = document.getElementById('introSplashScreen');
+    this.fillEl = document.getElementById('splashProgressBar');
+    this.pctEl = document.getElementById('splashProgressPct');
+    this.statusEl = document.getElementById('splashStatusText');
 
-  const messages = [
-    { at: 10, text: 'Iniciando subsistemas orbitales BabylonJS...' },
-    { at: 35, text: 'Conectando con NASA Earth & Space Data APIs...' },
-    { at: 65, text: 'Cargando catálogos de análogos lunares y marcianos...' },
-    { at: 88, text: 'Calibrando modelos geomorfométricos IEF Comparation...' },
-    { at: 100, text: 'Sistemas listos • Iniciando misión' }
-  ];
+    // Escuchar el evento de carga completada de la aplicación
+    window.addEventListener('ief:app-loaded', () => this.notifyAppLoaded(), { once: true });
 
-  const updateProgress = (target: number, duration: number, callback?: () => void) => {
-    const start = progress;
-    const startTime = performance.now();
+    if (this.splashEl) {
+      this.splashEl.addEventListener('click', () => this.forceFinish());
+      window.addEventListener('keydown', (e) => {
+        if (!this.isFinished && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) {
+          this.forceFinish();
+        }
+      }, { once: true });
+    }
 
-    function step(currentTime: number) {
-      if (isClosed) return;
-      const elapsed = currentTime - startTime;
-      const fraction = Math.min(1, elapsed / duration);
-      progress = start + (target - start) * fraction;
+    this.runLoop();
+  }
 
-      if (progressBar) progressBar.style.width = `${progress}%`;
-      if (progressPct) progressPct.textContent = `${Math.round(progress)}%`;
+  public startShrinkTransition() {
+    if (this.splashEl) {
+      this.splashEl.classList.add('shrink-active');
+    }
+  }
 
-      for (let i = messages.length - 1; i >= 0; i--) {
-        if (progress >= messages[i].at) {
-          if (statusText) statusText.textContent = messages[i].text;
-          break;
+  public setStatus(message: string) {
+    this.customStatus = message;
+    if (this.statusEl && !this.isFinished) {
+      this.statusEl.textContent = message;
+    }
+  }
+
+  public notifyAppLoaded() {
+    if (this.isAppReady) return;
+    this.isAppReady = true;
+    if (this.statusEl) {
+      this.statusEl.textContent = 'Finalizando configuración y telemetría...';
+    }
+  }
+
+  private runLoop = (timestamp = performance.now()) => {
+    if (!this.lastTimestamp) this.lastTimestamp = timestamp;
+    const dt = Math.min(50, Math.max(10, timestamp - this.lastTimestamp));
+    this.lastTimestamp = timestamp;
+
+    if (!this.isAppReady) {
+      // Fase 1: Se mueve poco a poco y cuanto más se acerca al 75%, más lento va
+      const remainingTo75 = Math.max(0, 75 - this.currentProgress);
+      // Velocidad proporcional a la distancia restante: desaceleración continua hacia el 75%
+      const speed = Math.max(0.003, (remainingTo75 / 75) * 0.20 * (dt / 16.67));
+      this.currentProgress = Math.min(74.8, this.currentProgress + speed);
+
+      // Textos dinámicos acordes al avance si no hay un mensaje específico
+      if (this.statusEl && !this.customStatus) {
+        if (this.currentProgress < 20) {
+          this.statusEl.textContent = 'Iniciando subsistemas orbitales IEF Comparation...';
+        } else if (this.currentProgress < 45) {
+          this.statusEl.textContent = 'Cargando modelos y texturas orbitales NASA...';
+        } else if (this.currentProgress < 62) {
+          this.statusEl.textContent = 'Sincronizando análogos planetarios 3D...';
+        } else {
+          this.statusEl.textContent = 'Compilando sombreadores atmosféricos...';
         }
       }
+    } else {
+      // Fase 2: El evento de carga ha saltado ("lo termina de cargar")
+      // Avanza con decisión y fluidez hacia el 100%
+      const remainingTo100 = Math.max(0.2, 100 - this.currentProgress);
+      const speed = Math.max(0.85, remainingTo100 * 0.16 * (dt / 16.67));
+      this.currentProgress = Math.min(100, this.currentProgress + speed);
 
-      if (fraction < 1) {
-        requestAnimationFrame(step);
-      } else {
-        if (callback) callback();
+      if (this.currentProgress >= 99.7 && !this.isFinished) {
+        this.currentProgress = 100;
+        this.isFinished = true;
+        this.updateUI(100);
+        this.finishAndExit();
+        return;
       }
     }
 
-    requestAnimationFrame(step);
+    this.updateUI(this.currentProgress);
+    this.animId = requestAnimationFrame(this.runLoop);
   };
 
-  const closeSplash = () => {
-    if (isClosed) return;
-    isClosed = true;
-    splash.classList.add('fade-out');
-    setTimeout(() => {
-      splash.style.display = 'none';
-      splash.remove();
-    }, 750);
-  };
-
-  // Animar avance fluido de la barra hasta 100% en aproximadamente 1.8 segundos
-  updateProgress(40, 550, () => {
-    updateProgress(80, 650, () => {
-      updateProgress(100, 450, () => {
-        setTimeout(closeSplash, 350);
-      });
-    });
-  });
-
-  // Omitir inmediatamente al hacer clic o pulsar tecla
-  splash.addEventListener('click', closeSplash);
-  window.addEventListener('keydown', (e) => {
-    if (!isClosed && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) {
-      closeSplash();
+  private updateUI(progress: number) {
+    if (this.fillEl) {
+      this.fillEl.style.width = `${progress.toFixed(1)}%`;
     }
-  }, { once: true });
+    if (this.pctEl) {
+      this.pctEl.textContent = `${Math.round(progress)}%`;
+    }
+  }
+
+  private finishAndExit() {
+    this.updateUI(100);
+    if (this.statusEl) {
+      this.statusEl.textContent = '100% • Misión iniciada';
+    }
+
+    // Pausa visual para ver el 100% antes de cambiar la ventana
+    setTimeout(() => {
+      if (this.splashEl) {
+        this.splashEl.classList.add('fade-out');
+        setTimeout(() => {
+          this.splashEl?.remove();
+          cancelAnimationFrame(this.animId);
+        }, 750);
+      }
+    }, 380);
+  }
+
+  private forceFinish() {
+    this.notifyAppLoaded();
+    this.currentProgress = 100;
+    this.isFinished = true;
+    this.updateUI(100);
+    this.finishAndExit();
+  }
 }
 
-/**
- * Inicialización de las escenas 3D fotorrealistas en BabylonJS
- */
-function initBabylonScenes() {
+async function initApp() {
+  const coordinator = new SplashLoadingCoordinator();
+
+  // Transición suave del círculo mientras avanza el loadbar
+  setTimeout(() => {
+    coordinator.startShrinkTransition();
+  }, 220);
+
+  // 1. Inicializar escena 3D principal y monitorizar texturas reales
   const earthCanvas = document.getElementById('earthCanvas') as HTMLCanvasElement;
   if (earthCanvas) {
     earthScene = new EarthSceneManager(earthCanvas);
+
+    earthScene.onTextureProgress = (texName) => {
+      coordinator.setStatus(`Cargando ${texName}...`);
+    };
+
     earthScene.onCoordinatesChange = (lat, lon) => {
       const latDir = lat >= 0 ? 'N' : 'S';
       const lonDir = lon >= 0 ? 'E' : 'W';
       const coordsText = `${Math.abs(lat).toFixed(4)}° ${latDir}, ${Math.abs(lon).toFixed(4)}° ${lonDir}`;
       const readoutElem = document.getElementById('hudCoordsText');
-      if (readoutElem) {
-        readoutElem.textContent = coordsText;
-      }
+      if (readoutElem) readoutElem.textContent = coordsText;
     };
 
-    // Zoom manual con la rueda del ratón hacia el planeta: transición suave a navegación libre en esa ubicación
     earthScene.onZoomDiveTrigger = (lat, lon) => {
       map2DManager.triggerFreeExplorationDive(lat, lon);
     };
   }
 
-  // Miniaturas 3D fotorrealistas en tarjetas laterales
+  // 2. Inicializar mini planetas (Luna y Marte)
   const miniMoonCanvas = document.getElementById('miniMoonCanvas') as HTMLCanvasElement;
   if (miniMoonCanvas) {
     miniMoon = new MiniPlanetViewer(miniMoonCanvas, 'Moon');
@@ -140,6 +196,40 @@ function initBabylonScenes() {
   if (miniMarsCanvas) {
     miniMars = new MiniPlanetViewer(miniMarsCanvas, 'Mars');
   }
+
+  // 3. Inicializar cartografía 2D y HUD
+  init2DMapManager();
+  setupUIEventListeners();
+  updateLiveTelemetry(0.0000, 0.0000);
+
+  // 4. Promesa de carga completa de página y recursos del navegador
+  const windowLoadPromise = new Promise<void>((resolve) => {
+    if (document.readyState === 'complete') {
+      resolve();
+    } else {
+      window.addEventListener('load', () => resolve(), { once: true });
+      setTimeout(resolve, 3500); // Salvaguarda en caso de timeout
+    }
+  });
+
+  // 5. Promesa de compilación y renderizado en BabylonJS
+  const scenePromises: Promise<void>[] = [];
+  if (earthScene) scenePromises.push(earthScene.whenReady());
+  if (miniMoon) scenePromises.push(miniMoon.whenReady());
+  if (miniMars) scenePromises.push(miniMars.whenReady());
+
+  // Esperar a que la página cargue y el motor 3D dibuje el primer frame
+  await Promise.all([windowLoadPromise, Promise.all(scenePromises)]);
+
+  // ¡Disparar el evento que salta al loadbar, termina la carga y cambia la ventana!
+  window.dispatchEvent(new CustomEvent('ief:app-loaded'));
+  coordinator.notifyAppLoaded();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
 }
 
 /**

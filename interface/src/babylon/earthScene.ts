@@ -26,6 +26,9 @@ export class EarthSceneManager {
   public onCoordinatesChange?: (lat: number, lon: number) => void;
   public onAtmosphericEntry?: (lat: number, lon: number) => void;
   public onZoomDiveTrigger?: (lat: number, lon: number) => void;
+  public onTextureProgress?: (name: string) => void;
+  private firstFrameRendered = false;
+  private onReadyCallbacks: (() => void)[] = [];
 
   constructor(canvas: HTMLCanvasElement) {
     this.engine = new BABYLON.Engine(canvas, true, {
@@ -36,6 +39,15 @@ export class EarthSceneManager {
 
     this.scene = new BABYLON.Scene(this.engine);
     this.scene.clearColor = new BABYLON.Color4(0.005, 0.01, 0.02, 1.0);
+
+    // Detección de primer cuadro renderizado cuando todo el grafo esté listo
+    this.scene.executeWhenReady(() => {
+      this.scene.onAfterRenderObservable.addOnce(() => {
+        this.firstFrameRendered = true;
+        this.onReadyCallbacks.forEach(cb => cb());
+        this.onReadyCallbacks = [];
+      });
+    });
 
     // 1. Fondo de espacio profundo con estrellas puntuales
     this.spaceEnv = new DeepSpaceEnvironment(this.scene);
@@ -91,6 +103,13 @@ export class EarthSceneManager {
 
     window.addEventListener('resize', () => {
       this.engine.resize();
+    });
+  }
+
+  public whenReady(): Promise<void> {
+    if (this.firstFrameRendered) return Promise.resolve();
+    return new Promise((resolve) => {
+      this.onReadyCallbacks.push(resolve);
     });
   }
 
@@ -188,10 +207,14 @@ export class EarthSceneManager {
     });
 
     // Texturas con invertY = false para orientar correctamente los polos (Norte arriba, Sur abajo)
-    const dayTex = new BABYLON.Texture('./textures/earth.jpg', this.scene, false, false);
-    const nightTex = new BABYLON.Texture('./textures/earth_lights.png', this.scene, false, false);
-    const specTex = new BABYLON.Texture('./textures/earth_specular.jpg', this.scene, false, false);
-    const normTex = new BABYLON.Texture('./textures/earth_normal.jpg', this.scene, false, false);
+    const notifyTex = (name: string) => {
+      if (this.onTextureProgress) this.onTextureProgress(name);
+    };
+
+    const dayTex = new BABYLON.Texture('./textures/earth.jpg', this.scene, false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE, () => notifyTex('Tierra Satélite'));
+    const nightTex = new BABYLON.Texture('./textures/earth_lights.png', this.scene, false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE, () => notifyTex('Luces Urbanas'));
+    const specTex = new BABYLON.Texture('./textures/earth_specular.jpg', this.scene, false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE, () => notifyTex('Máscara Oceánica'));
+    const normTex = new BABYLON.Texture('./textures/earth_normal.jpg', this.scene, false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE, () => notifyTex('Relieve Topográfico'));
 
     earthMat.setTexture('dayTexture', dayTex);
     earthMat.setTexture('nightTexture', nightTex);
@@ -215,7 +238,9 @@ export class EarthSceneManager {
     this.cloudsMesh.parent = this.earthRoot;
 
     const cloudsMat = new BABYLON.StandardMaterial('cloudsMat', this.scene);
-    const cloudsTex = new BABYLON.Texture('./textures/earth_clouds.png', this.scene, false, false);
+    const cloudsTex = new BABYLON.Texture('./textures/earth_clouds.png', this.scene, false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE, () => {
+      if (this.onTextureProgress) this.onTextureProgress('Atmósfera y Nubes');
+    });
     cloudsTex.uScale = -1;
     cloudsTex.uOffset = 1;
     cloudsMat.diffuseTexture = cloudsTex;

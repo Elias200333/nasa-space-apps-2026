@@ -108,6 +108,14 @@ export class MiniPlanetViewer {
     });
   }
 
+  public whenReady(): Promise<void> {
+    return new Promise((resolve) => {
+      this.scene.executeWhenReady(() => {
+        resolve();
+      });
+    });
+  }
+
   public spinFast() {
     let count = 0;
     const interval = setInterval(() => {
