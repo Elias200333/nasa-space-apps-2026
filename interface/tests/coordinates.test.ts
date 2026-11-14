@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import * as BABYLON from 'babylonjs';
 import { latLonToVector3 } from '../src/babylon/targetPin';
 import { generateRandomAnalogCoordinates, ANALOG_DATABASE, PLANET_METRICS } from '../src/data/analogs';
 
@@ -36,38 +37,72 @@ describe('Cálculos Geográficos y de Esfera en BabylonJS', () => {
     expect(Math.abs(normalizeLon(540))).toBe(180);
   });
 
-  it('Debe calcular rotaciones Euler exactas para situar cualquier coordenada frente a la cámara', () => {
-    const lat = 25.0; // Desierto del Sahara
-    const lon = 15.0;
-    const phi = (90 - lat) * (Math.PI / 180);
-    const lonRad = lon * (Math.PI / 180);
-    const v = {
-      x: -Math.sin(phi) * Math.cos(lonRad),
-      y: Math.cos(phi),
-      z: -Math.sin(phi) * Math.sin(lonRad)
-    };
+  it('Debe calcular rotaciones Euler preservando Norte-Arriba y Este-Derecha exactamente igual que el mapa 2D', () => {
+    const testCases = [
+      { name: 'España (Península Ibérica)', lat: 40.0, lon: -4.0 },
+      { name: 'Desierto del Sahara', lat: 25.0, lon: 15.0 },
+      { name: 'Nueva York', lat: 40.7, lon: -74.0 },
+      { name: 'Sídney', lat: -33.8, lon: 151.2 }
+    ];
 
-    const rx = Math.atan2(-v.y, -v.z);
-    const vX = {
-      x: v.x,
-      y: v.y * Math.cos(rx) - v.z * Math.sin(rx),
-      z: v.y * Math.sin(rx) + v.z * Math.cos(rx)
-    };
-    const ry = Math.atan2(vX.x, -vX.z);
+    testCases.forEach(({ name, lat, lon }) => {
+      const latRad = lat * (Math.PI / 180);
+      const lonRad = lon * (Math.PI / 180);
 
-    // Tras aplicar Rx y Ry, el vector v debe apuntar exactamente a (0, 0, -1)
-    // donde la cámara mira en vista frontal (alpha = -PI/2, beta = PI/2)
-    const sinY = Math.sin(ry);
-    const cosY = Math.cos(ry);
-    const vRot = {
-      x: vX.x * cosY + vX.z * sinY,
-      y: vX.y,
-      z: -vX.x * sinY + vX.z * cosY
-    };
+      // Posición del punto en la esfera local
+      const P = new BABYLON.Vector3(
+        -Math.cos(latRad) * Math.cos(lonRad),
+        Math.sin(latRad),
+        -Math.cos(latRad) * Math.sin(lonRad)
+      );
 
-    expect(vRot.x).toBeCloseTo(0, 4);
-    expect(vRot.y).toBeCloseTo(0, 4);
-    expect(vRot.z).toBeCloseTo(-1, 4);
+      // Vector tangente Norte (dP/dlat)
+      const North = new BABYLON.Vector3(
+        Math.sin(latRad) * Math.cos(lonRad),
+        Math.cos(latRad),
+        Math.sin(latRad) * Math.sin(lonRad)
+      ).normalize();
+
+      // Vector tangente Este (dP/dlon)
+      const East = new BABYLON.Vector3(
+        Math.cos(latRad) * Math.sin(lonRad),
+        0,
+        -Math.cos(latRad) * Math.cos(lonRad)
+      ).normalize();
+
+      // Rotación analítica: Ry luego Rx
+      const ry = Math.atan2(P.x, -P.z);
+      const rx = -latRad;
+
+      const mY = BABYLON.Matrix.RotationY(ry);
+      const mX = BABYLON.Matrix.RotationX(rx);
+      const mTotal = mY.multiply(mX);
+
+      const q = BABYLON.Quaternion.FromRotationMatrix(mTotal);
+      const euler = q.toEulerAngles();
+
+      // Matriz de transformación con los ángulos Euler
+      const M = BABYLON.Matrix.RotationYawPitchRoll(euler.y, euler.x, euler.z);
+
+      const pTrans = BABYLON.Vector3.TransformCoordinates(P, M);
+      const northTrans = BABYLON.Vector3.TransformCoordinates(North, M);
+      const eastTrans = BABYLON.Vector3.TransformCoordinates(East, M);
+
+      // 1. El punto elegido debe mirar de frente a la cámara (Z = -1)
+      expect(pTrans.x).toBeCloseTo(0, 3);
+      expect(pTrans.y).toBeCloseTo(0, 3);
+      expect(pTrans.z).toBeCloseTo(-1, 3);
+
+      // 2. El Norte debe apuntar rigurosamente hacia ARRIBA (Y = +1), idéntico al mapa 2D
+      expect(northTrans.x).toBeCloseTo(0, 3);
+      expect(northTrans.y).toBeCloseTo(1, 3);
+      expect(northTrans.z).toBeCloseTo(0, 3);
+
+      // 3. El Este debe apuntar rigurosamente hacia la DERECHA (X = +1), idéntico al mapa 2D
+      expect(eastTrans.x).toBeCloseTo(1, 3);
+      expect(eastTrans.y).toBeCloseTo(0, 3);
+      expect(eastTrans.z).toBeCloseTo(0, 3);
+    });
   });
 });
 
