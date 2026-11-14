@@ -3,20 +3,88 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TERRAIN-X | Comparación de Terrenos Planetarios (Luna / Marte)</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2322d3ee'><circle cx='12' cy='12' r='8'/><ellipse cx='12' cy='12' rx='11' ry='4' fill='none' stroke='%2338bdf8' stroke-width='1.5'/></svg>">
+  <title>IEF Comparation | NASA Space Apps Challenge 2026 • Planetary Terrain & Cavity Comparison</title>
+  <link rel="icon" type="image/jpeg" href="/ief_comparation_logo.jpg">
+  <style>
+    /* Estilos críticos inline para evitar pantalla blanca (FOUC) y desbordamiento de SVG */
+    html, body {
+      background-color: #060913 !important;
+      color: #e2e8f0;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .intro-splash-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: radial-gradient(circle at center, #0f1c34 0%, #060913 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
 </head>
 <body>
+  <!-- Pantalla de Inicio / Splash Screen Cinemática con el Logo de IEF Comparation y NASA Space Apps -->
+  <div id="introSplashScreen" class="intro-splash-screen">
+    <div class="splash-cosmic-bg">
+      <div class="splash-stars"></div>
+      <div class="splash-nebula"></div>
+    </div>
+
+    <div class="splash-content">
+      <!-- NASA Space Apps Challenge Badge Superior -->
+      <div class="splash-nasa-header">
+        <img src="/nasa_space_apps_logo.png" alt="NASA Space Apps Challenge" class="splash-nasa-logo" />
+        <span class="splash-edition-tag">NASA SPACE APPS CHALLENGE 2026</span>
+      </div>
+
+      <!-- Logotipo Central IEF Comparation con Anillo de Energía -->
+      <div class="splash-logo-container">
+        <div class="splash-energy-ring"></div>
+        <div class="splash-pulse-glow"></div>
+        <img src="/ief_comparation_logo.jpg" alt="IEF Comparation" class="splash-team-logo" />
+      </div>
+
+      <!-- Títulos y Misión -->
+      <div class="splash-titles">
+        <h1 class="splash-title">IEF COMPARATION</h1>
+        <p class="splash-subtitle">Planetary Terrain & Cavity Comparison Engine • Earth / Moon / Mars</p>
+      </div>
+
+      <!-- Barra de Carga Dinámica y Mensajes de Subsistemas -->
+      <div class="splash-loader-wrapper">
+        <div class="splash-progress-track">
+          <div id="splashProgressBar" class="splash-progress-fill"></div>
+        </div>
+        <div class="splash-status-row">
+          <span id="splashStatusText" class="splash-status-text">Inicializando subsistemas orbitales...</span>
+          <span id="splashProgressPct" class="splash-progress-pct">0%</span>
+        </div>
+      </div>
+
+      <div class="splash-skip-hint">
+        <span>Haz clic en cualquier parte o pulsa Espacio para omitir</span>
+      </div>
+    </div>
+  </div>
+
   <!-- 1. Barra de Navegación Superior -->
   <header class="top-nav">
     <div class="nav-left">
-      <div class="brand-logo">
-        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <circle cx="12" cy="12" r="7"></circle>
-          <ellipse cx="12" cy="12" rx="11" ry="3.5" transform="rotate(-25 12 12)"></ellipse>
-        </svg>
-        <span class="brand-name">SpaceTerrain</span>
-        <span class="brand-badge">PLANETARY TERRAIN COMPARISON</span>
+      <div class="brand-logo" title="IEF Comparation - NASA Space Apps Challenge 2026">
+        <img src="/ief_comparation_logo.jpg" alt="IEF Comparation" class="brand-team-logo" />
+        <div class="brand-text-group">
+          <span class="brand-name">IEF Comparation</span>
+          <span class="brand-badge">NASA SPACE APPS 2026</span>
+        </div>
+        <img src="/nasa_space_apps_logo.png" alt="NASA Space Apps" class="brand-nasa-logo" />
       </div>
 
       <nav class="nav-tabs">
