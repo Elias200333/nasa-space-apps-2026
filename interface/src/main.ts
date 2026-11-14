@@ -628,26 +628,44 @@ function updateLayerModeUI(body: 'Mars' | 'Moon', mode: PlanetaryLayerMode) {
 
   if (body === 'Mars') {
     if (mode === 'surface') {
-      if (provenanceBadge) provenanceBadge.textContent = 'NASA Mars Trek / Viking MDIM2.1 (232 m/px)';
-      if (infoNotice) infoNotice.textContent = 'Mosaico orbital global en color real Viking MDIM2.1 (NASA Trek WMTS)';
+      if (provenanceBadge) {
+        provenanceBadge.textContent = 'Viking MDIM2.1 (232m)';
+        provenanceBadge.title = 'NASA Mars Trek / Viking MDIM2.1 (232 m/px)';
+      }
+      if (infoNotice) infoNotice.textContent = 'Mosaico orbital global en color real (NASA Mars Trek WMTS)';
     } else if (mode === 'topography') {
-      if (provenanceBadge) provenanceBadge.textContent = 'NASA Mars Trek / MGS MOLA (463 m/px)';
-      if (infoNotice) infoNotice.textContent = 'Altimetría de relieve sombreado en color MOLA • Gradiente hipsométrico (relieve visual, no malla DEM 3D)';
+      if (provenanceBadge) {
+        provenanceBadge.textContent = 'MGS MOLA (463m)';
+        provenanceBadge.title = 'NASA Mars Trek / MGS MOLA (463 m/px)';
+      }
+      if (infoNotice) infoNotice.textContent = 'Relieve sombreado altimétrico MOLA (cartografía 2D, no malla DEM)';
     } else {
-      if (provenanceBadge) provenanceBadge.textContent = 'NASA Mars Trek / 5 Accidentes Científicos';
-      if (infoNotice) infoNotice.textContent = 'Exploración de Olympus Mons, Valles Marineris, Jezero, Gale y Elysium Mons con coordenadas verificadas';
+      if (provenanceBadge) {
+        provenanceBadge.textContent = '5 POIs Científicos';
+        provenanceBadge.title = 'NASA Mars Trek / 5 Accidentes Científicos';
+      }
+      if (infoNotice) infoNotice.textContent = 'Olympus Mons, Valles Marineris, Jezero, Gale y Elysium Mons';
     }
   } else {
     // Moon
     if (mode === 'surface') {
-      if (provenanceBadge) provenanceBadge.textContent = 'NASA Moon Trek / LRO WAC (100 m/px)';
-      if (infoNotice) infoNotice.textContent = 'Mosaico global fotográfico Lunar Reconnaissance Orbiter WAC 303ppd (NASA Trek WMTS)';
+      if (provenanceBadge) {
+        provenanceBadge.textContent = 'LRO WAC (100m)';
+        provenanceBadge.title = 'NASA Moon Trek / LRO WAC (100 m/px)';
+      }
+      if (infoNotice) infoNotice.textContent = 'Mosaico global Lunar Reconnaissance Orbiter (NASA Moon Trek WMTS)';
     } else if (mode === 'topography') {
-      if (provenanceBadge) provenanceBadge.textContent = 'NASA Moon Trek / LRO LOLA (128 ppd)';
-      if (infoNotice) infoNotice.textContent = 'Cartografía de elevación en color LOLA • Relieve sombreado altimétrico (relieve visual, no malla DEM 3D)';
+      if (provenanceBadge) {
+        provenanceBadge.textContent = 'LRO LOLA (128ppd)';
+        provenanceBadge.title = 'NASA Moon Trek / LRO LOLA (128 ppd)';
+      }
+      if (infoNotice) infoNotice.textContent = 'Cartografía de elevación en color LOLA (cartografía 2D, no malla DEM)';
     } else {
-      if (provenanceBadge) provenanceBadge.textContent = 'NASA Moon Trek / 5 Accidentes Científicos';
-      if (infoNotice) infoNotice.textContent = 'Exploración de Tycho, Copernicus, Mare Tranquillitatis, Aristarchus y Shackleton con coordenadas verificadas';
+      if (provenanceBadge) {
+        provenanceBadge.textContent = '5 POIs Científicos';
+        provenanceBadge.title = 'NASA Moon Trek / 5 Accidentes Científicos';
+      }
+      if (infoNotice) infoNotice.textContent = 'Tycho, Copernicus, Mare Tranquillitatis, Aristarchus y Shackleton';
     }
   }
 }
@@ -956,9 +974,9 @@ function updateLiveTelemetry(lat: number, lon: number) {
 
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(() => {});
+    document.documentElement.requestFullscreen().catch(() => { });
   } else {
-    document.exitFullscreen().catch(() => {});
+    document.exitFullscreen().catch(() => { });
   }
 }
 
@@ -1019,9 +1037,9 @@ function setupGlobalSearch() {
     } else {
       matches = SEARCH_CATALOG.filter(item => {
         return item.name.toLowerCase().includes(q) ||
-               (item.nameEs && item.nameEs.toLowerCase().includes(q)) ||
-               item.description.toLowerCase().includes(q) ||
-               item.categoryLabel.toLowerCase().includes(q);
+          (item.nameEs && item.nameEs.toLowerCase().includes(q)) ||
+          item.description.toLowerCase().includes(q) ||
+          item.categoryLabel.toLowerCase().includes(q);
       });
     }
 

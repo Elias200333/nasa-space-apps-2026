@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +9,8 @@
   <link rel="stylesheet" href="/src/styles.css">
   <style>
     /* Estilos críticos inline para evitar pantalla blanca (FOUC) y desbordamiento de imágenes */
-    html, body {
+    html,
+    body {
       background-color: #060913 !important;
       color: #e2e8f0;
       margin: 0;
@@ -16,6 +18,7 @@
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
+
     .intro-splash-screen {
       position: fixed;
       inset: 0;
@@ -26,6 +29,7 @@
       justify-content: center;
       overflow: hidden;
     }
+
     .splash-hero-stage {
       display: flex;
       flex-direction: column;
@@ -35,6 +39,7 @@
       z-index: 10;
       max-width: 90vw;
     }
+
     .splash-logo-circle {
       position: relative;
       width: 140px;
@@ -45,6 +50,7 @@
       transition: all 0.75s cubic-bezier(0.16, 1, 0.3, 1);
       margin-bottom: 8px;
     }
+
     .splash-team-logo {
       width: 128px !important;
       height: 128px !important;
@@ -57,6 +63,7 @@
       display: block;
       transition: all 0.75s cubic-bezier(0.16, 1, 0.3, 1);
     }
+
     .splash-energy-ring {
       position: absolute;
       inset: -10px;
@@ -66,10 +73,17 @@
       opacity: 0.9;
       animation: splashRingRotate 6s linear infinite;
     }
+
     @keyframes splashRingRotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
     }
+
     .splash-expandable-details {
       display: flex !important;
       flex-direction: column !important;
@@ -82,11 +96,13 @@
       margin-top: 6px;
       transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
+
     .intro-splash-screen.shrink-active .splash-logo-circle {
       width: 108px !important;
       height: 108px !important;
       margin-bottom: 4px;
     }
+
     .intro-splash-screen.shrink-active .splash-team-logo {
       width: 98px !important;
       height: 98px !important;
@@ -94,10 +110,12 @@
       max-height: 98px !important;
       box-shadow: 0 0 25px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.45);
     }
+
     .intro-splash-screen.shrink-active .splash-energy-ring {
       inset: -6px;
       filter: blur(5px);
     }
+
     .splash-loader-wrapper {
       width: 380px !important;
       max-width: 88vw !important;
@@ -106,6 +124,7 @@
       gap: 8px !important;
       margin-top: 10px !important;
     }
+
     .splash-progress-track {
       width: 100% !important;
       height: 8px !important;
@@ -116,6 +135,7 @@
       position: relative !important;
       box-shadow: 0 0 16px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(0, 0, 0, 0.6) !important;
     }
+
     .splash-progress-fill {
       height: 100% !important;
       width: 0% !important;
@@ -124,6 +144,7 @@
       box-shadow: 0 0 14px #38bdf8, 0 0 24px rgba(56, 189, 248, 0.6) !important;
       transition: width 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
+
     .splash-status-row {
       display: flex !important;
       justify-content: space-between !important;
@@ -132,6 +153,7 @@
       font-family: var(--font-mono, monospace) !important;
       width: 100% !important;
     }
+
     .splash-status-text {
       color: #38bdf8 !important;
       font-weight: 600 !important;
@@ -141,28 +163,33 @@
       text-overflow: ellipsis !important;
       max-width: 78% !important;
     }
+
     .splash-progress-pct {
       color: #ffffff !important;
       font-weight: 800 !important;
       text-shadow: 0 0 8px rgba(255, 255, 255, 0.7) !important;
     }
+
     .brand-team-logo {
       width: 36px !important;
       height: 36px !important;
       border-radius: 50% !important;
       object-fit: cover !important;
     }
+
     .brand-nasa-logo {
       height: 22px !important;
       width: auto !important;
       object-fit: contain !important;
     }
+
     svg {
       max-width: 100%;
       height: auto;
     }
   </style>
 </head>
+
 <body>
   <!-- Pantalla de Inicio / Splash Screen Cinemática (IEF Comparation & NASA Space Apps) -->
   <div id="introSplashScreen" class="intro-splash-screen">
@@ -176,14 +203,16 @@
       <div id="splashLogoCircle" class="splash-logo-circle">
         <div class="splash-energy-ring"></div>
         <div class="splash-pulse-glow"></div>
-        <img src="/ief_comparation_logo.jpg" alt="IEF Comparation" class="splash-team-logo" width="128" height="128" style="border-radius: 50%; object-fit: cover;" />
+        <img src="/ief_comparation_logo.jpg" alt="IEF Comparation" class="splash-team-logo" width="128" height="128"
+          style="border-radius: 50%; object-fit: cover;" />
       </div>
 
       <!-- Contenedor que se despliega suavemente cuando el círculo se encoge -->
       <div id="splashExpandableDetails" class="splash-expandable-details">
         <!-- Distintivo NASA Space Apps Challenge -->
         <div class="splash-nasa-header">
-          <img src="/nasa_space_apps_logo.png" alt="NASA Space Apps Challenge" class="splash-nasa-logo" height="22" style="height: 22px; width: auto;" />
+          <img src="/nasa_space_apps_logo.png" alt="NASA Space Apps Challenge" class="splash-nasa-logo" height="22"
+            style="height: 22px; width: auto;" />
           <span class="splash-edition-tag">NASA SPACE APPS CHALLENGE 2026</span>
         </div>
 
@@ -226,7 +255,8 @@
 
       <div class="vr-welcome-desc">
         Has abierto TERRAIN-X con un visor de Realidad Virtual.
-        Al pulsar <strong>EMPEZAR</strong>, accederás a la sala inmersiva 3D con la Tierra, Marte y la Luna flotando con cartografía oficial de la NASA y análogos geológicos.
+        Al pulsar <strong>EMPEZAR</strong>, accederás a la sala inmersiva 3D con la Tierra, Marte y la Luna flotando con
+        cartografía oficial de la NASA y análogos geológicos.
       </div>
 
       <div class="vr-welcome-actions">
@@ -249,12 +279,14 @@
   <header class="top-nav">
     <div class="nav-left">
       <div class="brand-logo" title="IEF Comparation - NASA Space Apps Challenge 2026">
-        <img src="/ief_comparation_logo.jpg" alt="IEF Comparation" class="brand-team-logo" width="36" height="36" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" />
+        <img src="/ief_comparation_logo.jpg" alt="IEF Comparation" class="brand-team-logo" width="36" height="36"
+          style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" />
         <div class="brand-text-group">
           <span class="brand-name">IEF Comparation</span>
           <span class="brand-badge">NASA SPACE APPS 2026</span>
         </div>
-        <img src="/nasa_space_apps_logo.png" alt="NASA Space Apps" class="brand-nasa-logo" height="22" style="height: 22px; width: auto;" />
+        <img src="/nasa_space_apps_logo.png" alt="NASA Space Apps" class="brand-nasa-logo" height="22"
+          style="height: 22px; width: auto;" />
       </div>
 
       <nav class="nav-tabs">
@@ -337,10 +369,12 @@
           <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
           <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
           <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
-          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
+          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15">
+          </path>
         </svg>
       </button>
-      <button class="tool-btn active" id="btnRandomTarget" title="Generar coordenadas aleatorias y sumergirse en la Tierra">
+      <button class="tool-btn active" id="btnRandomTarget"
+        title="Generar coordenadas aleatorias y sumergirse en la Tierra">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="22" y1="12" x2="18" y2="12"></line>
@@ -366,7 +400,8 @@
       </button>
       <button class="tool-btn" id="btnFullscreen" title="Pantalla completa">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
+          </path>
         </svg>
       </button>
     </div>
@@ -378,19 +413,23 @@
           <span class="pulse-indicator"></span>
           <span id="layerSelectorPlanetTitle">MARTE • CARTOGRAFÍA NASA</span>
         </div>
-        <span id="layerProvenanceBadge" class="layer-provenance-badge">NASA Mars Trek / Viking MDIM2.1</span>
+        <span id="layerProvenanceBadge" class="layer-provenance-badge">Viking MDIM2.1 (232m)</span>
       </div>
 
       <div class="layer-selector-buttons">
-        <button class="layer-btn active" data-layer="surface" id="btnLayerSurface" title="Mosaico orbital global de superficie real">
+        <button class="layer-btn active" data-layer="surface" id="btnLayerSurface"
+          title="Mosaico orbital global de superficie real">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
-            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            <path
+              d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+            </path>
           </svg>
           <span>Superficie</span>
         </button>
 
-        <button class="layer-btn" data-layer="topography" id="btnLayerTopography" title="Cartografía de relieve sombreado y gradiente altimétrico">
+        <button class="layer-btn" data-layer="topography" id="btnLayerTopography"
+          title="Cartografía de relieve sombreado y gradiente altimétrico">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
             <polyline points="2 17 12 22 22 17"></polyline>
@@ -399,7 +438,8 @@
           <span>Topografía</span>
         </button>
 
-        <button class="layer-btn" data-layer="exploration" id="btnLayerExploration" title="Accidentes geográficos y puntos de interés verificados">
+        <button class="layer-btn" data-layer="exploration" id="btnLayerExploration"
+          title="Accidentes geográficos y puntos de interés verificados">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="22" y1="12" x2="18" y2="12"></line>
@@ -412,7 +452,8 @@
       </div>
 
       <div class="layer-selector-footer">
-        <span id="layerInfoNotice" class="layer-info-notice">Mosaico orbital global fotográfico Viking MDIM2.1 (232 m/px)</span>
+        <span id="layerInfoNotice" class="layer-info-notice">Mosaico orbital global fotográfico Viking MDIM2.1 (232
+          m/px)</span>
       </div>
     </div>
 
@@ -423,7 +464,8 @@
     </div>
 
     <!-- TARJETA IZQUIERDA: MOON -->
-    <aside class="planet-card" id="moonCard" style="cursor:pointer;" title="Haz clic para seleccionar la Luna y descender a su análogo en la Tierra">
+    <aside class="planet-card" id="moonCard" style="cursor:pointer;"
+      title="Haz clic para seleccionar la Luna y descender a su análogo en la Tierra">
       <div class="card-header">
         <div class="card-title-group">
           <div class="card-badge-icon" style="background:rgba(203, 213, 225, 0.15);">
@@ -534,7 +576,8 @@
     </aside>
 
     <!-- TARJETA DERECHA: MARS -->
-    <aside class="planet-card" id="marsCard" style="cursor:pointer;" title="Haz clic para seleccionar Marte y descender a su análogo en la Tierra">
+    <aside class="planet-card" id="marsCard" style="cursor:pointer;"
+      title="Haz clic para seleccionar Marte y descender a su análogo en la Tierra">
       <div class="card-header">
         <div class="card-title-group">
           <div class="card-badge-icon" style="background:rgba(249, 115, 22, 0.2);">
@@ -678,7 +721,8 @@
 
       <div class="map-hud-center">
         <!-- Botón para Desplegar / Alternar el Panel Lateral de 10 Análogos -->
-        <button id="btnToggleDrawerHud" class="drawer-hud-toggle-btn active" title="Alternar panel lateral derecho con las 10 ubicaciones análogas">
+        <button id="btnToggleDrawerHud" class="drawer-hud-toggle-btn active"
+          title="Alternar panel lateral derecho con las 10 ubicaciones análogas">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path>
             <rect x="9" y="3" width="6" height="4" rx="1"></rect>
@@ -699,7 +743,8 @@
           <span id="btnCenterTargetText">Centrar en objetivo</span>
         </button>
 
-        <button id="btnToggle3DPreview" class="preview-3d-toggle-btn active" title="Previsualizar entorno 3D y cavidades en un radio de 10 km">
+        <button id="btnToggle3DPreview" class="preview-3d-toggle-btn active"
+          title="Previsualizar entorno 3D y cavidades en un radio de 10 km">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
             <polyline points="2 17 12 22 22 17"></polyline>
@@ -742,12 +787,13 @@
           <div class="drawer-title-group">
             <div class="drawer-badge" id="candidatesTargetBadge">LUNA • 10 UBICACIONES EVALUADAS</div>
             <h3 class="drawer-title">Ranking de Análogos</h3>
-            <p class="drawer-subtitle" id="candidatesSubtitle">Cálculo científico multivariable (main.py & IGN LiDAR)</p>
+            <p class="drawer-subtitle" id="candidatesSubtitle">Cálculo científico multivariable (main.py & IGN LiDAR)
+            </p>
           </div>
           <div class="drawer-actions">
             <button id="btnDrawerRegen" class="drawer-action-btn regen-btn" title="Recalcular ranking con main.py">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
               </svg>
               <span>main.py</span>
             </button>
@@ -798,14 +844,17 @@
             <p class="drawer-subtitle" id="terrain3dSubtitle">Radio: 100 m • IGN PNOA-LiDAR & NASA Trek</p>
           </div>
           <div class="drawer-actions">
-            <button id="btnRegen3D" class="drawer-action-btn regen-btn" title="Recalcular modelo 3D con generate_terrain_3D.py">
+            <button id="btnRegen3D" class="drawer-action-btn regen-btn"
+              title="Recalcular modelo 3D con generate_terrain_3D.py">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
               </svg>
               <span>Recalcular</span>
             </button>
-            <button id="btnMaximize3DPanel" class="drawer-action-btn expand-btn" title="Ampliar a pantalla completa (respetando panel derecho)">
-              <svg id="maximizeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button id="btnMaximize3DPanel" class="drawer-action-btn expand-btn"
+              title="Ampliar a pantalla completa (respetando panel derecho)">
+              <svg id="maximizeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
                 <polyline points="15 3 21 3 21 9"></polyline>
                 <polyline points="9 21 3 21 3 15"></polyline>
                 <line x1="21" y1="3" x2="14" y2="10"></line>
@@ -853,7 +902,8 @@
           <!-- Pestaña 1: Visor 3D WebGL con Plotly -->
           <div id="tabContentInteractive" class="terrain-tab-pane active">
             <div class="iframe-container" id="iframe3DContainer">
-              <iframe id="terrain3DIframe" src="/output_3d/terrain_3d.html" title="Modelo 3D Interactivo de Terreno"></iframe>
+              <iframe id="terrain3DIframe" src="/output_3d/terrain_3d.html"
+                title="Modelo 3D Interactivo de Terreno"></iframe>
               <div id="terrain3DLoading" class="terrain-loading-overlay hidden">
                 <div class="spinner"></div>
                 <span>Generando modelo 3D con generate_terrain_3D.py...</span>
@@ -864,7 +914,8 @@
           <!-- Pestaña 2: Atlas Temático (6 Paneles) -->
           <div id="tabContentThematic" class="terrain-tab-pane hidden">
             <div class="thematic-maps-viewer">
-              <img id="thematicMapsImg" src="/output_3d/thematic_maps.png" alt="Mapas Temáticos de DEM, Pendiente, Hillshade y Cavidades" />
+              <img id="thematicMapsImg" src="/output_3d/thematic_maps.png"
+                alt="Mapas Temáticos de DEM, Pendiente, Hillshade y Cavidades" />
             </div>
           </div>
 
@@ -1005,4 +1056,5 @@
 
   <script type="module" src="./src/main.ts"></script>
 </body>
+
 </html>
