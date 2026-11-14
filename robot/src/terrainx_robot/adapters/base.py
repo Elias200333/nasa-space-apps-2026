@@ -29,6 +29,7 @@ from typing import Any
 
 from ..lidar.accumulator import CaptureAccumulator, CaptureMode
 from ..lidar.frames import LidarFrame, frame_from_message
+from ..lidar.live_stream import pose_from_robot_pose
 from ..lidar.validation import DEFAULT_MAX_POINTS
 from ..models import (
     CaptureState,
@@ -227,6 +228,12 @@ class RobotAdapter(ABC):
         self.last_lidar_frame_info = None  # LidarFrameInfo del último frame recibido
         self.last_decode_error: str | None = None
         self.last_points = None  # np.ndarray (N,3) del último frame válido (vista en vivo)
+        # Visor 3D en vivo: bytes ORIGINALES del último mapa (metadatos, lz4) y su contador
+        self.last_lidar_raw: tuple[dict, bytes] | None = None
+        self.lidar_raw_seq = 0
+        # Pose del LiDAR (rt/utlidar/robot_pose): {x, y, z, yaw, frame_id} y su contador
+        self.last_pose: dict | None = None
+        self.pose_seq = 0
 
     # ------------------------------------------------------------ propiedades
     @property
@@ -429,6 +436,9 @@ class RobotAdapter(ABC):
     ) -> LidarFrame:
         self._seq += 1
         self.monitor.observe(topic, host_utc, meta)
+        if raw is not None:
+            self.last_lidar_raw = (meta, raw)   # una tupla nueva: la lectura desde otro hilo es atómica
+            self.lidar_raw_seq += 1
         if self._recorder is not None and raw is not None:
             self._recorder.record_lidar(topic=topic, host_utc=host_utc, meta=meta, raw=raw)
         frame = frame_from_message(
@@ -442,6 +452,11 @@ class RobotAdapter(ABC):
     def _ingest_json(self, *, topic: str, data: Any, host_utc: datetime) -> None:
         self.monitor.observe(topic, host_utc, data)
         self.telemetry.update(topic, data, host_utc)
+        if topic.endswith("robot_pose"):
+            pose = pose_from_robot_pose(data)
+            if pose is not None:
+                self.last_pose = pose
+                self.pose_seq += 1
         if self._recorder is not None:
             self._recorder.record_json(topic=topic, host_utc=host_utc, data=data)
 

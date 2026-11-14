@@ -14,6 +14,7 @@ Endpoints
     POST /api/auth/fetch-key   recupera y guarda la clave (NO la devuelve)
     POST /api/control/arm|disarm
     WS   /ws/control           teleoperación WASD con hombre muerto
+    WS   /ws/lidar             visor LiDAR 3D: mapa en vivo / acumulado + pose (solo lectura)
 
 Seguridad
     - host fijo 127.0.0.1 (no accesible desde la red).
@@ -37,6 +38,7 @@ from fastapi.staticfiles import StaticFiles
 from ..adapters.base import CaptureError, ConnectionFailed
 from ..auth.aes_key_manager import AuthError
 from ..config import Settings
+from ..lidar.live_stream import live_frame
 from ..storage.scan_store import ScanStoreError
 from .service import DashboardService
 
@@ -46,6 +48,9 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 DEADMAN_S = 0.4          # sin órdenes en este tiempo -> parada
 VIDEO_TARGET_FPS = 15
 POSTURE_COMMANDS = {"BalanceStand", "StandUp", "StandDown", "RecoveryStand", "Damp"}
+LIDAR_TICK_S = 0.1       # visor 3D: como mucho 10 mapas/s (el navegador dibuja 1 cada 150 ms)
+SLAM_INFO_S = 1.0        # visor 3D: estado del mapa acumulado cada segundo
+LIDAR_MODES = {"live", "slam", "off"}
 
 
 def create_app(settings: Settings, service: DashboardService | None = None) -> FastAPI:
@@ -205,6 +210,75 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
             # Cerrar el canal detiene y sale de control: no se queda conduciendo solo.
             service.stop_move()
             service.disarm_control()
+
+    # ------------------------------------------------------------ LiDAR 3D
+    @app.websocket("/ws/lidar")
+    async def ws_lidar(ws: WebSocket) -> None:
+        """Visor LiDAR 3D. El navegador pide {"mode": "live" | "slam" | "off"},
+        {"type": "SLAM_RESET"} (borrar el acumulado) o {"type": "SLAM_SYNC"} (reenviarlo
+        entero). Recibe mensajes binarios LVX1 (LIDAR_VOXELS en vivo, SLAM_CHUNK del
+        acumulado) y JSON (POSE, SLAM_INFO). Nada de esto envía órdenes al robot."""
+        await ws.accept()
+        want = {"mode": "off", "sync": False}
+
+        async def receiver() -> None:
+            while True:
+                try:
+                    msg = await ws.receive_json()
+                except WebSocketDisconnect:
+                    return
+                except (ValueError, KeyError):            # mensaje que no es JSON: se ignora
+                    continue
+                if not isinstance(msg, dict):
+                    continue
+                mode = msg.get("mode")
+                if mode in LIDAR_MODES:
+                    if mode == "slam" and want["mode"] != "slam":
+                        want["sync"] = True          # al pasar a «Acumulado» va el mapa entero
+                    want["mode"] = mode
+                kind = msg.get("type")
+                if kind == "SLAM_RESET":
+                    service.slam_reset()
+                elif kind == "SLAM_SYNC":
+                    want["sync"] = True
+
+        recv = asyncio.create_task(receiver())
+        last_raw = last_pose = -1
+        slam_seq, slam_epoch, last_info = 0, None, 0.0
+        try:
+            while not recv.done():
+                adapter = service.adapter
+                if adapter is not None:
+                    if adapter.pose_seq != last_pose and adapter.last_pose is not None:
+                        last_pose = adapter.pose_seq
+                        await ws.send_json(dict(adapter.last_pose, type="POSE"))
+                    frame = adapter.last_lidar_raw
+                    if want["mode"] == "live" and adapter.lidar_raw_seq != last_raw and frame is not None:
+                        last_raw = adapter.lidar_raw_seq
+                        blob = live_frame(*frame)
+                        if blob is not None:
+                            await ws.send_bytes(blob)
+                if want["mode"] == "slam":
+                    info = service.slam.meta()
+                    now = asyncio.get_running_loop().time()
+                    if info["epoch"] != slam_epoch or want["sync"]:
+                        slam_epoch, slam_seq, want["sync"] = info["epoch"], 0, False
+                        last_info = 0.0                   # el visor tira lo viejo antes de los trozos
+                    if now - last_info >= SLAM_INFO_S:
+                        last_info = now
+                        await ws.send_json(dict(info, type="SLAM_INFO", evidence_class="derived"))
+                    blobs, slam_seq = service.slam.frames_since(slam_seq)
+                    for blob in blobs:
+                        await ws.send_bytes(blob)
+                await asyncio.sleep(LIDAR_TICK_S)
+        except (WebSocketDisconnect, RuntimeError):
+            pass                                          # el visor se cerró
+        finally:
+            recv.cancel()
+            try:
+                await recv
+            except (asyncio.CancelledError, Exception):  # cancelada o cerrada: nada que hacer
+                pass
 
     return app
 

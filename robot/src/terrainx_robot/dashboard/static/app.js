@@ -131,43 +131,7 @@ $("btn-fetch").onclick = async () => {
 };
 
 // ---------------------------------------------------------------- LiDAR 3D
-let three = null;
-function initLidar() {
-  const host = $("lidar-canvas");
-  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x060a10);
-  const camera = new THREE.PerspectiveCamera(60, host.clientWidth / host.clientHeight, 0.05, 500);
-  camera.position.set(4, 4, 4);
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(host.clientWidth, host.clientHeight); host.appendChild(renderer.domElement);
-  const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  scene.add(new THREE.AxesHelper(1));                // 1 m en cada eje
-  scene.add(new THREE.GridHelper(10, 20, 0x223044, 0x15202e));
-  const geom = new THREE.BufferGeometry();
-  geom.setAttribute("position", new THREE.BufferAttribute(new Float32Array(0), 3));
-  const points = new THREE.Points(geom, new THREE.PointsMaterial({ color: 0x38bdf8, size: 0.03 }));
-  scene.add(points);
-  three = { scene, camera, renderer, controls, geom, points };
-  (function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); })();
-  window.addEventListener("resize", () => {
-    camera.aspect = host.clientWidth / host.clientHeight; camera.updateProjectionMatrix();
-    renderer.setSize(host.clientWidth, host.clientHeight);
-  });
-}
-async function updateLidar() {
-  if (!three) return;
-  let d; try { d = await api("/api/lidar"); } catch (e) { return; }
-  $("lidar-count").textContent = d.available ? `${d.point_count} puntos (${d.shown} mostrados)` : "0 puntos";
-  $("lidar-badge").textContent = d.available ? (d.point_type || "") : "—";
-  $("lidar-badge").className = "badge " + (d.evidence_class === "robot_measured" ? "live" : "warn");
-  if (d.available && d.points && d.points.length) {
-    const arr = new Float32Array(d.points);
-    three.geom.setAttribute("position", new THREE.BufferAttribute(arr, 3));
-    three.geom.attributes.position.needsUpdate = true;
-    three.geom.setDrawRange(0, arr.length / 3);
-    three.geom.computeBoundingSphere();
-  }
-}
-$("lidar-refresh").onclick = updateLidar;
+// El visor (mapa como la app de Unitree, en vivo / acumulado) está en static/lidar/lidarView.js.
 
 // ---------------------------------------------------------------- CONTROL WASD
 let armed = false, ws = null, heartbeat = null;
@@ -236,7 +200,5 @@ window.addEventListener("keyup", onKey(false));
 window.addEventListener("blur", () => { if (armed) { pressed.clear(); highlight(); sendDrive(); } });  // soltar el foco detiene
 
 // ---------------------------------------------------------------- arranque
-initLidar();
 refresh(); loadScans();
 setInterval(refresh, 1000);
-setInterval(() => { if ($("lidar-auto").checked) updateLidar(); }, 1200);
