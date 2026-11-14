@@ -2,11 +2,12 @@ import * as BABYLON from 'babylonjs';
 
 export function latLonToVector3(lat: number, lon: number, radius: number): BABYLON.Vector3 {
   const phi = (90 - lat) * (Math.PI / 180);
-  const theta = (lon + 180) * (Math.PI / 180);
+  const lonRad = lon * (Math.PI / 180);
 
-  const x = -(radius * Math.sin(phi) * Math.sin(theta));
+  // Proyección sin espejo que alinea exactamente con la textura equirectangular corregida
+  const x = -(radius * Math.sin(phi) * Math.cos(lonRad));
   const y = radius * Math.cos(phi);
-  const z = radius * Math.sin(phi) * Math.cos(theta);
+  const z = -(radius * Math.sin(phi) * Math.sin(lonRad));
 
   return new BABYLON.Vector3(x, y, z);
 }

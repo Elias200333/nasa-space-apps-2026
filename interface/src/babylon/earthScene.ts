@@ -16,6 +16,7 @@ export class EarthSceneManager {
   // Control de auto-rotación e inactividad
   private autoRotate = true;
   private isPointerDown = false;
+  private activeDragMode: 'none' | 'earth' | 'camera' = 'none';
   private lastPointerX = 0;
   private lastPointerY = 0;
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
@@ -106,8 +107,9 @@ export class EarthSceneManager {
         vec4 worldPos = world * vec4(position, 1.0);
         vPositionW = worldPos.xyz;
         vNormalW = normalize((world * vec4(normal, 0.0)).xyz);
-        // Coordenadas UV directas (el Polo Norte UV=0 corresponde a +Y)
-        vUV = uv;
+        // Coordenadas UV con U invertida (1.0 - uv.x) para corregir el efecto espejo horizontal:
+        // Brasil/América a la izquierda (Oeste) y África a la derecha (Este)
+        vUV = vec2(1.0 - uv.x, uv.y);
         gl_Position = worldViewProjection * vec4(position, 1.0);
       }
     `;
@@ -203,6 +205,8 @@ export class EarthSceneManager {
 
     const cloudsMat = new BABYLON.StandardMaterial('cloudsMat', this.scene);
     const cloudsTex = new BABYLON.Texture('./textures/earth_clouds.png', this.scene, false, false);
+    cloudsTex.uScale = -1;
+    cloudsTex.uOffset = 1;
     cloudsMat.diffuseTexture = cloudsTex;
     cloudsMat.opacityTexture = cloudsTex;
     cloudsMat.diffuseColor = new BABYLON.Color3(0.92, 0.92, 0.92);
@@ -213,17 +217,33 @@ export class EarthSceneManager {
   }
 
   /**
-   * Manejo directo del ratón sobre la Tierra:
-   * - Al arrastrar con el ratón se gira la Tierra sobre su eje (y se aprecian las zonas de día y noche).
-   * - La auto-rotación se detiene inmediatamente al maniobrarla.
-   * - Tras 30 segundos exactos sin interactuar, reanuda la rotación lenta automáticamente.
+   * Manejo directo del ratón sobre la escena y la Tierra:
+   * - Click izquierdo arrastrando: Gira la Tierra sobre su eje (día/noche pasan frente al observador).
+   * - Click derecho arrastrando: Mueve/orbita la perspectiva de la cámara ("como antes").
+   * - La auto-rotación se detiene inmediatamente al maniobrar con cualquier botón.
+   * - Tras 30 segundos de inactividad, reanuda la rotación lenta automáticamente.
    */
   private setupPlanetRotationControls(canvas: HTMLCanvasElement) {
+    canvas.style.cursor = 'grab';
+
+    // Evitar el menú contextual del navegador para permitir arrastre fluido con click derecho
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+    });
+
     canvas.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0) return; // Sólo botón primario
+      if (e.button === 0) {
+        this.activeDragMode = 'earth';
+      } else if (e.button === 2) {
+        this.activeDragMode = 'camera';
+      } else {
+        return;
+      }
+
       this.isPointerDown = true;
       this.lastPointerX = e.clientX;
       this.lastPointerY = e.clientY;
+      canvas.style.cursor = 'grabbing';
 
       // Detener rotación automática al maniobrar
       this.autoRotate = false;
@@ -242,17 +262,26 @@ export class EarthSceneManager {
       this.lastPointerX = e.clientX;
       this.lastPointerY = e.clientY;
 
-      // Rotación horizontal sobre el eje terrestre Y
-      this.earthRoot.rotation.y += deltaX * 0.005;
+      if (this.activeDragMode === 'earth') {
+        // Click izquierdo: Gira la Tierra sobre su eje (continentes rotan frente al observador)
+        this.earthRoot.rotation.y += deltaX * 0.005;
 
-      // Inclinación vertical X restringida para no poner los polos boca abajo
-      const newRotX = this.earthRoot.rotation.x + deltaY * 0.005;
-      this.earthRoot.rotation.x = Math.max(-Math.PI / 3.5, Math.min(Math.PI / 3.5, newRotX));
+        // Inclinación vertical restringida para preservar la orientación de los polos
+        const newRotX = this.earthRoot.rotation.x + deltaY * 0.005;
+        this.earthRoot.rotation.x = Math.max(-Math.PI / 3.5, Math.min(Math.PI / 3.5, newRotX));
+      } else if (this.activeDragMode === 'camera') {
+        // Click derecho: Órbita de la perspectiva de la cámara ("como antes")
+        this.camera.alpha -= deltaX * 0.005;
+        const newBeta = this.camera.beta - deltaY * 0.005;
+        this.camera.beta = Math.max(0.08, Math.min(Math.PI - 0.08, newBeta));
+      }
     });
 
     window.addEventListener('pointerup', () => {
       if (!this.isPointerDown) return;
       this.isPointerDown = false;
+      this.activeDragMode = 'none';
+      canvas.style.cursor = 'grab';
 
       // Iniciar cuenta atrás de 30 segundos para volver a girar sola lentamente
       if (this.inactivityTimer) clearTimeout(this.inactivityTimer);
@@ -276,10 +305,16 @@ export class EarthSceneManager {
 
       // Lectura de coordenadas según el punto central del planeta facing camera
       if (this.onCoordinatesChange) {
-        const lat = -this.earthRoot.rotation.x * (180 / Math.PI);
-        let lon = (-this.earthRoot.rotation.y * (180 / Math.PI)) % 360;
+        const camDirWorld = this.camera.position.clone().normalize();
+        this.earthRoot.computeWorldMatrix(true);
+        const invWorld = this.earthRoot.getWorldMatrix().clone().invert();
+        const localDir = BABYLON.Vector3.TransformNormal(camDirWorld, invWorld).normalize();
+
+        const lat = Math.asin(Math.max(-1, Math.min(1, localDir.y))) * (180 / Math.PI);
+        let lon = Math.atan2(-localDir.z, -localDir.x) * (180 / Math.PI);
         if (lon > 180) lon -= 360;
         if (lon < -180) lon += 360;
+
         this.onCoordinatesChange(Number(lat.toFixed(4)), Number(lon.toFixed(4)));
       }
 
@@ -294,18 +329,35 @@ export class EarthSceneManager {
     this.autoRotate = false;
     if (this.inactivityTimer) clearTimeout(this.inactivityTimer);
 
-    // Posicionar baliza en la superficie de la Tierra
+    // Posicionar baliza en la superficie de la Tierra con coordenadas no espejadas
     this.targetPin.setCoordinates(lat, lon);
 
-    // Rotar la Tierra para poner ese punto de cara a la cámara
-    // Latitud -> rotación en X, Longitud -> rotación en Y
-    const targetRotX = -(lat * (Math.PI / 180));
-    const targetRotY = -(lon * (Math.PI / 180));
+    // Vector unitario del punto en el marco local de la Tierra
+    const phi = (90 - lat) * (Math.PI / 180);
+    const lonRad = lon * (Math.PI / 180);
+    const v = new BABYLON.Vector3(
+      -Math.sin(phi) * Math.cos(lonRad),
+      Math.cos(phi),
+      -Math.sin(phi) * Math.sin(lonRad)
+    );
+
+    // Rotaciones analíticas para situar el punto exactamente frente a la cámara (0, 0, -1)
+    const rx = Math.atan2(-v.y, -v.z);
+    const mX = BABYLON.Matrix.RotationX(rx);
+    const vX = BABYLON.Vector3.TransformCoordinates(v, mX);
+    const ry = Math.atan2(vX.x, -vX.z);
+
+    const targetRotX = rx;
+    const targetRotY = ry;
 
     // Giro por el camino más corto
     let currentY = this.earthRoot.rotation.y;
-    const diff = (targetRotY - currentY) % (2 * Math.PI);
-    const shortestY = currentY + (((diff + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+    const diffY = (targetRotY - currentY) % (2 * Math.PI);
+    const shortestY = currentY + (((diffY + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+
+    let currentX = this.earthRoot.rotation.x;
+    const diffX = (targetRotX - currentX) % (2 * Math.PI);
+    const shortestX = currentX + (((diffX + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
 
     const fps = 60;
     const totalFrames = 120;
@@ -315,7 +367,7 @@ export class EarthSceneManager {
     animRotY.setKeys([{ frame: 0, value: this.earthRoot.rotation.y }, { frame: totalFrames, value: shortestY }]);
 
     const animRotX = new BABYLON.Animation('earthRotX', 'rotation.x', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
-    animRotX.setKeys([{ frame: 0, value: this.earthRoot.rotation.x }, { frame: totalFrames, value: targetRotX }]);
+    animRotX.setKeys([{ frame: 0, value: this.earthRoot.rotation.x }, { frame: totalFrames, value: shortestX }]);
 
     // Animación de zoom de la cámara hacia la superficie
     const animRadius = new BABYLON.Animation('camZoomRadius', 'radius', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
@@ -325,14 +377,26 @@ export class EarthSceneManager {
       { frame: totalFrames, value: 3.02 }
     ]);
 
+    // Re-alineación suave de la cámara a vista frontal (si fue movida con click derecho)
+    const animAlpha = new BABYLON.Animation('camAlpha', 'alpha', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+    const targetAlpha = -Math.PI / 2;
+    const diffAlpha = (targetAlpha - this.camera.alpha) % (2 * Math.PI);
+    const shortestAlpha = this.camera.alpha + (((diffAlpha + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+    animAlpha.setKeys([{ frame: 0, value: this.camera.alpha }, { frame: totalFrames, value: shortestAlpha }]);
+
+    const animBeta = new BABYLON.Animation('camBeta', 'beta', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+    animBeta.setKeys([{ frame: 0, value: this.camera.beta }, { frame: totalFrames, value: Math.PI / 2 }]);
+
     const easing = new BABYLON.CubicEase();
     easing.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
     animRotY.setEasingFunction(easing);
     animRotX.setEasingFunction(easing);
     animRadius.setEasingFunction(easing);
+    animAlpha.setEasingFunction(easing);
+    animBeta.setEasingFunction(easing);
 
     this.scene.beginDirectAnimation(this.earthRoot, [animRotY, animRotX], 0, totalFrames, false);
-    this.scene.beginDirectAnimation(this.camera, [animRadius], 0, totalFrames, false);
+    this.scene.beginDirectAnimation(this.camera, [animRadius, animAlpha, animBeta], 0, totalFrames, false);
 
     setTimeout(() => {
       if (onAtmosphereReached) onAtmosphereReached();
