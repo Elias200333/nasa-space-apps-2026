@@ -26,7 +26,7 @@
     "product": "Modelo Digital del Terreno de Alta Resoluci\u00f3n (MDT)",
     "coverage_id": "Elevacion4258_5",
     "nominal_resolution_m": 5.0,
-    "crs": "EPSG:4326",
+    "crs": "EPSG:4258 (ETRS89)",
     "wcs_service": "https://servicios.idee.es/wcs-inspire/mdt",
     "documentation_url": "https://centrodedescargas.cnig.es/CentroDescargas/modelos-digitales-elevaciones",
     "bbox_requested": {
@@ -36,10 +36,10 @@
       "max_lon": -13.714890137235873
     },
     "bbox_coverage": {
-      "min_lat": 29.034407,
-      "max_lat": 29.041593,
-      "min_lon": -13.723110000000002,
-      "max_lon": -13.714890000000002
+      "min_lat": 29.034406755300036,
+      "max_lat": 29.041593244699964,
+      "min_lon": -13.723109862764126,
+      "max_lon": -13.714890137235873
     },
     "grid_shape": [
       41,
@@ -51,7 +51,7 @@
     "elev_delta_m": 117.94,
     "mdt01_status": "MDT01 (1m) disponible como descarga MTN25 en CNIG; servicio WCS continuo opera en MDT05 (5m PNOA-LiDAR).",
     "verified_real_data": true,
-    "timestamp": "2026-11-14T21:14:21.030203+00:00"
+    "timestamp": "2026-11-14T10:39:09.488427+00:00"
   },
   "deliverables": {
     "topographic_image": "topographic_map_ign_100m.png",

@@ -18,9 +18,9 @@ export class AnalogMap2DManager {
   private isReturning = false;
   private isTransitioning = false;
   private is3DPanelOpen = true;
-  private currentLat = 29.148;
-  private currentLon = -13.450;
-  private currentRadiusKm = 10.0;
+  private currentLat = 29.0380;
+  private currentLon = -13.7190;
+  private currentRadiusKm = 0.1;
 
   // Estado planetario actual del mapa
   private currentBody: CelestialBody = 'Earth';
@@ -121,8 +121,8 @@ export class AnalogMap2DManager {
     this.renderSiteMarkers(site);
     this.setupTargetExplorationHUD(site);
 
-    // Cargar la previsualización 3D del radio de 10 km alrededor de la ubicación analógica
-    this.loadTerrain3DPreview(lat, lon, 10.0);
+    // Cargar la previsualización 3D del radio de 100 m alrededor de la ubicación analógica
+    this.loadTerrain3DPreview(lat, lon, 0.1);
     this.toggle3DPanel(true);
 
     requestAnimationFrame(() => {
@@ -696,37 +696,79 @@ export class AnalogMap2DManager {
       btnRegenText.textContent = 'Generando...';
     }
     if (subtitleEl) {
-      subtitleEl.textContent = `Radio de exploración: ${radiusKm} km en (${lat.toFixed(3)}°, ${lon.toFixed(3)}°) • DEM & Tubos de Lava`;
+      const radiusLabel = radiusKm < 1.0 ? `${Math.round(radiusKm * 1000)} m` : `${radiusKm} km`;
+      subtitleEl.textContent = `Radio de exploración: ${radiusLabel} en (${lat.toFixed(3)}°, ${lon.toFixed(3)}°) • IGN PNOA-LiDAR & NASA Trek`;
     }
 
     try {
-      const resp = await fetch(`/api/terrain-3d?lat=${lat}&lon=${lon}&radius=${radiusKm}&force=${force}`);
+      const bodyParam = this.currentBody || 'Moon';
+      const siteParam = this.activeTargetSite?.id || '';
+      const resp = await fetch(`/api/terrain-3d?lat=${lat}&lon=${lon}&radius=${radiusKm}&body=${bodyParam}&site=${siteParam}&force=${force}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data: Terrain3DResponse = await resp.json();
+      const data: any = await resp.json();
 
-      // 1. Cargar el entorno WebGL interactivo generado por Plotly y el atlas temático
+      // 1. Coordenadas reales georreferenciadas devueltas por el backend (center_gps)
+      const realLat = Number(data.center_gps?.lat ?? data.center?.lat ?? lat);
+      const realLon = Number(data.center_gps?.lon ?? data.center?.lon ?? lon);
+      const realRadiusM = Number(data.radius_m ?? (radiusKm < 1.0 ? Math.round(radiusKm * 1000) : radiusKm * 1000));
+      const radiusLabel = realRadiusM < 1000 ? `${Math.round(realRadiusM)} m` : `${(realRadiusM / 1000).toFixed(1)} km`;
+
+      this.currentLat = realLat;
+      this.currentLon = realLon;
+      this.currentRadiusKm = realRadiusM / 1000.0;
+
+      if (subtitleEl) {
+        subtitleEl.textContent = `Radio de exploración: ${radiusLabel} en (${realLat.toFixed(3)}°, ${realLon.toFixed(3)}°) • IGN PNOA-LiDAR & NASA Trek`;
+      }
+
+      // Actualizar centro del mapa Leaflet 2D si difiere para que el 2D y el 3D coincidan perfectamente
+      if (this.map) {
+        const curCenter = this.map.getCenter();
+        if (Math.abs(curCenter.lat - realLat) > 0.001 || Math.abs(curCenter.lng - realLon) > 0.001) {
+          this.map.panTo([realLat, realLon], { animate: true });
+        }
+        if (this.currentMarker) {
+          this.currentMarker.setLatLng([realLat, realLon]);
+        }
+      }
+
+      // Actualizar el título y coordenadas en el HUD superior del mapa 2D
+      const coordsEl = document.getElementById('mapSiteCoords');
+      const titleEl = document.getElementById('mapSiteTitle');
+      if (coordsEl) {
+        const latDir = realLat >= 0 ? 'N' : 'S';
+        const lonDir = realLon >= 0 ? 'E' : 'W';
+        coordsEl.textContent = `${Math.abs(realLat).toFixed(4)}° ${latDir}, ${Math.abs(realLon).toFixed(4)}° ${lonDir} • IGN PNOA-LiDAR & NASA Trek`;
+      }
+      if (titleEl && data.site_name) {
+        titleEl.textContent = `Región de ${data.site_name}`;
+      }
+
+      // 2. Cargar el entorno WebGL interactivo generado por Plotly y el atlas temático sincronizado
       if (iframe) {
         iframe.src = `${data.html_url}?t=${Date.now()}`;
       }
       if (thematicImg) {
-        thematicImg.src = `${data.thematic_url}?t=${Date.now()}`;
+        thematicImg.src = `${data.atlas_url || data.thematic_url || '/output_3d/thematic_comparison_atlas.png'}?t=${Date.now()}`;
       }
 
-      // 2. Actualizar tarjetas de métricas analíticas y barra superior
+      // 3. Actualizar tarjetas de métricas analíticas y barra superior
       const simEl = document.getElementById('metricOverallSim');
       const elevEl = document.getElementById('metricElevRange');
       const slopeEl = document.getElementById('metricMeanSlope');
       const pearsonEl = document.getElementById('metricPearson');
 
-      const simPct = data.metrics.overall_similarity_pct ?? (this.activeTargetSite?.similarity_score ?? 98.1);
-      const minElev = data.metrics.elevation_min_m !== undefined ? Math.round(data.metrics.elevation_min_m) : 0;
-      const maxElev = data.metrics.elevation_max_m !== undefined ? Math.round(data.metrics.elevation_max_m) : 360;
-      const slopeDeg = data.metrics.mean_slope_deg !== undefined ? data.metrics.mean_slope_deg.toFixed(1) : '4.1';
-      const rPearson = data.metrics.pearson_correlation_r !== undefined ? data.metrics.pearson_correlation_r.toFixed(3) : '0.999';
+      const simPct = data.similarity_pct ?? data.metrics?.overall_similarity_pct ?? (this.activeTargetSite?.similarity_score ?? 68.5);
+      const minElev = data.metrics?.elev_min_m ?? data.metrics?.elevation_min_m ?? 203;
+      const maxElev = data.metrics?.elev_max_m ?? data.metrics?.elevation_max_m ?? 321;
+      const slopeDeg = data.metrics?.slope_mean_deg !== undefined
+        ? Number(data.metrics.slope_mean_deg).toFixed(1)
+        : (data.metrics?.mean_slope_deg !== undefined ? Number(data.metrics.mean_slope_deg).toFixed(1) : '1.3');
+      const rPearson = data.metrics?.pearson_correlation_r !== undefined ? Number(data.metrics.pearson_correlation_r).toFixed(3) : '0.999';
       const numCavs = data.cavities ? data.cavities.length : 0;
 
       if (simEl) simEl.textContent = `${typeof simPct === 'number' ? simPct.toFixed(1) : simPct}%`;
-      if (elevEl) elevEl.textContent = `${minElev} m - ${maxElev} m`;
+      if (elevEl) elevEl.textContent = `${Math.round(minElev)} m - ${Math.round(maxElev)} m`;
       if (slopeEl) slopeEl.textContent = `${slopeDeg}°`;
       if (pearsonEl) pearsonEl.textContent = `r = ${rPearson}`;
 
@@ -739,40 +781,74 @@ export class AnalogMap2DManager {
       const scoreVal = document.getElementById('mapSiteScore');
 
       if (topSimEl) topSimEl.textContent = `${typeof simPct === 'number' ? simPct.toFixed(1) : simPct}%`;
-      if (topElevEl) topElevEl.textContent = `${minElev} - ${maxElev} m`;
+      if (topElevEl) topElevEl.textContent = `${Math.round(minElev)} - ${Math.round(maxElev)} m`;
       if (topSlopeEl) topSlopeEl.textContent = `${slopeDeg}°`;
-      if (topCavitiesEl) topCavitiesEl.textContent = `${numCavs} detectadas`;
+      if (topCavitiesEl) topCavitiesEl.textContent = numCavs > 0 ? `${numCavs} detectadas` : 'IGN MDT05';
       if (topPearsonEl) topPearsonEl.textContent = `r = ${rPearson}`;
       if (scoreVal && simPct) {
         scoreVal.textContent = `${Math.round(Number(simPct))}%`;
       }
 
-      // 3. Poblar tabla científica de cavidades detectadas
+      // 3. Poblar tabla científica (evaluación multidimensional o cavidades)
       const tbody = document.getElementById('cavitiesTableBody');
-      if (tbody && data.cavities) {
+      const tableTitle = document.querySelector('.cavities-table-container h4');
+      const evalMetrics = data.evaluation?.metrics_table;
+
+      if (tbody) {
         tbody.innerHTML = '';
-        data.cavities.forEach((c: CavityCandidate) => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td><code>${c.id}</code></td>
-            <td><strong>${c.type}</strong></td>
-            <td>${c.latitude.toFixed(4)}°, ${c.longitude.toFixed(4)}°</td>
-            <td>${c.elevation_m.toFixed(1)} m</td>
-            <td>${c.estimated_depth_m.toFixed(1)} m</td>
-            <td>${c.rim_slope_deg.toFixed(1)}°</td>
-            <td><strong style="color: #34d399;">${Math.round(c.confidence_score * 100)}%</strong></td>
-          `;
-          tbody.appendChild(row);
-        });
+        if (evalMetrics && Array.isArray(evalMetrics) && evalMetrics.length > 0) {
+          if (tableTitle) {
+            tableTitle.textContent = `Evaluación Multidimensional Científica • ${data.evaluation?.target_benchmark_name || 'NASA Planetary Target'}`;
+          }
+          const thead = document.querySelector('.cavities-table thead');
+          if (thead) {
+            thead.innerHTML = `
+              <tr>
+                <th>Criterio Geomorfológico</th>
+                <th>Medición Terrestre (IGN MDT)</th>
+                <th>Objetivo Planetario (NASA)</th>
+                <th>Ponderación</th>
+                <th>Afinidad</th>
+              </tr>
+            `;
+          }
+          evalMetrics.forEach((m: any) => {
+            const row = document.createElement('tr');
+            const scorePct = Math.round(Number(m.similarity_score) * 100);
+            const scoreColor = scorePct >= 70 ? '#34d399' : (scorePct >= 40 ? '#38bdf8' : '#fbbf24');
+            row.innerHTML = `
+              <td><strong>${m.name}</strong></td>
+              <td>${m.terrestrial_value}</td>
+              <td style="color:var(--text-muted);">${m.planetary_target}</td>
+              <td>${m.weight_pct}%</td>
+              <td><strong style="color:${scoreColor};">${scorePct}%</strong></td>
+            `;
+            tbody.appendChild(row);
+          });
+        } else if (data.cavities && Array.isArray(data.cavities) && data.cavities.length > 0) {
+          data.cavities.forEach((c: CavityCandidate) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td><code>${c.id}</code></td>
+              <td><strong>${c.type}</strong></td>
+              <td>${c.latitude.toFixed(4)}°, ${c.longitude.toFixed(4)}°</td>
+              <td>${c.elevation_m.toFixed(1)} m</td>
+              <td>${c.estimated_depth_m.toFixed(1)} m</td>
+              <td>${c.rim_slope_deg.toFixed(1)}°</td>
+              <td><strong style="color: #34d399;">${Math.round(c.confidence_score * 100)}%</strong></td>
+            `;
+            tbody.appendChild(row);
+          });
+        }
       }
 
-      // 4. Proyectar en Leaflet 2D el radio perimetral de 10 km y las balizas de cavidades
+      // 4. Proyectar en Leaflet 2D el radio perimetral y las balizas
       if (this.map) {
         if (this.radiusCircle) {
           this.map.removeLayer(this.radiusCircle);
         }
-        this.radiusCircle = L.circle([lat, lon], {
-          radius: radiusKm * 1000,
+        this.radiusCircle = L.circle([realLat, realLon], {
+          radius: realRadiusM,
           color: '#22d3ee',
           weight: 1.5,
           dashArray: '6, 6',

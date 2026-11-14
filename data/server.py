@@ -19,9 +19,9 @@ if _DATA_ROOT not in sys.path:
     sys.path.insert(0, _DATA_ROOT)
 
 from analyze_analog import PLANETARY_TARGETS, fetch_live_nasa_telemetry
-from modules.science.features.catalog import ANALOG_CATALOG
+from modules.science.features.catalog import ANALOG_CATALOG, EXPANDED_ANALOG_CATALOG, get_extended_site_by_id
 from modules.science.score import AnalogScorer
-from generate_terrain_3d import Terrain3DEngine
+from generate_terrain_3d import RealisticTerrainComparisonEngine, Terrain3DEngine
 
 OUTPUT_DIR = os.path.join(_DATA_ROOT, "output_3d")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -75,6 +75,12 @@ class TerrainXAPIHandler(BaseHTTPRequestHandler):
             coords = site.earth_geojson["coordinates"][0]
             lon = sum(p[0] for p in coords[:-1]) / (len(coords) - 1)
             lat = sum(p[1] for p in coords[:-1]) / (len(coords) - 1)
+
+            # Check if expanded site metadata provides explicit geodetic center
+            ext_site = get_extended_site_by_id(site.id) or EXPANDED_ANALOG_CATALOG.get(site.id)
+            if ext_site:
+                lat = ext_site.center_lat
+                lon = ext_site.center_lon
 
             # Quantitative evaluation using AnalogScorer
             scorer = AnalogScorer()
@@ -130,49 +136,96 @@ class TerrainXAPIHandler(BaseHTTPRequestHandler):
 
         elif path == "/api/terrain-3d":
             try:
-                lat = float(query.get("lat", [29.148])[0])
-                lon = float(query.get("lon", [-13.450])[0])
-                radius = float(query.get("radius", [10.0])[0])
+                lat = float(query.get("lat", [29.038])[0])
+                lon = float(query.get("lon", [-13.719])[0])
+                radius = float(query.get("radius", [100.0])[0])
+                body = query.get("body", ["Moon"])[0].capitalize()
+                site_id = query.get("site", [""])[0]
                 force_regen = query.get("force", ["false"])[0].lower() == "true"
             except (ValueError, IndexError):
-                lat, lon, radius, force_regen = 29.148, -13.450, 10.0, False
+                lat, lon, radius, body, site_id, force_regen = 29.038, -13.719, 100.0, "Moon", "", False
 
-            json_path = os.path.join(OUTPUT_DIR, "terrain_metrics.json")
+            # Convert to meters if passed in km
+            radius_m = radius if radius >= 20.0 else radius * 1000.0
+
+            json_comp_path = os.path.join(OUTPUT_DIR, "comparison_metrics.json")
+            json_legacy_path = os.path.join(OUTPUT_DIR, "terrain_metrics.json")
             html_path = os.path.join(OUTPUT_DIR, "terrain_3d.html")
 
             # Check if cached files match requested center
-            needs_run = force_regen or not os.path.exists(json_path) or not os.path.exists(html_path)
+            needs_run = force_regen or not os.path.exists(html_path) or (not os.path.exists(json_comp_path) and not os.path.exists(json_legacy_path))
             if not needs_run:
                 try:
-                    with open(json_path, "r", encoding="utf-8") as f:
+                    target_json = json_comp_path if os.path.exists(json_comp_path) else json_legacy_path
+                    with open(target_json, "r", encoding="utf-8") as f:
                         cached = json.load(f)
-                        c_lat = cached.get("center", {}).get("lat", 0)
-                        c_lon = cached.get("center", {}).get("lon", 0)
+                        c_gps = cached.get("center_gps") or cached.get("center", {})
+                        c_lat = c_gps.get("lat", 0)
+                        c_lon = c_gps.get("lon", 0)
                         if abs(c_lat - lat) > 0.05 or abs(c_lon - lon) > 0.05:
                             needs_run = True
                 except Exception:
                     needs_run = True
 
             if needs_run:
-                print(f"[Backend API] Generating 3D terrain for ({lat:.4f}°, {lon:.4f}°) Radius: {radius} km...")
-                engine = Terrain3DEngine(lat=lat, lon=lon, radius_km=radius)
+                print(f"[Backend API] Generating synchronized 3D terrain for ({lat:.4f}°, {lon:.4f}°) Radius: {radius_m:.0f}m...")
+                engine = RealisticTerrainComparisonEngine(
+                    site_id=site_id or "ES_LANZAROTE_CALDERA_BLANCA",
+                    target_body=body,
+                    custom_lat=lat,
+                    custom_lon=lon,
+                    exploration_radius_m=radius_m
+                )
                 engine.run_all(OUTPUT_DIR)
 
-            # Load metrics and cavities
-            try:
-                with open(json_path, "r", encoding="utf-8") as f:
-                    terrain_data = json.load(f)
-            except Exception as e:
-                terrain_data = {"error": str(e), "metrics": {}, "cavities": []}
+            # Load metrics from synchronized comparison_metrics.json or legacy
+            terrain_data = {}
+            actual_gps = {"lat": lat, "lon": lon}
+            actual_site_id = site_id
+            actual_site_name = ""
+            actual_radius_m = radius_m
+
+            if os.path.exists(json_comp_path):
+                try:
+                    with open(json_comp_path, "r", encoding="utf-8") as f:
+                        comp_raw = json.load(f)
+                    actual_gps = comp_raw.get("center_gps") or actual_gps
+                    actual_site_id = comp_raw.get("site_id") or actual_site_id
+                    actual_site_name = comp_raw.get("site_name") or ""
+                    actual_radius_m = comp_raw.get("exploration_radius_m", radius_m)
+                    terrain_data = {
+                        "metrics": comp_raw.get("metrics_100m", {}),
+                        "evaluation": comp_raw.get("evaluation", {}),
+                        "dem_metadata": comp_raw.get("dem_metadata", {}),
+                        "similarity_pct": comp_raw.get("similarity_pct", 0),
+                        "deliverables": comp_raw.get("deliverables", {})
+                    }
+                except Exception as e:
+                    terrain_data = {"error": str(e), "metrics": {}}
+            elif os.path.exists(json_legacy_path):
+                try:
+                    with open(json_legacy_path, "r", encoding="utf-8") as f:
+                        terrain_data = json.load(f)
+                except Exception as e:
+                    terrain_data = {"error": str(e), "metrics": {}}
 
             resp = {
                 "success": True,
-                "center": {"lat": lat, "lon": lon},
-                "radius_km": radius,
+                "site_id": actual_site_id,
+                "site_name": actual_site_name,
+                "center": actual_gps,
+                "center_gps": actual_gps,
+                "radius_m": actual_radius_m,
+                "radius_km": round(actual_radius_m / 1000.0, 3),
+                "target_body": body,
                 "metrics": terrain_data.get("metrics", {}),
-                "cavities": terrain_data.get("cavities", []),
+                "evaluation": terrain_data.get("evaluation", {}),
+                "dem_metadata": terrain_data.get("dem_metadata", {}),
+                "similarity_pct": terrain_data.get("similarity_pct", 0),
                 "html_url": "/output_3d/terrain_3d.html",
-                "thematic_url": "/output_3d/thematic_maps.png"
+                "atlas_url": "/output_3d/thematic_comparison_atlas.png",
+                "topo_url": "/output_3d/topographic_map_ign_100m.png",
+                "report_url": "/output_3d/terrain_comparison_report.md"
             }
 
             self.send_response(200)
@@ -193,6 +246,10 @@ class TerrainXAPIHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-Type", "image/png")
                 elif filename.endswith(".json"):
                     self.send_header("Content-Type", "application/json")
+                elif filename.endswith(".md"):
+                    self.send_header("Content-Type", "text/markdown; charset=utf-8")
+                elif filename.endswith(".tif") or filename.endswith(".tiff"):
+                    self.send_header("Content-Type", "image/tiff")
                 else:
                     self.send_header("Content-Type", "application/octet-stream")
                 self._send_cors_headers()
