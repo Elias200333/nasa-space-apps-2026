@@ -1,5 +1,5 @@
-"""Dashboard: guardar el mapa SLAM desde el visor (PLY malla + GLB como el visor), congelarlo,
-grabar la sesión cruda desde el panel Replay, y WASD activo por defecto.
+"""Dashboard: guardar el mapa SLAM desde el visor (PLY malla + GLB como el visor + coordenadas
+JSON), congelarlo, grabar la sesión cruda desde el panel Replay, y WASD activo por defecto.
 
 Robot FALSO y mapas SINTÉTICOS (aquí no hay robot).
 """
@@ -14,6 +14,8 @@ from terrainx_robot.adapters.go2_topics import LIDAR_VOXEL_COMPRESSED
 from terrainx_robot.adapters.go2_webrtc import PassthroughLidarDecoder
 from terrainx_robot.fixtures.synthetic import generate_frames
 from terrainx_robot.lidar.voxel_glb import read_glb
+import numpy as np
+
 from terrainx_robot.storage.ply import read_ply
 from terrainx_robot.storage.session_log import SessionReader
 from test_dashboard_replay_health import build, wait_for
@@ -51,17 +53,20 @@ def test_descarga_del_visor_guarda_ply_glb_y_metadatos(tmp_path):
         r = client.post("/api/slam/save")
         assert r.status_code == 200, r.text
         m = r.json()
+        assert m["reused"] is False
         assert m["geometry"]["point_type"] == "voxel_mesh" and m["evidence_class"] == "derived"
         assert m["delivery_mode"] == "live" and m["demo"] is False and m["capture"]["session_id"] is None
         assert m["capture"]["start_utc"] <= m["capture"]["end_utc"]
         mesh, glb = m["provenance"]["mesh"], m["provenance"]["glb"]
-        assert set(m["files"]) == {"ply", "glb"} and m["files"]["glb"]["path"] == f"{m['id']}.glb"
+        assert set(m["files"]) == {"ply", "glb", "coords"} and m["files"]["glb"]["path"] == f"{m['id']}.glb"
+        assert m["files"]["coords"]["path"] == f"{m['id']}.coords.json"
         assert mesh["voxels"] > 0 and m["point_count"] == mesh["vertices"]
         assert glb["cube_faces"] == mesh["cube_faces"] and glb["triangles"] == mesh["triangles"]
-        assert any(".glb" in c for c in m["caveats"])
+        assert m["provenance"]["coords"]["points"] == mesh["voxels"]
+        assert any(".glb" in c and ".coords.json" in c for c in m["caveats"])
         assert service.store.verify(m["id"])["ok"]
         sums = (settings.data_dir / "scans" / m["id"] / "SHA256SUMS").read_text().splitlines()
-        assert len(sums) == 3                                            # PLY, GLB y metadatos
+        assert len(sums) == 4                                            # PLY, GLB, coordenadas y metadatos
 
         r = client.get(f"/api/scans/{m['id']}/download", params={"format": "glb"})   # lo que baja el navegador
         assert r.status_code == 200 and r.headers["content-type"] == "model/gltf-binary"
@@ -70,6 +75,34 @@ def test_descarga_del_visor_guarda_ply_glb_y_metadatos(tmp_path):
         extras = gltf["asset"]["extras"]
         assert extras["voxels"] == mesh["voxels"] and extras["evidence_class"] == "derived"
         assert extras["frame_id"] == m["frame_id"] and gltf["accessors"][0]["count"] == 4 * mesh["cube_faces"]
+        assert extras["scan_id"] == m["id"]
+
+        # Coordenadas: lo otro que ofrece el menú de descarga del visor
+        r = client.get(f"/api/scans/{m['id']}/download", params={"format": "coords"})
+        assert r.status_code == 200 and r.headers["content-type"].startswith("application/json")
+        assert hashlib.sha256(r.content).hexdigest() == m["files"]["coords"]["sha256"]
+        c = r.json()
+        assert c["scan_id"] == m["id"] and c["evidence_class"] == "derived" and c["demo"] is False
+        assert c["frame_id"] == m["frame_id"] and c["unit"] == "m" and c["cube_size_m"] == 0.05
+        assert c["count"] == len(c["points"]) == mesh["voxels"]
+        # un punto por vóxel del mapa: el centro del cubo que pinta el visor (k · res)
+        idx, res = service.slam.export_voxels()
+        assert np.allclose(np.array(sorted(map(tuple, c["points"]))), np.array(sorted(map(tuple, idx * res))))
+        # y la caja de los cubos es la de la malla: centro ± res/2
+        pts = np.array(c["points"])
+        assert np.allclose(pts.min(axis=0) - res / 2, m["geometry"]["bounds_min"], atol=1e-6)
+        assert np.allclose(pts.max(axis=0) + res / 2, m["geometry"]["bounds_max"], atol=1e-6)
+
+        # Mapa sin cambios (p. ej. en pausa): bajar el otro formato NO crea otro escaneo
+        again = client.post("/api/slam/save").json()
+        assert again["reused"] is True and again["id"] == m["id"]
+        assert len(client.get("/api/scans").json()) == 1
+        service.slam_step(f.meta, f.payload)                             # entra un mapa nuevo: otro escaneo
+        third = client.post("/api/slam/save").json()
+        assert third["reused"] is False and third["id"] != m["id"]
+        (settings.data_dir / "scans" / third["id"] / f"{third['id']}.coords.json").write_text("{}")
+        fourth = client.post("/api/slam/save").json()                    # alterado: no se reutiliza
+        assert fourth["reused"] is False and fourth["id"] != third["id"]
 
         r = client.get(f"/api/scans/{m['id']}/download")                 # el PLY sigue siendo el de siempre
         assert r.content.startswith(b"ply\nformat binary_little_endian 1.0\n")

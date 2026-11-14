@@ -8,9 +8,10 @@ Endpoints
     GET  /video/stream         cámara en directo (MJPEG)
     GET  /api/lidar            última nube de puntos (submuestreada)
     POST /api/slam/save        descarga del visor: guarda el mapa acumulado (PLY malla + GLB
-                               igual que el visor + metadatos + SHA-256) y devuelve sus metadatos
+                               igual que el visor + coordenadas JSON + metadatos + SHA-256) y
+                               devuelve sus metadatos + «reused» (mapa sin cambios: el mismo escaneo)
     GET  /api/scans            lista de escaneos
-    GET  /api/scans/{id}/download?format=ply|glb   descarga un archivo del escaneo
+    GET  /api/scans/{id}/download?format=ply|glb|coords   descarga un archivo del escaneo
     POST /api/record/start|stop   «● Grabar sesión»: sesión cruda del robot para el replay
     POST /api/auth/devices     lista robots de la cuenta (pide credenciales; NO devuelve clave)
     POST /api/auth/fetch-key   recupera y guarda la clave (NO la devuelve)
@@ -182,7 +183,7 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
         if ref is None:
             raise HTTPException(status_code=404, detail=f"el escaneo {scan_id} no tiene archivo {format!r}")
         path = service.store.scans_dir / scan_id / ref.path
-        media = "model/gltf-binary" if format == "glb" else "application/octet-stream"
+        media = {"glb": "model/gltf-binary", "coords": "application/json"}.get(format, "application/octet-stream")
         return FileResponse(path, media_type=media, filename=path.name)
 
     # ----------------------------------------------------------- autenticación

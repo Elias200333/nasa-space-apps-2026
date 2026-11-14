@@ -155,7 +155,7 @@ def test_guardar_el_mapa_del_dashboard_no_congela_el_bucle(tmp_path, monkeypatch
         return meta, max(gaps)
 
     meta, worst_gap = run(go())
-    assert meta["geometry"]["point_type"] == "voxel_mesh" and set(meta["files"]) == {"ply", "glb"}
+    assert meta["geometry"]["point_type"] == "voxel_mesh" and set(meta["files"]) == {"ply", "glb", "coords"}
     assert worst_gap < 0.3, f"el bucle se quedó parado {worst_gap:.2f} s mientras se guardaba"
 
 

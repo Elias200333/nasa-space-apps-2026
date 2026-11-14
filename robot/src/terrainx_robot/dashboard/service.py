@@ -16,8 +16,9 @@ Seguridad
     - Un único punto de conexión: no se abren conexiones paralelas al robot.
     - El mapa SLAM acumulado solo LEE los mapas que ya llegan: no envía nada al robot.
       Desde el visor: papelera = mapa nuevo, pausa = deja de sumar mapas (lo que se ve es lo
-      que se guarda), descarga = se guarda (PLY malla + GLB igual que el visor + metadatos
-      + SHA-256, clase DERIVED) y se baja el GLB.
+      que se guarda), descarga = se guarda (PLY malla + GLB igual que el visor + coordenadas
+      JSON + metadatos + SHA-256, clase DERIVED) y se baja el GLB o las coordenadas. Si el mapa
+      no ha cambiado desde el último guardado, se reutiliza ese escaneo (sin duplicados).
     - «● Grabar sesión» (panel Replay) graba la sesión cruda del robot para el replay.
     - Modo REPLAY (demo sin robot): reproduce una sesión grabada por el mismo camino
       que el robot real. Es excluyente con la conexión en vivo y NO admite control.
@@ -45,6 +46,7 @@ from ..config import Settings
 from ..lidar.accumulator import AccumulatedCloud
 from ..lidar.live_stream import raw_frame_fields
 from ..lidar.slam_map import KEEP_RATIO, MIN_HITS, SlamMap
+from ..lidar.voxel_coords import COORDS_FORMAT, build_coords_json
 from ..lidar.voxel_glb import build_voxel_glb
 from ..lidar.voxel_mesh import build_voxel_mesh
 from ..models import (
@@ -58,7 +60,7 @@ from ..models import (
     SessionInfo,
 )
 from ..storage.scan_store import ScanStore, ScanStoreError
-from ..util import utc_now
+from ..util import new_id, utc_now
 from . import robot_details
 
 log = logging.getLogger(__name__)
@@ -100,6 +102,7 @@ class DashboardService:
         self._slam_evidence = EvidenceClass.DERIVED
         self._slam_adapter: Go2WebRTCAdapter | ReplayAdapter | None = None   # de dónde sale el mapa
         self._saving = False
+        self._last_save: tuple | None = None   # (origen, epoch, versión del mapa, scan_id) del último guardado
         # Modo replay
         self._replay_task: asyncio.Task | None = None
         self.replay_info: dict[str, Any] | None = None
@@ -372,10 +375,13 @@ class DashboardService:
 
     async def save_slam_map(self) -> dict[str, Any]:
         """Botón de descarga del visor: guarda el mapa acumulado tal como se ve (PLY malla + GLB
-        igual que el visor + metadatos + SHA-256) y devuelve sus metadatos; el navegador baja
-        luego el GLB. Funciona también desconectado (el mapa sigue en memoria). Lo pesado va en
-        otro hilo: en este bucle vive la conexión WebRTC (con Pluffy, bloquearlo 8–14 s hizo
-        que el perro cortara; ver base.stop_capture)."""
+        igual que el visor + coordenadas JSON + metadatos + SHA-256) y devuelve sus metadatos
+        más ``reused``; el navegador baja luego el GLB o las coordenadas. Si el mapa no ha
+        cambiado desde el último guardado (p. ej. en pausa) y ese escaneo sigue íntegro, se
+        devuelve ese (reused = True): bajar los dos archivos no crea dos escaneos. Funciona
+        también desconectado (el mapa sigue en memoria). Lo pesado va en otro hilo: en este bucle
+        vive la conexión WebRTC (con Pluffy, bloquearlo 8–14 s hizo que el perro cortara; ver
+        base.stop_capture)."""
         if self._saving:
             raise CaptureError("ya se está guardando el mapa: espera a que termine")
         adapter, evidence, source = self._slam_adapter, self._slam_evidence, self._slam_source
@@ -384,16 +390,38 @@ class DashboardService:
         self._saving = True
         try:
             t0 = time.monotonic()
+            same = await asyncio.to_thread(self._unchanged_since_last_save, source)
+            if same is not None:
+                log.info("Mapa SLAM sin cambios desde %s: se reutiliza ese escaneo", same.id)
+                return dict(same.model_dump(mode="json"), reused=True)
             snap = await asyncio.to_thread(self.slam.snapshot)
             if not len(snap["voxels"]) or snap["res"] is None:
                 raise ScanStoreError("el mapa acumulado está vacío: deja que el perro vea algo antes de guardar")
             meta, faces = await asyncio.to_thread(
                 self._save_slam_map, snap, adapter=adapter, evidence=evidence, source=source)
+            self._last_save = (source, snap["meta"]["epoch"], snap["meta"]["version"], meta.id)
         finally:
             self._saving = False
-        log.info("Mapa SLAM guardado: %s (%d vóxeles, %d caras; PLY + GLB en %.2f s fuera del bucle "
-                 "de la conexión)", meta.id, len(snap["voxels"]), faces, time.monotonic() - t0)
-        return meta.model_dump(mode="json")
+        log.info("Mapa SLAM guardado: %s (%d vóxeles, %d caras; PLY + GLB + coordenadas en %.2f s fuera "
+                 "del bucle de la conexión)", meta.id, len(snap["voxels"]), faces, time.monotonic() - t0)
+        return dict(meta.model_dump(mode="json"), reused=False)
+
+    def _unchanged_since_last_save(self, source: str | None) -> ScanMetadata | None:
+        """Hilo aparte. El último escaneo guardado, si desde entonces no se ha sumado ni borrado
+        nada (misma fuente, mismo epoch y misma versión del mapa) y sus archivos siguen íntegros
+        (SHA-256); si no, None y se guarda otro."""
+        last = self._last_save
+        if last is None:
+            return None
+        now = self.slam.meta()
+        if last[:3] != (source, now["epoch"], now["version"]):
+            return None
+        try:
+            if self.store.verify(last[3])["ok"]:
+                return self.store.load_metadata(last[3])
+        except ScanStoreError:
+            pass
+        return None
 
     def _save_slam_map(self, snap: dict, *, adapter, evidence: EvidenceClass,
                        source: str | None) -> tuple[ScanMetadata, int]:
@@ -402,11 +430,19 @@ class DashboardService:
         idx, res, slam_meta = snap["voxels"], snap["res"], snap["meta"]
         mesh = build_voxel_mesh(idx, res)
         delivery = adapter.descriptor.delivery_mode
-        glb = build_voxel_glb(idx, res, extras={
-            "evidence_class": evidence.value, "delivery_mode": delivery.value,
-            "demo": evidence is EvidenceClass.SYNTHETIC_TEST, "frame_id": snap["frame_id"] or "unknown_robot_frame",
-            "source": source, "nota": "mapa SLAM acumulado (DERIVADO); metadatos completos en el .metadata.json"})
         now = utc_now()
+        capture_start = snap["first_utc"] or now
+        scan_id = new_id("scan", capture_start)           # va también dentro del GLB y del JSON
+        common = {"evidence_class": evidence.value, "delivery_mode": delivery.value,
+                  "demo": evidence is EvidenceClass.SYNTHETIC_TEST,
+                  "frame_id": snap["frame_id"] or "unknown_robot_frame"}
+        glb = build_voxel_glb(idx, res, extras={
+            "scan_id": scan_id, **common, "source": source,
+            "nota": "mapa SLAM acumulado (DERIVADO); metadatos completos en el .metadata.json"})
+        coords = build_coords_json(idx, res, info={
+            "scan_id": scan_id,
+            "content": "mapa SLAM acumulado del dashboard (DERIVADO): un punto por cubo del visor",
+            **common, "metadata": f"{scan_id}.metadata.json"})
         cloud = AccumulatedCloud(
             points=mesh.vertices, mode="accumulate", topic="rt/utlidar/voxel_map_compressed",
             frame_id=snap["frame_id"], resolution=mesh.resolution, point_type=PointType.VOXEL_MESH,
@@ -427,16 +463,19 @@ class DashboardService:
             "paredes pueden salir desplazadas o dobles.",
             "Colores = paleta de altura de la app de Unitree (como el visor); no son colores reales.",
             "El .glb es el mismo mapa con el aspecto del visor (aristas grises, sin luz) y los ejes de "
-            "glTF: (x, y, z) del robot → (x, z, −y). El .ply guarda las coordenadas del robot.",
+            "glTF: (x, y, z) del robot → (x, z, −y). El .ply y el .coords.json (centro de cada cubo, "
+            "uno por vóxel) guardan las coordenadas del robot.",
             "Tiempos = primer y último mapa del robot sumados al acumulado (en replay, la hora de la "
             "reproducción, no la original).",
         )
         meta = self.store.save(
             cloud, robot=adapter.descriptor, evidence_class=evidence,
             delivery_mode=delivery, scan_context=adapter.scan_context,
-            capture_start=snap["first_utc"] or now, capture_end=snap["last_utc"] or now,
+            capture_start=capture_start, capture_end=snap["last_utc"] or now,
             session_id=adapter._source_session_id(), pose_source=None, binary=True, extra_caveats=caveats,
-            extra_files={"glb": (".glb", glb.data, GLB_FORMAT)},
+            extra_files={"glb": (".glb", glb.data, GLB_FORMAT),
+                         "coords": (".coords.json", coords, COORDS_FORMAT)},
+            scan_id=scan_id,
             extra_provenance={
                 "slam": dict(slam_meta, source=source, min_hits=MIN_HITS, keep_ratio=KEEP_RATIO,
                              paused_when_saved=self.slam_paused),
@@ -448,6 +487,8 @@ class DashboardService:
                 "glb": {"vertices": glb.vertices, "triangles": glb.triangles, "cube_faces": glb.cube_faces,
                         "axes": "glTF Y arriba: (x, y, z) del robot → (x, z, −y)",
                         "material": "KHR_materials_unlit + textura con la paleta y aristas grises (1/32 de cara)"},
+                "coords": {"points": mesh.voxels, "point": "centro de cada cubo (k · cube_size_m), uno por vóxel",
+                           "order": "por x, luego y, luego z", "axes": "los del robot, como el .ply"},
             },
         )
         return meta, mesh.cube_faces

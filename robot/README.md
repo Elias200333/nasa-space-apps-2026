@@ -4,7 +4,7 @@ Software del especialista de robótica de TERRAIN-X (NASA Space Apps Challenge 2
 
 **Base (solo lectura):** comunicación con el Unitree Go2 físico — adquisición LiDAR y telemetría, exportación PLY + metadatos JSON con SHA-256 y un modo replay para trabajar sin robot.
 
-**Dashboard web local:** autenticación AES-128, conexión compartida al Go2, **cámara en directo**, visor LiDAR 3D con el mapa SLAM acumulado (se guarda como PLY + GLB), telemetría, replay y **teleoperación WASD** con hombre muerto (activa con el robot conectado). Ver [sección 11](#11-dashboard-web-del-go2-air).
+**Dashboard web local:** autenticación AES-128, conexión compartida al Go2, **cámara en directo**, visor LiDAR 3D con el mapa SLAM acumulado (se guarda como PLY + GLB + coordenadas JSON), telemetría, replay y **teleoperación WASD** con hombre muerto (activa con el robot conectado). Ver [sección 11](#11-dashboard-web-del-go2-air).
 
 > Por defecto el módulo es de **solo lectura**: un guardián bloquea en el propio PC cualquier orden que no esté en una lista blanca. La conducción WASD es un **modo aparte** que hay que habilitar explícitamente; usa un guardián acotado (solo Move/Stop/levantar/sentar/amortiguar) y se detiene al soltar la tecla, perder el foco o cortarse la conexión. Nada de esto sustituye a la parada de emergencia física del robot, que siempre debe manejar un operador presente.
 
@@ -210,6 +210,8 @@ La clave es propia de cada robot y está en tu cuenta de Unitree. Se recupera co
 
 Después apunta `TERRAINX_GO2_AES_KEY_FILE` en `robot\.env` a esa ruta (por defecto `%USERPROFILE%\.terrainx\go2_aes_key.txt`). También puedes hacer todo esto desde el panel **«Unitree — Conexión y autenticación»** del propio dashboard.
 
+**Solo hace falta una vez.** Para conectar, el programa usa la IP del `.env` y esa clave: nunca el correo ni la contraseña. Con la clave guardada, el panel lo dice con su huella y deja el formulario plegado tras «Cambiar o renovar la clave…». Solo hay que volver a pedirla si el perro la rechaza (error `aes_key_rejected`); después, reinicia el dashboard, porque la clave se lee al arrancar. No se guarda la contraseña ni ningún token de la cuenta.
+
 ### Lanzar el dashboard
 
 ```powershell
@@ -231,12 +233,13 @@ Abre **http://127.0.0.1:8777** en el navegador. Paneles: cámara en directo (MJP
    - **papelera** (en «Acumulado»): empieza un mapa SLAM nuevo;
    - lleva el perro por todo el entorno;
    - **pausa**: el mapa acumulado deja de sumar mapas, así lo que ves es lo que se guarda (si cierras la pestaña, se reanuda solo);
-   - **descarga**: guarda el **mapa SLAM acumulado** en `runtime/scans/<id>/` y el navegador baja el **`.glb`**. Se guardan tres archivos:
+   - **descarga**: abre un menú con **«Modelo 3D (.glb)»** y **«Coordenadas (.json)»**. Cualquiera de las dos guarda el **mapa SLAM acumulado** en `runtime/scans/<id>/` y el navegador baja el archivo elegido. Se guardan estos archivos:
      - **`.glb`**: se ve como el visor. Tiene los mismos cubos y colores, las aristas grises y no lleva luz. Lo abren Blender (en «Vista previa del material»; para los colores exactos, Gestión de color → «Estándar»), Babylon y los visores glTF del navegador.
+     - **`.coords.json`**: el array `[[x, y, z], …]` en metros con el **centro de cada cubo** (cada cubo va de punto − 0,025 a punto + 0,025 m), uno por vóxel, también los interiores que la malla no dibuja. Usa los ejes del robot, como el `.ply`. Delante lleva el `scan_id`, la clase de evidencia, el marco y el tamaño del cubo.
      - **`.ply`**: malla de cubos con las coordenadas del robot, para CloudCompare y MeshLab. Cada programa le pone su propia luz, así que no se ve igual que el visor.
      - **metadatos y SHA-256**: `point_type = voxel_mesh`, clase `derived`.
 
-   Si la conexión se corta, lo acumulado se puede guardar igual.
+   Si el mapa no ha cambiado desde el último guardado (por ejemplo, en pausa), la segunda descarga sale del **mismo escaneo**: no se duplica. Si la conexión se corta, lo acumulado se puede guardar igual.
 
 > Para una nube de puntos **medida** (`robot_measured`, sin el filtro del SLAM) sigue existiendo el comando `capture` del CLI (con el dashboard desconectado del robot: el Go2 admite un solo cliente).
 
@@ -257,8 +260,8 @@ Abre **http://127.0.0.1:8777** en el navegador. Paneles: cámara en directo (MJP
 
 ### Qué está probado y qué no
 
-- **Probado sin robot** (213 tests, incluidos los del dashboard con un robot simulado): los endpoints, el modo control acotado y activo por defecto, el hombre muerto, el recorte de velocidad, el mapa guardado como PLY + GLB, la pausa, la grabación de sesiones y que la clave/credenciales no se filtran.
+- **Probado sin robot** (218 tests, incluidos los del dashboard con un robot simulado): los endpoints, el modo control acotado y activo por defecto, el hombre muerto, el recorte de velocidad, el mapa guardado como PLY + GLB + coordenadas, la pausa, la grabación de sesiones y que la clave/credenciales no se filtran.
 - **Probado con Pluffy (2026-11-14, 22:18):** el guardado del mapa como malla PLY (40 275 vóxeles, 0,38 s fuera del bucle de la conexión).
-- **Pendiente de probar con Pluffy:** el `.glb`, la pausa del acumulado, «● Grabar sesión» desde el panel Replay y el WASD activo por defecto. El `.glb` sí está comprobado, sin robot, con el mapa real de las 22:18: se ve como el visor en three.js y en Blender 4.5.
+- **Pendiente de probar con Pluffy:** el `.glb`, las coordenadas, la pausa del acumulado, «● Grabar sesión» desde el panel Replay y el WASD activo por defecto. El `.glb` sí está comprobado, sin robot, con el mapa real de las 22:18: se ve como el visor en three.js y en Blender 4.5.
 - **Pendiente de comprobar con el Go2 físico:** que lleguen vídeo y LiDAR reales y a qué frecuencia, y el comportamiento real de la locomoción. Nada de esto está verificado hasta probarlo con el robot.
 - Three.js se incluye vendorizado en `dashboard/static/vendor/` (MIT) para que el visor 3D funcione **sin internet** en la red del robot.

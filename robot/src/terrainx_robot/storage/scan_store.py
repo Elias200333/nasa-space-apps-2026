@@ -4,6 +4,7 @@ Qué hace
     Guarda cada escaneo en su propia carpeta:
         <data_dir>/scans/<scan_id>/<scan_id>.ply
         <data_dir>/scans/<scan_id>/<scan_id>.glb    (solo el mapa SLAM: se ve como el visor)
+        <data_dir>/scans/<scan_id>/<scan_id>.coords.json   (solo el mapa SLAM: array de coordenadas)
         <data_dir>/scans/<scan_id>/<scan_id>.metadata.json
         <data_dir>/scans/<scan_id>/SHA256SUMS   (formato de sha256sum)
     Cada archivo va en metadata.files (clave → ruta, SHA-256, bytes, formato).
@@ -49,7 +50,9 @@ class ScanStoreError(RuntimeError):
 # Archivo extra de un escaneo: clave en metadata.files → (sufijo, contenido, formato)
 ExtraFile = tuple[str, bytes, str]
 _EXTRA_KEY = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
-_EXTRA_SUFFIX = re.compile(r"^\.[a-z0-9]{1,8}$")
+_EXTRA_SUFFIX = re.compile(r"^(\.[a-z0-9]{1,8}){1,2}$")          # .glb, .coords.json
+_RESERVED_SUFFIXES = (".json", ".metadata.json")                 # el de los metadatos (y lo ambiguo)
+_SCAN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_\-]{0,127}$")     # un nombre de carpeta, sin rutas
 
 
 def _write_bytes_atomic(path: Path, data: bytes) -> None:
@@ -146,21 +149,29 @@ class ScanStore:
         extra_caveats: tuple[str, ...] = (),
         extra_provenance: dict | None = None,
         extra_files: dict[str, ExtraFile] | None = None,
+        scan_id: str | None = None,
     ) -> ScanMetadata:
         """extra_files: archivos que acompañan al PLY (p. ej. {"glb": (".glb", bytes, formato)}):
-        se guardan como <scan_id><sufijo>, con su SHA-256 en metadata.files y en SHA256SUMS."""
+        se guardan como <scan_id><sufijo>, con su SHA-256 en metadata.files y en SHA256SUMS.
+        scan_id: para quien necesita el id antes de guardar (p. ej. para escribirlo dentro de un
+        archivo extra); si falta, se crea uno nuevo. Nunca se reutiliza una carpeta existente."""
         if cloud.points.shape[0] == 0:
             raise ScanStoreError("no se guarda una nube vacía")
         suffixes = set()
         for key, (suffix, data, _fmt) in (extra_files or {}).items():
             if key == "ply" or not _EXTRA_KEY.match(key) or not _EXTRA_SUFFIX.match(suffix):
                 raise ScanStoreError(f"archivo extra inválido: {key!r} ({suffix!r})")
-            if suffix in suffixes or suffix in (".ply", ".json") or not data:
+            if suffix in suffixes or suffix in _RESERVED_SUFFIXES or suffix.endswith(".ply") or not data:
                 raise ScanStoreError(f"archivo extra repetido o vacío: {key!r} ({suffix!r})")
             suffixes.add(suffix)
-        scan_id = new_id("scan", capture_start)
+        if scan_id is not None and not _SCAN_ID.match(scan_id):
+            raise ScanStoreError(f"identificador de escaneo inválido: {scan_id!r}")
+        scan_id = scan_id or new_id("scan", capture_start)
         folder = self.scans_dir / scan_id
-        folder.mkdir(parents=True, exist_ok=False)
+        try:
+            folder.mkdir(parents=True, exist_ok=False)
+        except FileExistsError as exc:      # fuera del try de abajo: la carpeta existente no se borra
+            raise ScanStoreError(f"ya existe el escaneo {scan_id}: no se sobrescribe") from exc
         try:
             return self._write_scan(
                 folder, scan_id, cloud, robot=robot, evidence_class=evidence_class,

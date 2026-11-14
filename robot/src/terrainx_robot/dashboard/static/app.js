@@ -65,7 +65,7 @@ async function refresh() {
   $("d-model").textContent = "Unitree Go2 " + (s.model_variant && s.model_variant !== "unknown" ? s.model_variant : "(modelo sin declarar)");
 
   // Autenticación
-  $("auth-status").textContent = "Clave AES: " + (s.aes_key_configured ? "configurada · " + (s.aes_key_fingerprint || "") : "no configurada");
+  renderAuth(s);
 
   // Control / límites
   const lim = s.speed_limits || {};
@@ -219,13 +219,26 @@ $("btn-replay-stop").onclick = async () => {
 };
 
 // ---------------------------------------------------------------- autenticación
-let selectedSN = null;
+// Con la clave guardada, conectar no pide correo ni contraseña: el formulario queda plegado tras
+// «Cambiar o renovar la clave…». Solo se pliega/despliega solo cuando cambia el estado de la clave
+// (refresh() corre cada segundo y no debe pelearse con el operador).
+let selectedSN = null, authKeyKnown = null;
+function renderAuth(s) {
+  const ok = !!s.aes_key_configured;
+  $("auth-status").textContent = ok
+    ? "✓ Clave del perro guardada · " + (s.aes_key_fingerprint || "") + ". Para conectar no hace falta correo ni contraseña."
+    : "Clave AES: no configurada. Vincula la cuenta Unitree una vez para recuperarla.";
+  $("auth-summary").textContent = ok ? "Cambiar o renovar la clave…" : "Vincular la cuenta y recuperar la clave";
+  if (ok !== authKeyKnown) { $("auth-renew").open = !ok; authKeyKnown = ok; }
+}
 $("btn-devices").onclick = async () => {
   const email = $("au-email").value.trim(), password = $("au-pass").value;
   $("dev-list").innerHTML = "<span class='note'>consultando…</span>";
   try {
+    // La contraseña se queda en el campo hasta «Recuperar y guardar»: esa llamada la vuelve a
+    // necesitar (el servidor no guarda sesión ni token). Antes se borraba aquí y la recuperación
+    // se enviaba sin contraseña.
     const r = await api("/api/auth/devices", { method: "POST", body: JSON.stringify({ email, password }) });
-    $("au-pass").value = "";
     $("dev-list").innerHTML = "";
     if (!r.devices.length) { $("dev-list").innerHTML = "<span class='note'>sin robots en la cuenta</span>"; return; }
     r.devices.forEach((d) => {
@@ -239,11 +252,12 @@ $("btn-devices").onclick = async () => {
 $("btn-fetch").onclick = async () => {
   if (!selectedSN) return;
   const email = $("au-email").value.trim(), password = $("au-pass").value;
+  $("auth-msg").textContent = "recuperando la clave…";
   try {
     const r = await api("/api/auth/fetch-key", { method: "POST", body: JSON.stringify({ email, password, serial: selectedSN }) });
-    $("au-pass").value = "";
-    $("auth-status").textContent = "Clave AES: configurada · " + (r.fingerprint || "");
-  } catch (e) { $("auth-status").textContent = "error: " + e.message; }
+    $("auth-msg").textContent = "Clave guardada (" + (r.fingerprint || "") + "). Reinicia el dashboard para que la use al conectar.";
+  } catch (e) { $("auth-msg").textContent = "error: " + e.message; }
+  $("au-pass").value = "";
   refresh();
 };
 

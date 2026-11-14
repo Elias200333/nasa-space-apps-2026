@@ -138,7 +138,7 @@ def test_guardar_el_mapa_acumulado_como_malla_derivada(tmp_path):
     assert r.status_code == 200, r.text
     m = r.json()
     assert m["evidence_class"] == "derived" and m["demo"] is False and m["delivery_mode"] == "live"
-    assert m["geometry"]["point_type"] == "voxel_mesh" and set(m["files"]) == {"ply", "glb"}
+    assert m["geometry"]["point_type"] == "voxel_mesh" and set(m["files"]) == {"ply", "glb", "coords"}
     assert m["frame_id"] == f.meta["frame_id"] and m["point_count"] == m["provenance"]["mesh"]["vertices"] > 0
     assert any("ACUMULADO" in c for c in m["caveats"]) and any("MALLA" in c for c in m["caveats"])
     assert m["provenance"]["slam"]["frames"] == 3
@@ -203,6 +203,9 @@ def test_replay_de_sesion_sintetica_sin_control(tmp_path):
         from terrainx_robot.lidar.voxel_glb import read_glb
         extras = read_glb(glb)[0]["asset"]["extras"]
         assert extras["evidence_class"] == "synthetic_test" and extras["demo"] is True   # el GLB también lo dice
+        coords = client.get(f"/api/scans/{m['id']}/download", params={"format": "coords"}).json()
+        assert coords["evidence_class"] == "synthetic_test" and coords["demo"] is True   # y las coordenadas
+        assert coords["delivery_mode"] == "replay" and coords["scan_id"] == m["id"]
 
         s = client.post("/api/replay/stop").json()
         assert s["source"]["kind"] == "none" and s["connected"] is False
