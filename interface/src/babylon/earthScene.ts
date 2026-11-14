@@ -26,7 +26,7 @@ export class EarthSceneManager {
     });
 
     this.scene = new BABYLON.Scene(this.engine);
-    this.scene.clearColor = new BABYLON.Color4(0.01, 0.02, 0.05, 1.0);
+    this.scene.clearColor = new BABYLON.Color4(0.01, 0.02, 0.04, 1.0);
 
     // 1. Entorno de Espacio Profundo con estrellas y nebulosas
     this.spaceEnv = new DeepSpaceEnvironment(this.scene);
@@ -41,37 +41,38 @@ export class EarthSceneManager {
       this.scene
     );
     this.camera.attachControl(canvas, true);
-    this.camera.lowerRadiusLimit = 2.95; // Permite rozar la atmósfera
+    this.camera.lowerRadiusLimit = 2.92;
     this.camera.upperRadiusLimit = 18.0;
     this.camera.wheelPrecision = 35;
     this.camera.inertia = 0.88;
 
-    // 3. Iluminación Solar Fotorrealista (Sol directo de alta energía + luz estelar)
+    // 3. Iluminación Solar Realista (Luz solar natural sin sobreexponer ni tintar de azul)
     const sunLight = new BABYLON.DirectionalLight(
       'sunLight',
       new BABYLON.Vector3(-1.2, -0.3, 0.9).normalize(),
       this.scene
     );
-    sunLight.intensity = 2.0;
-    sunLight.diffuse = new BABYLON.Color3(1.0, 0.98, 0.95);
-    sunLight.specular = new BABYLON.Color3(1.0, 1.0, 1.0);
+    sunLight.intensity = 1.35; // Intensidad equilibrada para no quemar la imagen
+    sunLight.diffuse = new BABYLON.Color3(1.0, 0.99, 0.96); // Luz solar cálida natural
+    sunLight.specular = new BABYLON.Color3(0.5, 0.5, 0.55); // Brillo especular suave
 
+    // Luz ambiental neutra espacial (oscura y sin tinte azulado)
     const spaceAmbient = new BABYLON.HemisphericLight(
       'spaceAmbient',
       new BABYLON.Vector3(0, 1, 0),
       this.scene
     );
-    spaceAmbient.intensity = 0.22;
-    spaceAmbient.diffuse = new BABYLON.Color3(0.2, 0.35, 0.6);
-    spaceAmbient.groundColor = new BABYLON.Color3(0.02, 0.04, 0.08);
+    spaceAmbient.intensity = 0.18;
+    spaceAmbient.diffuse = new BABYLON.Color3(0.06, 0.07, 0.09); // Gris neutro oscuro
+    spaceAmbient.groundColor = new BABYLON.Color3(0.01, 0.01, 0.02);
 
-    // 4. Construcción de Tierra Fotorrealista, Nubes y Atmósfera
+    // 4. Construcción de Tierra con Colores Auténticos de NASA, Nubes Bajas y Atmósfera Sutil
     this.buildRealisticEarth();
     this.buildRealisticClouds();
-    this.buildAtmosphereFresnel();
+    this.buildDelicateAtmosphere();
     this.buildHudRing();
 
-    // 5. Baliza holográfica sobre la superficie
+    // 5. Baliza holográfica refinada
     this.targetPin = new TargetPin(this.scene, this.earthRadius);
 
     // 6. Bucle de renderizado
@@ -90,7 +91,7 @@ export class EarthSceneManager {
 
     const earthMat = new BABYLON.StandardMaterial('earthPhotorealMat', this.scene);
 
-    // Cargar textura fotorrealista de la NASA Blue Marble
+    // Textura difusa en alta definición de NASA Blue Marble (colores naturales de tierra y océanos)
     const diffuseTex = new BABYLON.Texture(
       './textures/earth.jpg',
       this.scene,
@@ -99,34 +100,42 @@ export class EarthSceneManager {
       BABYLON.Texture.TRILINEAR_SAMPLINGMODE,
       null,
       () => {
-        // Fallback procedural automático si no carga
         earthMat.diffuseTexture = PlanetaryTextureGenerator.createEarthTexture(this.scene);
       }
     );
     earthMat.diffuseTexture = diffuseTex;
+    earthMat.diffuseColor = new BABYLON.Color3(1.0, 1.0, 1.0); // Colores fieles sin tinte azul artificial
 
-    // Mapa de normales para relieve montañoso (Andes, Rocosas, Himalaya)
+    // Relieve montañoso con mapa de normales
     const normalTex = new BABYLON.Texture('./textures/earth_normal.jpg', this.scene);
     earthMat.bumpTexture = normalTex;
-    earthMat.bumpTexture.level = 0.6;
+    earthMat.bumpTexture.level = 0.5;
 
-    // Mapa especular (los océanos reflejan el sol brillante, los continentes son mate)
+    // Brillo especular concentrado en océanos (agua brillante, continentes mate)
     const specTex = new BABYLON.Texture('./textures/earth_specular.jpg', this.scene);
     earthMat.specularTexture = specTex;
-    earthMat.specularColor = new BABYLON.Color3(0.9, 0.95, 1.0);
-    earthMat.specularPower = 32;
+    earthMat.specularColor = new BABYLON.Color3(0.4, 0.4, 0.45); // Destello de agua natural
+    earthMat.specularPower = 85; // Alta concentración: destello nítido y realista, no una mancha gigante
 
-    // Luces nocturnas de ciudades en la zona oscura
+    // Luces nocturnas en la zona oscura (sin alterar el lado diurno)
     const lightsTex = new BABYLON.Texture('./textures/earth_lights.png', this.scene);
     earthMat.emissiveTexture = lightsTex;
-    earthMat.emissiveColor = new BABYLON.Color3(0.4, 0.35, 0.3);
+    earthMat.emissiveColor = new BABYLON.Color3(0.3, 0.28, 0.22); // Cálido tono de bombillas
+
+    // Efecto Fresnel sutil en el borde de la Tierra (únicamente en el contorno extremo)
+    earthMat.emissiveFresnelParameters = new BABYLON.FresnelParameters();
+    earthMat.emissiveFresnelParameters.leftColor = new BABYLON.Color3(0.08, 0.35, 0.85); // Azul atmosférico sólo en el borde
+    earthMat.emissiveFresnelParameters.rightColor = BABYLON.Color3.Black(); // Centro completamente transparente/natural
+    earthMat.emissiveFresnelParameters.bias = 0.0;
+    earthMat.emissiveFresnelParameters.power = 5.5; // Potencia alta para ceñirse estrictamente al horizonte
 
     this.earthMesh.material = earthMat;
   }
 
   private buildRealisticClouds() {
+    // La capa de nubes se sitúa muy pegada a la superficie terrestre (a escala real)
     this.cloudsMesh = BABYLON.MeshBuilder.CreateSphere('cloudsMesh', {
-      diameter: (this.earthRadius + 0.035) * 2,
+      diameter: (this.earthRadius + 0.015) * 2,
       segments: 64
     }, this.scene);
 
@@ -145,45 +154,47 @@ export class EarthSceneManager {
     );
     cloudsMat.diffuseTexture = cloudsTex;
     cloudsMat.opacityTexture = cloudsTex;
-    cloudsMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+    cloudsMat.diffuseColor = new BABYLON.Color3(0.92, 0.92, 0.92);
+    cloudsMat.specularColor = new BABYLON.Color3(0, 0, 0); // Las nubes son completamente mate
     cloudsMat.backFaceCulling = false;
 
     this.cloudsMesh.material = cloudsMat;
   }
 
-  private buildAtmosphereFresnel() {
-    // Atmósfera con dispersión de Rayleigh exterior
+  private buildDelicateAtmosphere() {
+    // Anillo atmosférico exterior ultra-fino y realista (dispersión de Rayleigh en el limbo)
     this.atmosphereMesh = BABYLON.MeshBuilder.CreateSphere('atmosphereGlow', {
-      diameter: (this.earthRadius + 0.12) * 2,
+      diameter: (this.earthRadius + 0.025) * 2, // Grosor sutil a escala proporcional
       segments: 48
     }, this.scene);
 
-    const atmoMat = new BABYLON.StandardMaterial('atmoFresnelMat', this.scene);
-    atmoMat.diffuseColor = new BABYLON.Color3(0.1, 0.45, 0.95);
-    atmoMat.emissiveColor = new BABYLON.Color3(0.15, 0.55, 1.0);
-    atmoMat.alpha = 0.22;
+    const atmoMat = new BABYLON.StandardMaterial('delicateAtmoMat', this.scene);
     atmoMat.backFaceCulling = false;
+    atmoMat.disableLighting = true; // Autoiluminado por el borde
 
-    // Efecto Fresnel para iluminar intensamente solo el borde del horizonte
+    // Fresnel de opacidad: el centro es 100% transparente y solo el borde brilla tenuemente
     atmoMat.opacityFresnelParameters = new BABYLON.FresnelParameters();
-    atmoMat.opacityFresnelParameters.leftColor = BABYLON.Color3.White();
-    atmoMat.opacityFresnelParameters.rightColor = BABYLON.Color3.Black();
-    atmoMat.opacityFresnelParameters.bias = 0.05;
-    atmoMat.opacityFresnelParameters.power = 3.5;
+    atmoMat.opacityFresnelParameters.leftColor = new BABYLON.Color3(0.65, 0.85, 1.0); // Borde exterior tenue
+    atmoMat.opacityFresnelParameters.rightColor = BABYLON.Color3.Black(); // Centro 0% opaco
+    atmoMat.opacityFresnelParameters.bias = 0.0;
+    atmoMat.opacityFresnelParameters.power = 7.0; // Solo visible en los últimos píxeles del contorno
+
+    atmoMat.emissiveColor = new BABYLON.Color3(0.12, 0.45, 0.95);
+    atmoMat.alpha = 0.55;
 
     this.atmosphereMesh.material = atmoMat;
   }
 
   private buildHudRing() {
     this.hudRingMesh = BABYLON.MeshBuilder.CreateTorus('hudRing', {
-      diameter: this.earthRadius * 2.7,
-      thickness: 0.012,
+      diameter: this.earthRadius * 2.65,
+      thickness: 0.008,
       tessellation: 64
     }, this.scene);
 
     const ringMat = new BABYLON.StandardMaterial('ringMat', this.scene);
     ringMat.emissiveColor = new BABYLON.Color3(0.13, 0.83, 0.93);
-    ringMat.alpha = 0.35;
+    ringMat.alpha = 0.25;
     this.hudRingMesh.material = ringMat;
     this.hudRingMesh.rotation.x = Math.PI / 4;
   }
@@ -191,10 +202,10 @@ export class EarthSceneManager {
   private setupRenderLoop() {
     this.engine.runRenderLoop(() => {
       if (this.cloudsMesh) {
-        this.cloudsMesh.rotation.y += 0.00025;
+        this.cloudsMesh.rotation.y += 0.0002;
       }
       if (this.hudRingMesh) {
-        this.hudRingMesh.rotation.z += 0.0005;
+        this.hudRingMesh.rotation.z += 0.0004;
       }
 
       if (this.onCoordinatesChange) {
@@ -259,7 +270,7 @@ export class EarthSceneManager {
     animRadius.setKeys([
       { frame: 0, value: this.camera.radius },
       { frame: totalFrames * 0.45, value: 5.8 },
-      { frame: totalFrames, value: 3.08 }
+      { frame: totalFrames, value: 3.06 }
     ]);
 
     const easing = new BABYLON.CubicEase();
@@ -276,7 +287,6 @@ export class EarthSceneManager {
       false
     );
 
-    // Cuando la cámara penetra en la atmósfera, disparar evento
     setTimeout(() => {
       if (onAtmosphereReached) {
         onAtmosphereReached();
