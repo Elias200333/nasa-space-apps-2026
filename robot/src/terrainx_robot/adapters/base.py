@@ -20,6 +20,7 @@ Estados (dossier §6.4), separados en dos máquinas:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
@@ -348,38 +349,61 @@ class RobotAdapter(ABC):
     async def stop_capture(self, *, binary_ply: bool = True) -> ScanMetadata:
         if self._capture_state is not CaptureState.CAPTURING or self._accumulator is None:
             raise CaptureError("no hay ninguna captura en curso")
-        self._capture_state = CaptureState.PROCESSING
+        self._capture_state = CaptureState.PROCESSING   # desde aquí no entran más frames
         end = utc_now()
-        recorded = self._stop_recorder()
+        # Se sueltan aquí, en el bucle: a partir de ahora ningún mensaje toca ni la nube
+        # ni el archivo de sesión, y el hilo de abajo puede trabajar con ellos a solas.
+        accumulator, self._accumulator = self._accumulator, None
+        recorder, self._recorder = self._recorder, None
+        save_kwargs = dict(
+            robot=self.descriptor,
+            evidence_class=self.evidence_class,
+            delivery_mode=self.descriptor.delivery_mode,
+            scan_context=self.scan_context,
+            capture_start=self._capture_start or end,
+            capture_end=end,
+            pose_source=self._pose_source(),
+            binary=binary_ply,
+            extra_caveats=tuple(self._extra_caveats()),
+            extra_provenance=self._extra_provenance(),
+        )
+        source_session = self._source_session_id()
+        t0 = time.monotonic()
         try:
-            cloud = self._accumulator.result()
-            if cloud.points.shape[0] == 0:
-                raise CaptureError(
-                    "no se recibió ningún punto LiDAR válido durante la captura "
-                    f"(frames recibidos: {cloud.frames_received}, rechazos: {cloud.rejection_reasons or 'ninguno'})"
-                )
-            meta = self.store.save(
-                cloud,
-                robot=self.descriptor,
-                evidence_class=self.evidence_class,
-                delivery_mode=self.descriptor.delivery_mode,
-                scan_context=self.scan_context,
-                capture_start=self._capture_start or end,
-                capture_end=end,
-                session_id=recorded.session_id if recorded else self._source_session_id(),
-                pose_source=self._pose_source(),
-                binary=binary_ply,
-                extra_caveats=tuple(self._extra_caveats()),
-                extra_provenance=self._extra_provenance(),
-            )
+            # Cerrar la sesión (SHA-256), juntar la nube y escribir el PLY va en OTRO hilo:
+            # en este bucle vive la conexión WebRTC. Con Pluffy, bloquearlo 8–14 s al guardar
+            # hizo que el perro dejara de recibir respuestas y cortara (cámara y datos fuera).
+            meta = await asyncio.to_thread(
+                self._finish_capture, accumulator, recorder, source_session, save_kwargs)
         except BaseException as exc:
             self._capture_state = CaptureState.FAILED
             self._last_error = str(exc)
-            self._accumulator = None
             raise
-        self._accumulator = None
+        log.info("Captura guardada: %s (%d puntos, %.2f s fuera del bucle de la conexión)",
+                 meta.id, meta.point_count, time.monotonic() - t0)
         self._capture_state = CaptureState.COMPLETE
         return meta
+
+    def _finish_capture(
+        self,
+        accumulator: CaptureAccumulator,
+        recorder: SessionRecorder | None,
+        source_session: str | None,
+        save_kwargs: dict[str, Any],
+    ) -> ScanMetadata:
+        """Parte pesada de stop_capture. Corre en un hilo: no toca el estado del adaptador."""
+        recorded = None
+        if recorder is not None:
+            recorded = recorder.close()
+            log.info("Sesión grabada: %s (%d mensajes)", recorded.session_id, recorded.record_count)
+        cloud = accumulator.result()
+        if cloud.points.shape[0] == 0:
+            raise CaptureError(
+                "no se recibió ningún punto LiDAR válido durante la captura "
+                f"(frames recibidos: {cloud.frames_received}, rechazos: {cloud.rejection_reasons or 'ninguno'})"
+            )
+        return self.store.save(
+            cloud, session_id=recorded.session_id if recorded else source_session, **save_kwargs)
 
     async def capture(
         self,
