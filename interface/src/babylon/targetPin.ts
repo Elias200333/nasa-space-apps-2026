@@ -92,4 +92,8 @@ export class TargetPin {
   public setColor(color: BABYLON.Color3) {
     this.glowMaterial.emissiveColor = color;
   }
+
+  public getRoot(): BABYLON.TransformNode {
+    return this.root;
+  }
 }
