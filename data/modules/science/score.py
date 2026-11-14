@@ -8,8 +8,16 @@ Strictly separates:
 - warnings: explicit caveats (missing features, datum differences, resolution limits)
 """
 
+import os
+import sys
 import uuid
 from typing import Dict, List, Optional
+
+# Ensure data root is on sys.path for direct execution
+_DATA_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if _DATA_ROOT not in sys.path:
+    sys.path.insert(0, _DATA_ROOT)
+
 from modules.science.schemas import AnalogSite, Assessment, MissionProfile
 from modules.science.features.extractors import extract_site_features_similarity
 
@@ -174,4 +182,18 @@ class AnalogScorer:
             warnings=warnings,
             method_version="TERRAIN-X-V1.0.0"
         )
+
+
+if __name__ == "__main__":
+    from modules.science.features.catalog import ANALOG_CATALOG
+    scorer = AnalogScorer()
+    sample_site = ANALOG_CATALOG["ES_LANZAROTE_CORONA"]
+    res = scorer.evaluate_site(sample_site, "LUNAR_VOLCANIC_CAVITY_V1")
+    print("\n--- TERRAIN-X AnalogScorer Direct Test ---")
+    print(f"Site: {sample_site.name}")
+    print(f"Mission: {res.mission_id}")
+    print(f"Score: {res.score} (Completeness: {res.completeness:.1%}, Confidence: {res.confidence:.1%})")
+    print("Feature Contributions:")
+    for f, c in res.feature_contributions.items():
+        print(f"  - {f}: {c:.4f}")
 

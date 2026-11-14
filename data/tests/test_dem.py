@@ -3,6 +3,11 @@ Tests for Digital Elevation Model (DEM) and geomorphometry processing.
 Verifies flat raster, known slope, and nodata rejection.
 """
 
+import sys, os
+_DATA_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+if _DATA_ROOT not in sys.path:
+    sys.path.insert(0, _DATA_ROOT)
+
 import math
 import numpy as np
 import pytest

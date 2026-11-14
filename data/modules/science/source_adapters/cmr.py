@@ -4,7 +4,15 @@ Connects to NASA CMR search API and CMR-STAC.
 Discovers collection concept-ids dynamically rather than hardcoding.
 """
 
+import os
+import sys
 from typing import Any, Dict, List, Optional
+
+# Ensure data root is on sys.path
+_DATA_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+if _DATA_ROOT not in sys.path:
+    sys.path.insert(0, _DATA_ROOT)
+
 from modules.science.source_adapters.base import BaseAdapter
 from modules.science.schemas import SourceRecord
 
@@ -59,4 +67,10 @@ class CMRClient(BaseAdapter):
             crs="EPSG:4326",
             resolution_m=30.0 if "DEM" in product_title or "AST" in short_name else None
         )
+
+
+if __name__ == "__main__":
+    client = CMRClient()
+    cid = client.search_collection_concept_id("ASTGTM", "003")
+    print(f"[CMR Live Check] ASTGTM v003 Concept ID: {cid}")
 

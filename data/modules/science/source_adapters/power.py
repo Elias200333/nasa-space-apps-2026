@@ -4,7 +4,15 @@ Queries NASA POWER Daily API for meteorological and climatological context.
 Official Docs: https://power.larc.nasa.gov/docs/services/api/temporal/daily/
 """
 
+import os
+import sys
 from typing import Any, Dict, Optional
+
+# Ensure data root is on sys.path
+_DATA_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+if _DATA_ROOT not in sys.path:
+    sys.path.insert(0, _DATA_ROOT)
+
 from modules.science.source_adapters.base import BaseAdapter
 from modules.science.schemas import SourceRecord
 

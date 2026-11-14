@@ -37,6 +37,11 @@ function initBabylonScenes() {
         readoutElem.textContent = coordsText;
       }
     };
+
+    // Zoom manual con la rueda del ratón hacia el planeta: transición suave al mapa 2D
+    earthScene.onZoomDiveTrigger = (lat, lon) => {
+      map2DManager.triggerManualCoordinatesDive(lat, lon, activeBody === 'Mars' ? 'Mars' : 'Moon');
+    };
   }
 
   // Miniaturas 3D fotorrealistas en tarjetas laterales
@@ -55,7 +60,7 @@ function initBabylonScenes() {
  * Inicialización del gestor de cartografía satelital 2D y transición
  */
 function init2DMapManager() {
-  map2DManager = new AnalogMap2DManager('map2dContainer', 'atmosphericTransitionOverlay');
+  map2DManager = new AnalogMap2DManager('map2dContainer');
 
   // Callback cuando el usuario pulsa "Regresar a Órbita Espacial" desde el mapa 2D
   map2DManager.setOnReturnToOrbit(() => {
@@ -78,6 +83,13 @@ function init2DMapManager() {
   if (btnReturnToOrbit) {
     btnReturnToOrbit.addEventListener('click', () => {
       map2DManager.returnToSpaceOrbit();
+    });
+  }
+
+  const btnCenterTarget = document.getElementById('btnCenterTarget');
+  if (btnCenterTarget) {
+    btnCenterTarget.addEventListener('click', () => {
+      map2DManager.centerOnTarget();
     });
   }
 }
@@ -212,28 +224,26 @@ export function selectCelestialTarget(body: CelestialBody) {
 }
 
 /**
- * FLUJO COMPLETO SOLICITADO:
- * 1. Genera coordenadas aleatorias en el código para el análogo planetario
- * 2. La Tierra 3D en BabylonJS rota y desciende en picado a la atmósfera
- * 3. Transición cinematográfica inmersiva (niebla, vapor y reentrada)
- * 4. Carga de mapa satelital 2D de alta resolución de la zona seleccionada
+ * Transición cinematográfica fotorrealista y sin cortes:
+ * 1. Genera coordenadas científicas del análogo planetario.
+ * 2. La Tierra 3D rota suavemente y la cámara desciende en zoom continuo.
+ * 3. Al alcanzar baja órbita, transiciona de forma imperceptible hacia el mapa satelital 2D de alta resolución.
+ * 4. Sin pantallas de videojuegos, sin textos invasivos ni cortes bruscos.
  */
 function generateAndDiveToAnalog(body: 'Moon' | 'Mars') {
-  // Generar coordenadas aleatorias en el código
   const result = generateRandomAnalogCoordinates(body);
   currentSelectedSite = result.site;
 
   const lat = result.coordinates.latitude;
   const lon = result.coordinates.longitude;
 
-  // Mostrar tarjeta HUD y aviso de coordenadas
+  // Actualizar tarjeta HUD discreta
   showTargetCard(result.site, body);
-  showTelemetryToast(result.site);
 
-  // Iniciar animación en BabylonJS con inmersión hacia la atmósfera
+  // Animación fotorrealista continua de rotación y zoom hacia la superficie
   earthScene.animateToCoordinatesAndDive(lat, lon, () => {
-    // Cuando la cámara penetra en la atmósfera, disparar la transición al mapa 2D
-    map2DManager.triggerAtmosphericDive(result.site);
+    // Al alcanzar baja órbita, transiciona de forma imperceptible al mapa satelital 2D
+    map2DManager.triggerSeamlessZoomDive(result.site);
   });
 }
 
@@ -267,35 +277,6 @@ function hideTargetCard() {
   if (card) {
     card.style.display = 'none';
   }
-}
-
-function showTelemetryToast(site: AnalogSite) {
-  const oldToast = document.querySelector('.telemetry-toast');
-  oldToast?.remove();
-
-  const toast = document.createElement('div');
-  toast.className = 'telemetry-toast';
-  toast.innerHTML = `
-    <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="10"></circle>
-      <line x1="12" y1="2" x2="12" y2="6"></line>
-      <line x1="12" y1="18" x2="12" y2="22"></line>
-      <line x1="2" y1="12" x2="6" y2="12"></line>
-      <line x1="18" y1="12" x2="22" y2="12"></line>
-      <circle cx="12" cy="12" r="3"></circle>
-    </svg>
-    <div class="toast-text">
-      <h5>DESCENSO ATMOSFÉRICO A ANÁLOGO [${site.target_body.toUpperCase()}]</h5>
-      <p>Coordenadas: ${site.coordinates.label}</p>
-    </div>
-  `;
-  document.body.appendChild(toast);
-
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transition = 'opacity 0.4s ease';
-    setTimeout(() => toast.remove(), 400);
-  }, 4000);
 }
 
 function setupCardSubtabs(cardId: string, body: 'Moon' | 'Mars') {

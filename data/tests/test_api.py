@@ -3,6 +3,11 @@ Tests for FastAPI REST endpoints (Contracts 1.0).
 Verifies HTTP response status codes and schema conformance.
 """
 
+import sys, os
+_DATA_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+if _DATA_ROOT not in sys.path:
+    sys.path.insert(0, _DATA_ROOT)
+
 from fastapi.testclient import TestClient
 from modules.science.api import app
 

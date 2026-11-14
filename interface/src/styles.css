@@ -964,142 +964,9 @@ body {
   margin-right: 12px;
 }
 
-.atmospheric-overlay.active {
-  opacity: 1;
-}
-
-.atmospheric-overlay.hidden {
-  display: none;
-}
-
-.atmospheric-overlay.dive-effect {
-  animation: atmosphereFlash 1.6s ease-in-out forwards;
-}
-
-.atmospheric-overlay.ascent-effect {
-  animation: atmosphereAscent 1.2s ease-in-out forwards;
-}
-
-.atmospheric-overlay.fade-out {
-  opacity: 0;
-  transition: opacity 0.7s ease;
-}
-
-@keyframes atmosphereFlash {
-  0% {
-    opacity: 0;
-    backdrop-filter: blur(0px);
-    transform: scale(0.95);
-  }
-  35% {
-    opacity: 0.85;
-    backdrop-filter: blur(12px);
-    transform: scale(1.08);
-  }
-  75% {
-    opacity: 0.95;
-    backdrop-filter: blur(20px);
-    transform: scale(1.18);
-  }
-  100% {
-    opacity: 1;
-    backdrop-filter: blur(28px);
-    transform: scale(1.25);
-  }
-}
-
-@keyframes atmosphereAscent {
-  0% {
-    opacity: 1;
-    backdrop-filter: blur(28px);
-    transform: scale(1.25);
-  }
-  50% {
-    opacity: 0.8;
-    backdrop-filter: blur(14px);
-    transform: scale(1.08);
-  }
-  100% {
-    opacity: 0;
-    backdrop-filter: blur(0px);
-    transform: scale(1);
-  }
-}
-
-.reentry-vapor-layer {
-  position: absolute;
-  inset: -100px;
-  background: repeating-linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.12) 0px,
-    rgba(255, 255, 255, 0) 60px,
-    rgba(34, 211, 238, 0.2) 120px,
-    rgba(255, 255, 255, 0) 180px
-  );
-  animation: vaporStream 0.3s linear infinite;
-  mix-blend-mode: overlay;
-}
-
-@keyframes vaporStream {
-  from { transform: translateY(-180px); }
-  to { transform: translateY(0px); }
-}
-
-.reentry-hud-status {
-  position: relative;
-  z-index: 95;
-  text-align: center;
-  background: rgba(10, 18, 34, 0.85);
-  backdrop-filter: blur(16px);
-  padding: 24px 36px;
-  border-radius: 16px;
-  border: 1px solid var(--cyan-glow);
-  box-shadow: 0 0 35px rgba(34, 211, 238, 0.4);
-}
-
-.hud-scan-line {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: var(--cyan-glow);
-  animation: scanHUD 1.4s ease-in-out infinite;
-}
-
-@keyframes scanHUD {
-  0%, 100% { top: 0%; opacity: 0.2; }
-  50% { top: 100%; opacity: 1; }
-}
-
-.hud-tag {
-  font-size: 0.75rem;
-  letter-spacing: 0.15em;
-  color: var(--cyan-glow);
-  font-weight: 700;
-}
-
-.hud-dive-title {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #ffffff;
-  margin: 6px 0;
-  letter-spacing: -0.01em;
-}
-
-.hud-altitude {
-  font-size: 0.85rem;
-  font-family: var(--font-mono);
-  color: var(--text-muted);
-}
-
-.alt-counter {
-  color: #38bdf8;
-  font-weight: 700;
-}
-
 /* ==========================================================================
    9. Cartografía Satelital 2D (Leaflet Viewport & HUD)
+   Transición suave de zoom continuo y crossfade estilo Google Earth
    ========================================================================== */
 .map2d-wrapper {
   position: fixed;
@@ -1109,22 +976,18 @@ body {
   flex-direction: column;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.5s ease;
+  transform: scale(0.97);
+  transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .map2d-wrapper.active {
   opacity: 1;
+  transform: scale(1);
   pointer-events: auto;
-  animation: mapReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .map2d-wrapper.hidden {
   display: none;
-}
-
-@keyframes mapReveal {
-  from { opacity: 0; transform: scale(1.05); }
-  to { opacity: 1; transform: scale(1); }
 }
 
 .map2d-hud-header {
@@ -1161,6 +1024,48 @@ body {
   background: rgba(249, 115, 22, 0.2);
   color: #fdba74;
   border-color: var(--mars-accent);
+}
+
+.map-hud-badge.target-reached-badge {
+  background: rgba(16, 185, 129, 0.25);
+  color: #34d399;
+  border-color: #10b981;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+  animation: pulseReached 1.6s infinite;
+}
+
+@keyframes pulseReached {
+  0%, 100% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.3); transform: scale(1); }
+  50% { box-shadow: 0 0 18px rgba(16, 185, 129, 0.6); transform: scale(1.02); }
+}
+
+.map-hud-center {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.center-target-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid var(--border-cyan);
+  color: var(--cyan-glow);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.center-target-btn:hover {
+  background: rgba(34, 211, 238, 0.25);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.4);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .map-title-block h2 {

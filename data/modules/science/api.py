@@ -11,6 +11,14 @@ Exposes official REST endpoints for web applications, frontend integration, and 
 """
 
 from typing import Any, Dict, List, Optional
+import os
+import sys
+
+# Ensure data root is on sys.path for direct execution
+_DATA_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if _DATA_ROOT not in sys.path:
+    sys.path.insert(0, _DATA_ROOT)
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
@@ -112,4 +120,10 @@ def get_sensitivity(mission_id: str = "LUNAR_VOLCANIC_CAVITY_V1"):
     Executes a multi-profile weight sensitivity study.
     """
     return run_weight_sensitivity_analysis(mission_id)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    print("\n[Starting TERRAIN-X REST API on http://127.0.0.1:8000 ...]")
+    uvicorn.run("modules.science.api:app", host="127.0.0.1", port=8000, reload=True)
 

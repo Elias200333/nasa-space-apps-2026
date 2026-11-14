@@ -4,7 +4,15 @@ Executes benchmark evaluations comparing positive controls, negative controls,
 and candidate sites. Conducts a weight perturbation sensitivity study.
 """
 
+import os
+import sys
 from typing import Any, Dict, List, Tuple
+
+# Ensure data root is on sys.path for direct execution
+_DATA_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if _DATA_ROOT not in sys.path:
+    sys.path.insert(0, _DATA_ROOT)
+
 from modules.science.schemas import AnalogSite, Assessment, MissionProfile
 from modules.science.features.catalog import ANALOG_CATALOG, get_all_sites
 from modules.science.score import AnalogScorer, DEFAULT_MISSION_PROFILES
@@ -105,4 +113,10 @@ def format_validation_markdown_table(assessments: List[Assessment]) -> str:
         evidence = ", ".join(site.cave_evidence) if site and site.cave_evidence else "None"
         lines.append(f"| {idx} | `{a.site_id}` | {name} | `{status}` | {score_str} | {a.completeness:.1%} | {a.confidence:.1%} | {evidence} |")
     return "\n".join(lines)
+
+
+if __name__ == "__main__":
+    print("\n--- Running TERRAIN-X Benchmark Validation ---")
+    assessments = run_benchmark_evaluation("LUNAR_VOLCANIC_CAVITY_V1")
+    print(format_validation_markdown_table(assessments))
 
