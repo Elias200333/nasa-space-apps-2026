@@ -271,6 +271,10 @@ export class AnalogMap2DManager {
     }, 1500);
   }
 
+  public isMapActive(): boolean {
+    return this.mapContainer.classList.contains('active');
+  }
+
   /**
    * Regresa suavemente del mapa 2D a la órbita espacial 3D,
    * sincronizando la rotación de la Tierra con el punto donde el usuario estaba mirando en 2D.
@@ -281,16 +285,25 @@ export class AnalogMap2DManager {
     sound.playClick(480);
 
     const center = this.map ? this.map.getCenter() : null;
+    let lat = center ? center.lat : undefined;
+    let lon = center ? center.lng : undefined;
 
-    // 1. Desvanecer suavemente el contenedor 2D
+    if (lat !== undefined && lon !== undefined) {
+      // Normalizar longitud al rango canónico [-180, 180] y restringir latitud
+      lon = ((lon + 180) % 360 + 360) % 360 - 180;
+      lat = Math.max(-85, Math.min(85, lat));
+    }
+
+    // 1. Notificar inmediatamente a BabylonJS para preparar la orientación 3D exacta
+    // antes de que comience a desvanecerse la capa satelital
+    if (this.onReturnToOrbitCallback) {
+      this.onReturnToOrbitCallback(lat, lon);
+    }
+
+    // 2. Desvanecer suavemente el contenedor 2D
     this.mapContainer.style.transition = 'opacity 0.45s ease-out, transform 0.45s ease-out';
     this.mapContainer.style.opacity = '0';
     this.mapContainer.style.transform = 'scale(0.98)';
-
-    // 2. Disparar el ascenso de la cámara 3D de BabylonJS pasando las coordenadas actuales
-    if (this.onReturnToOrbitCallback) {
-      this.onReturnToOrbitCallback(center ? center.lat : undefined, center ? center.lng : undefined);
-    }
 
     setTimeout(() => {
       this.mapContainer.classList.remove('active');

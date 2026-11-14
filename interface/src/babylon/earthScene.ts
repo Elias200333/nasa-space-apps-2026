@@ -362,6 +362,9 @@ export class EarthSceneManager {
     this.autoRotate = false;
     if (this.inactivityTimer) clearTimeout(this.inactivityTimer);
 
+    // Ocultar cualquier baliza para navegación limpia
+    this.targetPin.setVisible(false);
+
     const coords = this.getCurrentCenterCoordinates();
 
     // Zoom continuo anticipado hacia la órbita continental (cota 4.1 sin atravesar la Tierra)
@@ -468,13 +471,51 @@ export class EarthSceneManager {
     }, 680);
   }
 
+  /**
+   * Prepara la orientación 3D para el regreso suave desde el mapa 2D:
+   * 1. Orienta la Tierra hacia las coordenadas exactas observadas en el mapa 2D.
+   * 2. Ajusta la cámara de forma frontal (alpha = -PI/2, beta = PI/2) a cota continental cercana (radius = 4.1).
+   * 3. Oculta balizas para permitir una transición limpia.
+   */
+  public prepareOrbitAscent(lat: number, lon: number) {
+    this.autoRotate = false;
+    if (this.inactivityTimer) {
+      clearTimeout(this.inactivityTimer);
+      this.inactivityTimer = null;
+    }
+
+    this.scene.stopAnimation(this.camera);
+    this.scene.stopAnimation(this.earthRoot);
+
+    this.targetPin.setVisible(false);
+
+    // Posición frontal en cota continental coincidente con la vista 2D
+    this.camera.alpha = -Math.PI / 2;
+    this.camera.beta = Math.PI / 2;
+    this.camera.radius = 4.1;
+
+    this.orientToCoordinates(lat, lon);
+    this.earthRoot.computeWorldMatrix(true);
+
+    if (this.onCoordinatesChange) {
+      this.onCoordinatesChange(Number(lat.toFixed(4)), Number(lon.toFixed(4)));
+    }
+  }
+
   public ascendToOrbit(durationMs = 1200) {
     this.isTransitioning = false;
     const fps = 60;
     const totalFrames = (durationMs / 1000) * fps;
 
+    // Asegurar que la cámara empiece en cota continental cercana (4.1) y ascienda suavemente al espacio (8.5)
+    const startRadius = Math.min(this.camera.radius, 4.2);
+    this.camera.radius = startRadius;
+
     const animRadius = new BABYLON.Animation('ascendRad', 'radius', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
-    animRadius.setKeys([{ frame: 0, value: this.camera.radius }, { frame: totalFrames, value: 8.5 }]);
+    animRadius.setKeys([
+      { frame: 0, value: startRadius },
+      { frame: totalFrames, value: 8.5 }
+    ]);
 
     const easing = new BABYLON.CubicEase();
     easing.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEOUT);
@@ -487,6 +528,10 @@ export class EarthSceneManager {
     this.inactivityTimer = setTimeout(() => {
       this.autoRotate = true;
     }, 30000);
+  }
+
+  public hidePin() {
+    this.targetPin.setVisible(false);
   }
 
   public resetToGlobalView() {

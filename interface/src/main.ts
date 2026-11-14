@@ -65,7 +65,7 @@ function init2DMapManager() {
   // Callback cuando el usuario pulsa "Regresar a Órbita Espacial" desde el mapa 2D
   map2DManager.setOnReturnToOrbit((lat, lon) => {
     if (lat !== undefined && lon !== undefined) {
-      earthScene.orientToCoordinates(lat, lon);
+      earthScene.prepareOrbitAscent(lat, lon);
     }
     earthScene.ascendToOrbit(1200);
     // Restablecer selector a Tierra
@@ -150,7 +150,11 @@ function setupUIEventListeners() {
   if (btnResetEarth) {
     btnResetEarth.addEventListener('click', () => {
       sound.playClick(500);
-      earthScene.resetToGlobalView();
+      if (map2DManager && map2DManager.isMapActive()) {
+        map2DManager.returnToSpaceOrbit();
+      } else {
+        earthScene.resetToGlobalView();
+      }
       hideTargetCard();
     });
   }
@@ -221,7 +225,11 @@ export function selectCelestialTarget(body: CelestialBody) {
     generateAndDiveToAnalog('Mars');
   } else {
     // Si pulsa Earth, regresa a la vista de órbita global
-    earthScene.resetToGlobalView();
+    if (map2DManager && map2DManager.isMapActive()) {
+      map2DManager.returnToSpaceOrbit();
+    } else {
+      earthScene.resetToGlobalView();
+    }
     hideTargetCard();
   }
 }

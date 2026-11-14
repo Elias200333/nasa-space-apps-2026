@@ -26,6 +26,49 @@ describe('Cálculos Geográficos y de Esfera en BabylonJS', () => {
     const computedRadius = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
     expect(computedRadius).toBeCloseTo(radius, 4);
   });
+
+  it('Debe normalizar correctamente longitudes fuera del rango [-180, 180]', () => {
+    const normalizeLon = (lon: number) => ((lon + 180) % 360 + 360) % 360 - 180;
+    expect(normalizeLon(15)).toBe(15);
+    expect(normalizeLon(375)).toBe(15);
+    expect(normalizeLon(-345)).toBe(15);
+    expect(normalizeLon(-200)).toBe(160);
+    expect(Math.abs(normalizeLon(540))).toBe(180);
+  });
+
+  it('Debe calcular rotaciones Euler exactas para situar cualquier coordenada frente a la cámara', () => {
+    const lat = 25.0; // Desierto del Sahara
+    const lon = 15.0;
+    const phi = (90 - lat) * (Math.PI / 180);
+    const lonRad = lon * (Math.PI / 180);
+    const v = {
+      x: -Math.sin(phi) * Math.cos(lonRad),
+      y: Math.cos(phi),
+      z: -Math.sin(phi) * Math.sin(lonRad)
+    };
+
+    const rx = Math.atan2(-v.y, -v.z);
+    const vX = {
+      x: v.x,
+      y: v.y * Math.cos(rx) - v.z * Math.sin(rx),
+      z: v.y * Math.sin(rx) + v.z * Math.cos(rx)
+    };
+    const ry = Math.atan2(vX.x, -vX.z);
+
+    // Tras aplicar Rx y Ry, el vector v debe apuntar exactamente a (0, 0, -1)
+    // donde la cámara mira en vista frontal (alpha = -PI/2, beta = PI/2)
+    const sinY = Math.sin(ry);
+    const cosY = Math.cos(ry);
+    const vRot = {
+      x: vX.x * cosY + vX.z * sinY,
+      y: vX.y,
+      z: -vX.x * sinY + vX.z * cosY
+    };
+
+    expect(vRot.x).toBeCloseTo(0, 4);
+    expect(vRot.y).toBeCloseTo(0, 4);
+    expect(vRot.z).toBeCloseTo(-1, 4);
+  });
 });
 
 describe('Generador de Coordenadas Aleatorias de Análogos Terrestres', () => {
