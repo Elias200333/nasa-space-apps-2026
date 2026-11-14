@@ -21,6 +21,7 @@ Estados (dossier §6.4), separados en dos máquinas:
 from __future__ import annotations
 
 import logging
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
 from datetime import datetime
@@ -234,6 +235,10 @@ class RobotAdapter(ABC):
         # Pose del LiDAR (rt/utlidar/robot_pose): {x, y, z, yaw, frame_id} y su contador
         self.last_pose: dict | None = None
         self.pose_seq = 0
+        # Panel «Estado del robot»: último mensaje JSON de cada topic y cuándo llegó AQUÍ
+        # (reloj monotónico del PC: en replay, host_utc es la hora original de la grabación)
+        self.latest_json: dict[str, Any] = {}
+        self.topic_last_mono: dict[str, float] = {}
 
     # ------------------------------------------------------------ propiedades
     @property
@@ -436,6 +441,7 @@ class RobotAdapter(ABC):
     ) -> LidarFrame:
         self._seq += 1
         self.monitor.observe(topic, host_utc, meta)
+        self.topic_last_mono[topic] = time.monotonic()
         if raw is not None:
             self.last_lidar_raw = (meta, raw)   # una tupla nueva: la lectura desde otro hilo es atómica
             self.lidar_raw_seq += 1
@@ -452,6 +458,8 @@ class RobotAdapter(ABC):
     def _ingest_json(self, *, topic: str, data: Any, host_utc: datetime) -> None:
         self.monitor.observe(topic, host_utc, data)
         self.telemetry.update(topic, data, host_utc)
+        self.latest_json[topic] = data
+        self.topic_last_mono[topic] = time.monotonic()
         if topic.endswith("robot_pose"):
             pose = pose_from_robot_pose(data)
             if pose is not None:

@@ -9,7 +9,9 @@
 <body>
   <header class="topbar">
     <div class="brand">TERRAIN-X <span>· Diagnóstico Go2 AIR</span></div>
+    <div id="batt-alert" class="alert" hidden></div>
     <div class="conn">
+      <span id="src-badge" class="badge">—</span>
       <span id="dot" class="dot off"></span>
       <span id="conn-text">desconectado</span>
       <button id="btn-connect">Conectar</button>
@@ -73,6 +75,7 @@
           <button class="pbtn" data-cmd="StandDown" disabled>Sentar</button>
           <button class="pbtn" data-cmd="BalanceStand" disabled>Equilibrio</button>
           <button class="pbtn" data-cmd="Damp" disabled>Amortiguar</button>
+          <button class="pbtn" data-cmd="RecoveryStand" disabled title="Orden RecoveryStand de Unitree: volver a ponerse de pie (p. ej. tras caerse)">Recuperarse</button>
         </div>
       </div>
       <p class="note" id="limits">Topes de velocidad: —</p>
@@ -84,6 +87,60 @@
       <div id="lidar-canvas"></div>
       <div class="cam-meta"><span id="lidar-count">sin datos</span> · arrastrar = girar · rueda = zoom</div>
       <p class="note" id="lidar-note">Vóxeles ocupados del mapa del robot (no retornos crudos). Ejes en metros (asumido).</p>
+      <div class="ctrl-row slam-row">
+        <span id="slam-info" class="note">Acumulado: —</span>
+        <button id="btn-slam-save" class="secondary small" disabled>Guardar acumulado como escaneo</button>
+      </div>
+      <div id="slam-save-status" class="note"></div>
+    </section>
+
+    <!-- ESTADO DEL ROBOT -->
+    <section class="panel health">
+      <h2>Estado del robot <span id="health-badge" class="badge">—</span></h2>
+      <div class="health-grid">
+        <div>
+          <h3>Batería</h3>
+          <table>
+            <tr><td>Carga</td><td id="h-soc">—</td></tr>
+            <tr><td>Tensión</td><td id="h-volt">—</td></tr>
+            <tr><td>Corriente <small>(unidad sin verificar)</small></td><td id="h-cur">—</td></tr>
+            <tr><td>Ciclos</td><td id="h-cyc">—</td></tr>
+            <tr><td>Temp. BMS · MCU <small>(sin verificar)</small></td><td id="h-temp">—</td></tr>
+          </table>
+        </div>
+        <div>
+          <h3>LiDAR</h3>
+          <table>
+            <tr><td>Suciedad</td><td id="h-dirty">—</td></tr>
+            <tr><td>Paquetes perdidos (nube · IMU)</td><td id="h-loss">—</td></tr>
+            <tr><td>Código de error</td><td id="h-lerr">—</td></tr>
+            <tr><td>Firmware del LiDAR</td><td id="h-lfw">—</td></tr>
+          </table>
+          <h3>Robot</h3>
+          <table>
+            <tr><td>Evitación de obstáculos</td><td id="h-avoid">—</td></tr>
+          </table>
+        </div>
+      </div>
+      <h3>Flujos de datos</h3>
+      <table id="h-topics"><thead><tr><th>Topic</th><th>Hz</th><th>Último</th><th>Estado</th></tr></thead><tbody></tbody></table>
+      <p class="note">Solo lectura, tal como lo publica el robot. Los umbrales de batería (aviso &lt; 25 %, crítico &lt; 15 %)
+        son nuestros, no de Unitree. "no disponible" = el robot no lo publica.</p>
+    </section>
+
+    <!-- REPLAY -->
+    <section class="panel replay">
+      <h2>Replay · demo sin robot <span id="replay-badge" class="badge">—</span></h2>
+      <p class="note">Reproduce una sesión grabada (Capturas → «grabar sesión cruda») por el mismo camino que el
+        robot real: mapa, posición y telemetría. Sin control y sin cámara (las sesiones no graban vídeo).
+        Una sesión sintética se muestra siempre como DEMO.</p>
+      <div class="ctrl-row">
+        <button id="btn-sessions" class="secondary small">Actualizar lista</button>
+        <label class="chk"><input type="checkbox" id="replay-loop" checked /> en bucle</label>
+        <button id="btn-replay-stop" class="secondary small" disabled>■ Parar replay</button>
+      </div>
+      <table id="sessions"><thead><tr><th>Sesión</th><th>Origen</th><th>Datos</th><th></th></tr></thead><tbody></tbody></table>
+      <div id="replay-status" class="note">—</div>
     </section>
 
     <!-- CAPTURAS -->

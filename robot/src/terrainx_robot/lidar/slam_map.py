@@ -35,6 +35,7 @@ import json
 import struct
 import threading
 import uuid
+from datetime import datetime, timezone
 
 import lz4.block
 import numpy as np
@@ -83,6 +84,9 @@ class SlamMap:
             self.epoch = uuid.uuid4().hex[:8]           # cambia al borrar: los visores tiran lo viejo
             self.version = 0
             self.frames = 0
+            self.frame_id: str | None = None            # marco de los mapas sumados (p. ej. «odom»)
+            self.first_utc: datetime | None = None      # cuándo se sumó el primer / último mapa
+            self.last_utc: datetime | None = None
 
     # ── Entrada: un mapa de vóxeles del perro ──
     def update_raw(self, raw: bytes, src_size: int, origin, resolution: float):
@@ -135,6 +139,27 @@ class SlamMap:
                     self._dirty.update((cx, cy, cz) for cz in zs)   # cambian las cuentas de la columna
             self.version += 1
             self.frames += 1
+            now = datetime.now(timezone.utc)
+            self.first_utc = self.first_utc or now
+            self.last_utc = now
+
+    # ── Salida: nube de puntos (para guardarla como escaneo) ──
+    def export_points(self) -> np.ndarray:
+        """Vóxeles pintados del mapa acumulado → (N, 3) en metros del marco del perro.
+        Misma regla de pintado que los trozos (MIN_HITS, KEEP_RATIO, sin vóxeles sueltos)
+        y MISMA convención que las capturas en vivo (voxel_codec): punto = origen de la
+        ventana + índice · res = (k − ½) · res para el vóxel del mundo k."""
+        with self._lock:
+            res = self.res
+            parts = []
+            for (cx, cy, cz), hits in self._hits.items():
+                vis = (hits >= MIN_HITS) & (hits >= KEEP_RATIO * self._seen[(cx, cy)][None])
+                z, y, x = np.nonzero(_drop_alone(vis))
+                if len(x):
+                    parts.append(np.column_stack((x + cx * CHUNK, y + cy * CHUNK, z + cz * LAYERS - Z_BASE)))
+        if not parts or res is None:
+            return np.empty((0, 3), dtype=np.float64)
+        return (np.concatenate(parts).astype(np.float64) - 0.5) * res
 
     # ── Salida: los trozos para los visores ──
     def changed_frames(self) -> list[bytes]:
