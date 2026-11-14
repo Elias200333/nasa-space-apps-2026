@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TERRAIN-X · Go2 AIR</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">TERRAIN-X <span>· Diagnóstico Go2 AIR</span></div>
+    <div class="conn">
+      <span id="dot" class="dot off"></span>
+      <span id="conn-text">desconectado</span>
+      <button id="btn-connect">Conectar</button>
+      <button id="btn-disconnect" class="secondary">Desconectar</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <!-- CÁMARA -->
+    <section class="panel cam">
+      <h2>Cámara en directo <span id="cam-badge" class="badge">—</span></h2>
+      <div class="cam-wrap">
+        <img id="cam" alt="cámara del Go2" />
+        <div id="cam-overlay" class="overlay">Sin señal — conecta el robot</div>
+      </div>
+      <div class="cam-meta"><span id="cam-fps">FPS: —</span> · <span id="cam-frames">fotogramas: 0</span></div>
+    </section>
+
+    <!-- TELEMETRÍA -->
+    <section class="panel telemetry">
+      <h2>Telemetría</h2>
+      <table id="telemetry">
+        <tr><td>Conexión</td><td id="t-conn">—</td></tr>
+        <tr><td>Batería (SOC)</td><td id="t-batt">—</td></tr>
+        <tr><td>Voltaje</td><td id="t-volt">—</td></tr>
+        <tr><td>IMU (RPY)</td><td id="t-imu">—</td></tr>
+        <tr><td>Posición</td><td id="t-pos">—</td></tr>
+        <tr><td>LiDAR</td><td id="t-lidar">—</td></tr>
+        <tr><td>Vídeo</td><td id="t-video">—</td></tr>
+      </table>
+      <p class="note">Un valor "no disponible" significa que el robot no lo publica. No se muestran datos inventados.</p>
+    </section>
+
+    <!-- CONTROL WASD -->
+    <section class="panel control">
+      <h2>Conducción (WASD) <span id="ctrl-badge" class="badge warn">solo lectura</span></h2>
+      <p class="warn-text">⚠ Mueve un robot físico. Un operador debe estar junto al Go2 con el paro de emergencia.
+        El robot solo se mueve mientras mantienes la tecla pulsada.</p>
+      <div class="ctrl-row">
+        <button id="btn-arm" class="danger">Habilitar control</button>
+        <button id="btn-disarm" class="secondary" disabled>Deshabilitar</button>
+        <button id="btn-stop" class="stop" disabled>■ PARAR</button>
+      </div>
+      <div class="wasd" id="wasd">
+        <div></div><div class="key" data-k="w">W<small>avanza</small></div><div></div>
+        <div class="key" data-k="a">A<small>gira izq.</small></div>
+        <div class="key" data-k="s">S<small>retrocede</small></div>
+        <div class="key" data-k="d">D<small>gira der.</small></div>
+      </div>
+      <div class="ctrl-extra">
+        <span>Lateral: <b>Q</b>/<b>E</b> · Parar: <b>Espacio</b></span>
+        <div class="postures">
+          <button class="pbtn" data-cmd="StandUp" disabled>Levantar</button>
+          <button class="pbtn" data-cmd="StandDown" disabled>Sentar</button>
+          <button class="pbtn" data-cmd="BalanceStand" disabled>Equilibrio</button>
+          <button class="pbtn" data-cmd="Damp" disabled>Amortiguar</button>
+        </div>
+      </div>
+      <p class="note" id="limits">Topes de velocidad: —</p>
+    </section>
+
+    <!-- LIDAR 3D -->
+    <section class="panel lidar">
+      <h2>LiDAR 3D <span id="lidar-badge" class="badge">—</span></h2>
+      <div id="lidar-canvas"></div>
+      <div class="cam-meta">
+        <span id="lidar-count">0 puntos</span> ·
+        <label><input type="checkbox" id="lidar-auto" checked /> actualizar auto</label>
+        <button id="lidar-refresh" class="secondary small">Actualizar</button>
+      </div>
+      <p class="note" id="lidar-note">Vóxeles ocupados del mapa del robot (no retornos crudos). Ejes en metros (asumido).</p>
+    </section>
+
+    <!-- CAPTURAS -->
+    <section class="panel captures">
+      <h2>Capturas y datos</h2>
+      <div class="ctrl-row">
+        <button id="btn-cap-start" disabled>Iniciar captura</button>
+        <button id="btn-cap-stop" class="secondary" disabled>Detener y guardar</button>
+        <label class="chk"><input type="checkbox" id="cap-record" /> grabar sesión cruda</label>
+      </div>
+      <div id="cap-status" class="note">—</div>
+      <table id="scans"><thead><tr><th>ID</th><th>Puntos</th><th>Origen</th><th></th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <!-- AUTENTICACIÓN UNITREE -->
+    <section class="panel auth">
+      <h2>Unitree — Conexión y autenticación</h2>
+      <div id="auth-status" class="note">Clave AES: —</div>
+      <div class="auth-form">
+        <input id="au-email" type="email" placeholder="correo de la cuenta Unitree" autocomplete="username" />
+        <input id="au-pass" type="password" placeholder="contraseña" autocomplete="current-password" />
+        <button id="btn-devices">Vincular cuenta</button>
+      </div>
+      <div id="dev-list"></div>
+      <button id="btn-fetch" disabled>Recuperar y guardar clave del robot seleccionado</button>
+      <p class="note">La contraseña no se guarda. La clave se almacena fuera del repositorio y nunca se muestra:
+        solo verás "Clave configurada" y una huella corta.</p>
+    </section>
+
+    <!-- DIAGNÓSTICO -->
+    <section class="panel diag">
+      <h2>Diagnóstico</h2>
+      <table id="diag">
+        <tr><td>Modelo</td><td id="d-model">Unitree Go2 AIR</td></tr>
+        <tr><td>Protocolo</td><td>WebRTC + AES-128</td></tr>
+        <tr><td>IP / modo</td><td id="d-ip">—</td></tr>
+        <tr><td>Autenticación</td><td id="d-auth">—</td></tr>
+        <tr><td>Vídeo</td><td id="d-video">—</td></tr>
+        <tr><td>LiDAR</td><td id="d-lidar">—</td></tr>
+        <tr><td>Guardián</td><td id="d-guard">—</td></tr>
+        <tr><td>Librería</td><td id="d-lib">—</td></tr>
+        <tr><td>Último error</td><td id="d-err">—</td></tr>
+      </table>
+    </section>
+  </main>
+
+  <script src="/static/vendor/three.min.js"></script>
+  <script src="/static/vendor/OrbitControls.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

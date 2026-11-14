@@ -39,8 +39,12 @@ class Go2Settings(BaseModel):
     method: Literal["LocalAP", "LocalSTA"] = "LocalSTA"
     ip: str | None = None
     serial: str | None = None
+    region: Literal["global", "cn"] = "global"
     aes_key: SecretStr | None = None
-    aes_key_source: Literal["none", "file", "environment"] = "none"
+    # "file_missing": la ruta está configurada pero el archivo aún no existe
+    # (p. ej. antes de recuperar la clave). No es un error: solo no hay clave todavía.
+    aes_key_source: Literal["none", "file", "environment", "file_missing"] = "none"
+    aes_key_file: str | None = None  # ruta configurada (NO el secreto)
     connect_timeout_s: float = 30.0
     enable_lidar: bool = True
 
@@ -62,9 +66,11 @@ class Settings(BaseModel):
             "firmware_version": self.firmware_version,
             "go2_method": self.go2.method,
             "go2_ip": self.go2.ip,
+            "go2_region": self.go2.region,
             "go2_serial_configured": bool(self.go2.serial),
             "go2_aes_key": "configurada" if self.go2.aes_key else "no configurada",
             "go2_aes_key_source": self.go2.aes_key_source,
+            "go2_aes_key_file": self.go2.aes_key_file,
             "go2_connect_timeout_s": self.go2.connect_timeout_s,
             "go2_enable_lidar": self.go2.enable_lidar,
             "env_file_loaded": self.env_file_loaded,
@@ -101,6 +107,26 @@ def _parse_bool(name: str, value: str | None, default: bool) -> bool:
     raise ConfigError(f"{name} debe ser true/false, no {value!r}")
 
 
+def extract_hex_key(text: str) -> str | None:
+    """Primera línea no vacía que no sea comentario (#). Admite el formato con
+    cabecera que usa nuestro gestor de claves y `unitree-fetch-aes-key`."""
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            return stripped
+    return None
+
+
+def assert_key_path_outside_repo(path: Path) -> None:
+    """Rechaza cualquier ruta de clave dentro del repositorio (no debe poder subirse)."""
+    repo = find_repo_root(ROBOT_ROOT)
+    if repo is not None and path.resolve().is_relative_to(repo.resolve()):
+        raise ConfigError(
+            "El archivo de la clave AES está dentro del repositorio. Use una ruta fuera "
+            "(p. ej. en su carpeta de usuario) para que la clave nunca pueda subirse."
+        )
+
+
 def _load_aes_key(key_file: str | None, key_env: str | None) -> tuple[SecretStr | None, str]:
     if key_file and key_env:
         raise ConfigError(
@@ -109,15 +135,11 @@ def _load_aes_key(key_file: str | None, key_env: str | None) -> tuple[SecretStr 
         )
     if key_file:
         path = Path(key_file).expanduser().resolve()
-        repo = find_repo_root(ROBOT_ROOT)
-        if repo is not None and path.is_relative_to(repo.resolve()):
-            raise ConfigError(
-                "El archivo de la clave AES está dentro del repositorio. Muévalo fuera "
-                "(p. ej. a su carpeta de usuario) para que nunca pueda subirse."
-            )
+        assert_key_path_outside_repo(path)
         if not path.is_file():
-            raise ConfigError(f"No existe el archivo de clave AES indicado: {path}")
-        value = path.read_text(encoding="utf-8").strip()
+            # La ruta puede configurarse ANTES de recuperar la clave: no es un error.
+            return None, "file_missing"
+        value = extract_hex_key(path.read_text(encoding="utf-8")) or ""
         source = "file"
     elif key_env:
         value = key_env.strip()
@@ -178,6 +200,10 @@ def load_settings(
     elif model not in ("AIR", "PRO", "EDU"):
         raise ConfigError(f"TERRAINX_GO2_MODEL debe ser AIR, PRO, EDU o unknown, no {model!r}")
 
+    region = (get("TERRAINX_GO2_REGION", "global") or "global").lower()
+    if region not in ("global", "cn"):
+        raise ConfigError(f"TERRAINX_GO2_REGION debe ser global o cn, no {region!r}")
+
     try:
         timeout = float(get("TERRAINX_GO2_CONNECT_TIMEOUT_S", "30"))
     except ValueError as exc:
@@ -185,8 +211,9 @@ def load_settings(
     if timeout <= 0:
         raise ConfigError("TERRAINX_GO2_CONNECT_TIMEOUT_S debe ser > 0")
 
+    key_file = get("TERRAINX_GO2_AES_KEY_FILE")
     aes_key, aes_source = _load_aes_key(
-        get("TERRAINX_GO2_AES_KEY_FILE"),
+        key_file,
         (process_env.get("TERRAINX_GO2_AES_KEY") or "").strip() or None,
     )
 
@@ -206,8 +233,10 @@ def load_settings(
             method=method,
             ip=ip,
             serial=get("TERRAINX_GO2_SERIAL"),
+            region=region,
             aes_key=aes_key,
             aes_key_source=aes_source,
+            aes_key_file=str(Path(key_file).expanduser().resolve()) if key_file else None,
             connect_timeout_s=timeout,
             enable_lidar=_parse_bool(
                 "TERRAINX_GO2_ENABLE_LIDAR", get("TERRAINX_GO2_ENABLE_LIDAR"), True

@@ -2,9 +2,11 @@
 
 Software del especialista de robótica de TERRAIN-X (NASA Space Apps Challenge 2026).
 
-**Fase 1:** comunicación de **solo lectura** con el Unitree Go2 físico. Incluye adquisición LiDAR y telemetría, exportación PLY + metadatos JSON con SHA-256 y un modo replay para trabajar sin robot.
+**Base (solo lectura):** comunicación con el Unitree Go2 físico — adquisición LiDAR y telemetría, exportación PLY + metadatos JSON con SHA-256 y un modo replay para trabajar sin robot.
 
-> Este módulo **no envía órdenes de movimiento**. Un guardián bloquea en el propio PC cualquier mensaje que no esté en una lista blanca de lectura. No sustituye a la parada de emergencia física del robot.
+**Dashboard web local:** autenticación AES-128, conexión compartida al Go2, **cámara en directo**, visor LiDAR 3D, telemetría, capturas y, de forma separada y opcional, **teleoperación WASD** con hombre muerto. Ver [sección 11](#11-dashboard-web-del-go2-air).
+
+> Por defecto el módulo es de **solo lectura**: un guardián bloquea en el propio PC cualquier orden que no esté en una lista blanca. La conducción WASD es un **modo aparte** que hay que habilitar explícitamente; usa un guardián acotado (solo Move/Stop/levantar/sentar/amortiguar) y se detiene al soltar la tecla, perder el foco o cortarse la conexión. Nada de esto sustituye a la parada de emergencia física del robot, que siempre debe manejar un operador presente.
 
 ---
 
@@ -161,7 +163,9 @@ robot/
   - mantenimiento del enlace;
   - `rt/utlidar/switch` con `on`/`off`.
 
+  Además, en solo lectura se permite el conmutador de **cámara** (`vid` on/off).
   Todo lo demás se bloquea antes de salir del PC y queda contado en `readonly_guard`.
+- **Modo control (WASD):** no se activa solo. Al habilitarlo explícitamente, el guardián permite además un subconjunto **acotado** de locomoción (Move, StopMove, StandUp, StandDown, BalanceStand, RecoveryStand, Damp); siguen bloqueados saltos, volteretas, `rt/lowcmd` y `rt/wirelesscontroller`. Al deshabilitar, desconectar o cerrar el canal de control se envía StopMove y se vuelve a solo lectura. El dashboard solo se sirve en `127.0.0.1`.
 - Al desconectar **no** se envía `off` al LiDAR: no alteramos más estado del robot del necesario.
 - Las claves y credenciales nunca se escriben en el repositorio, en `.env` ni en los logs. Los mensajes de error de la librería se redactan.
 - `runtime/` puede contener datos reales e identificadores del robot. Está en `.gitignore`: revíselo antes de compartirlo.
@@ -176,3 +180,71 @@ robot/
 | `datachannel_timeout` | Cortafuegos de Windows bloqueando UDP o Wi-Fi débil | Permita Python en el cortafuegos para redes privadas y acerque el PC |
 | `missing_address` | LocalSTA sin IP ni número de serie | Rellene `TERRAINX_GO2_IP` en `.env` |
 | Caracteres raros en la consola | Codificación de la consola | La CLI fuerza UTF-8; en consolas antiguas, ejecute `chcp 65001` |
+| La cámara no aparece | El robot aún no envía vídeo, o `[dashboard]`/`[go2]` sin instalar | Espere unos segundos tras conectar; verifique con `check-library` |
+
+---
+
+## 11. Dashboard web del Go2 AIR
+
+Interfaz local de diagnóstico. Se sirve **solo en `127.0.0.1`** (no accesible desde la red).
+
+### Instalación del extra
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[go2,dashboard]"
+```
+
+### Recuperar la clave AES-128 (firmware ≥ 1.1.15)
+
+La clave es propia de cada robot y está en tu cuenta de Unitree. Se recupera con la **función oficial de la librería**, se guarda **fuera del repositorio** y **nunca se muestra** (solo una huella):
+
+```powershell
+# Opción 1 — desde la terminal
+.\.venv\Scripts\python.exe -m terrainx_robot unitree-devices                 # lista tus robots
+.\.venv\Scripts\python.exe -m terrainx_robot unitree-fetch-key --serial <SN> # guarda la clave
+.\.venv\Scripts\python.exe -m terrainx_robot aes-status                      # confirma (huella)
+
+# Opción 2 — si ya la obtuviste aparte
+.\.venv\Scripts\python.exe -m terrainx_robot import-aes-key --from-file C:\ruta\externa\go2.aes
+```
+
+Después apunta `TERRAINX_GO2_AES_KEY_FILE` en `robot\.env` a esa ruta (por defecto `%USERPROFILE%\.terrainx\go2_aes_key.txt`). También puedes hacer todo esto desde el panel **«Unitree — Conexión y autenticación»** del propio dashboard.
+
+### Lanzar el dashboard
+
+```powershell
+.\.venv\Scripts\python.exe -m terrainx_robot dashboard
+```
+
+Abre **http://127.0.0.1:8777** en el navegador. Paneles: cámara en directo (MJPEG), telemetría, LiDAR 3D, conducción WASD, capturas y diagnóstico.
+
+### Conectar al perro y comprobar que funciona
+
+1. Enciende el Go2, ponlo en la misma red que el PC y **cierra la app oficial de Unitree** (el robot admite un solo cliente).
+2. Rellena en `robot\.env`: `TERRAINX_GO2_IP`, `TERRAINX_GO2_MODEL=AIR`, la ruta de la clave y, si sabes, `TERRAINX_GO2_FIRMWARE`.
+3. En el dashboard pulsa **Conectar**. Si todo va bien verás:
+   - el indicador en verde y el estado `ready_readonly`;
+   - la **cámara en directo** en unos segundos (FPS en la esquina);
+   - telemetría (batería, IMU…) a medida que el robot la publica;
+   - la nube **LiDAR 3D** actualizándose (vóxeles ocupados, en metros asumidos).
+4. Prueba una **captura**: «Iniciar captura» → mueve el robot con su mando unos segundos → «Detener y guardar». Aparece en la lista y puedes descargar el PLY.
+
+### Conducir con WASD (teleoperación supervisada)
+
+> **Solo con espacio libre y un operador junto al paro de emergencia físico.**
+
+1. En el panel **Conducción (WASD)** pulsa **«Habilitar control»** y confirma. El guardián pasa a modo control (acotado).
+2. Conduce manteniendo pulsado:
+   - **W / S** — avanzar / retroceder
+   - **A / D** — girar izquierda / derecha
+   - **Q / E** — desplazamiento lateral
+   - **Espacio** — parar
+   - Botones de postura: **Levantar / Sentar / Equilibrio / Amortiguar**
+3. El robot **solo se mueve mientras mantienes la tecla**. Al soltarla, cambiar de ventana, cerrar la pestaña o perder la conexión, se detiene solo (hombre muerto, 0,4 s). Botones **PARAR** y **Deshabilitar** siempre disponibles.
+4. Límites de velocidad (recortados en el servidor): avance 0,6 m/s · lateral 0,4 m/s · giro 0,8 rad/s; el mando WASD usa valores aún más suaves. Saltos y volteretas están **bloqueados**.
+
+### Qué está probado y qué no
+
+- **Probado sin robot** (159 tests, incluidos los del dashboard con un robot simulado): los endpoints, el modo control acotado, el hombre muerto, el recorte de velocidad y que la clave/credenciales no se filtran.
+- **Pendiente de comprobar con el Go2 físico:** que lleguen vídeo y LiDAR reales y a qué frecuencia, y el comportamiento real de la locomoción. Nada de esto está verificado hasta probarlo con el robot.
+- Three.js se incluye vendorizado en `dashboard/static/vendor/` (MIT) para que el visor 3D funcione **sin internet** en la red del robot.
