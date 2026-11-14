@@ -362,6 +362,9 @@ export class EarthSceneManager {
     this.autoRotate = false;
     if (this.inactivityTimer) clearTimeout(this.inactivityTimer);
 
+    // Ocultar cualquier baliza para navegación limpia
+    this.targetPin.setVisible(false);
+
     const coords = this.getCurrentCenterCoordinates();
 
     // Zoom continuo anticipado hacia la órbita continental (cota 4.1 sin atravesar la Tierra)
@@ -395,23 +398,11 @@ export class EarthSceneManager {
     // Posicionar baliza en la superficie de la Tierra con coordenadas no espejadas
     this.targetPin.setCoordinates(lat, lon);
 
-    // Vector unitario del punto en el marco local de la Tierra
-    const phi = (90 - lat) * (Math.PI / 180);
-    const lonRad = lon * (Math.PI / 180);
-    const v = new BABYLON.Vector3(
-      -Math.sin(phi) * Math.cos(lonRad),
-      Math.cos(phi),
-      -Math.sin(phi) * Math.sin(lonRad)
-    );
-
-    // Rotaciones analíticas para situar el punto exactamente frente a la cámara (0, 0, -1)
-    const rx = Math.atan2(-v.y, -v.z);
-    const mX = BABYLON.Matrix.RotationX(rx);
-    const vX = BABYLON.Vector3.TransformCoordinates(v, mX);
-    const ry = Math.atan2(vX.x, -vX.z);
-
-    const targetRotX = rx;
-    const targetRotY = ry;
+    // Calcular ángulos de Euler con preservación estricta de Norte-Arriba
+    const euler = EarthSceneManager.calculateOrientationEuler(lat, lon);
+    const targetRotX = euler.x;
+    const targetRotY = euler.y;
+    const targetRotZ = euler.z;
 
     // Giro por el camino más corto
     let currentY = this.earthRoot.rotation.y;
@@ -422,15 +413,22 @@ export class EarthSceneManager {
     const diffX = (targetRotX - currentX) % (2 * Math.PI);
     const shortestX = currentX + (((diffX + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
 
+    let currentZ = this.earthRoot.rotation.z;
+    const diffZ = (targetRotZ - currentZ) % (2 * Math.PI);
+    const shortestZ = currentZ + (((diffZ + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+
     const fps = 60;
     const totalFrames = 75; // 1.25s de trayectoria continua y fluida
 
-    // Animación de rotación de la Tierra
+    // Animación de rotación de la Tierra en sus tres ejes para conservar la orientación vertical del mapa
     const animRotY = new BABYLON.Animation('earthRotY', 'rotation.y', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
     animRotY.setKeys([{ frame: 0, value: this.earthRoot.rotation.y }, { frame: totalFrames, value: shortestY }]);
 
     const animRotX = new BABYLON.Animation('earthRotX', 'rotation.x', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
     animRotX.setKeys([{ frame: 0, value: this.earthRoot.rotation.x }, { frame: totalFrames, value: shortestX }]);
+
+    const animRotZ = new BABYLON.Animation('earthRotZ', 'rotation.z', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+    animRotZ.setKeys([{ frame: 0, value: this.earthRoot.rotation.z }, { frame: totalFrames, value: shortestZ }]);
 
     // Descenso de cámara que se detiene a cota orbital continental (radius = 4.1, sin atravesar la Tierra de radio 2.8)
     const animRadius = new BABYLON.Animation('camZoomRadius', 'radius', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
@@ -454,11 +452,12 @@ export class EarthSceneManager {
     easing.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
     animRotY.setEasingFunction(easing);
     animRotX.setEasingFunction(easing);
+    animRotZ.setEasingFunction(easing);
     animRadius.setEasingFunction(easing);
     animAlpha.setEasingFunction(easing);
     animBeta.setEasingFunction(easing);
 
-    this.scene.beginDirectAnimation(this.earthRoot, [animRotY, animRotX], 0, totalFrames, false);
+    this.scene.beginDirectAnimation(this.earthRoot, [animRotY, animRotX, animRotZ], 0, totalFrames, false);
     this.scene.beginDirectAnimation(this.camera, [animRadius, animAlpha, animBeta], 0, totalFrames, false);
 
     // Disparar el fundido del mapa 2D con anticipación (a los 680ms)
@@ -468,13 +467,51 @@ export class EarthSceneManager {
     }, 680);
   }
 
+  /**
+   * Prepara la orientación 3D para el regreso suave desde el mapa 2D:
+   * 1. Orienta la Tierra hacia las coordenadas exactas observadas en el mapa 2D.
+   * 2. Ajusta la cámara de forma frontal (alpha = -PI/2, beta = PI/2) a cota continental cercana (radius = 4.1).
+   * 3. Oculta balizas para permitir una transición limpia.
+   */
+  public prepareOrbitAscent(lat: number, lon: number) {
+    this.autoRotate = false;
+    if (this.inactivityTimer) {
+      clearTimeout(this.inactivityTimer);
+      this.inactivityTimer = null;
+    }
+
+    this.scene.stopAnimation(this.camera);
+    this.scene.stopAnimation(this.earthRoot);
+
+    this.targetPin.setVisible(false);
+
+    // Posición frontal en cota continental coincidente con la vista 2D
+    this.camera.alpha = -Math.PI / 2;
+    this.camera.beta = Math.PI / 2;
+    this.camera.radius = 4.1;
+
+    this.orientToCoordinates(lat, lon);
+    this.earthRoot.computeWorldMatrix(true);
+
+    if (this.onCoordinatesChange) {
+      this.onCoordinatesChange(Number(lat.toFixed(4)), Number(lon.toFixed(4)));
+    }
+  }
+
   public ascendToOrbit(durationMs = 1200) {
     this.isTransitioning = false;
     const fps = 60;
     const totalFrames = (durationMs / 1000) * fps;
 
+    // Asegurar que la cámara empiece en cota continental cercana (4.1) y ascienda suavemente al espacio (8.5)
+    const startRadius = Math.min(this.camera.radius, 4.2);
+    this.camera.radius = startRadius;
+
     const animRadius = new BABYLON.Animation('ascendRad', 'radius', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
-    animRadius.setKeys([{ frame: 0, value: this.camera.radius }, { frame: totalFrames, value: 8.5 }]);
+    animRadius.setKeys([
+      { frame: 0, value: startRadius },
+      { frame: totalFrames, value: 8.5 }
+    ]);
 
     const easing = new BABYLON.CubicEase();
     easing.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEOUT);
@@ -487,6 +524,10 @@ export class EarthSceneManager {
     this.inactivityTimer = setTimeout(() => {
       this.autoRotate = true;
     }, 30000);
+  }
+
+  public hidePin() {
+    this.targetPin.setVisible(false);
   }
 
   public resetToGlobalView() {
@@ -514,6 +555,44 @@ export class EarthSceneManager {
     easing.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEOUT);
     anim.setEasingFunction(easing);
     this.scene.beginDirectAnimation(this.camera, [anim], 0, 20, false);
+  }
+
+  /**
+   * Calcula analíticamente los ángulos de rotación Euler (rx, ry, rz) requeridos para situar
+   * unas coordenadas (lat, lon) exactamente frente a la cámara (0, 0, -1),
+   * preservando rigurosamente el Norte estrictamente hacia ARRIBA (+Y) y el Este a la DERECHA (+X),
+   * garantizando que la orientación sea 100% idéntica al mapa 2D (sin inclinaciones laterales).
+   */
+  public static calculateOrientationEuler(lat: number, lon: number): BABYLON.Vector3 {
+    const latRad = lat * (Math.PI / 180);
+    const lonRad = lon * (Math.PI / 180);
+
+    const P = new BABYLON.Vector3(
+      -Math.cos(latRad) * Math.cos(lonRad),
+      Math.sin(latRad),
+      -Math.cos(latRad) * Math.sin(lonRad)
+    );
+
+    const ry = Math.atan2(P.x, -P.z);
+    const rx = -latRad;
+
+    const mY = BABYLON.Matrix.RotationY(ry);
+    const mX = BABYLON.Matrix.RotationX(rx);
+    const mTotal = mY.multiply(mX);
+
+    const q = BABYLON.Quaternion.FromRotationMatrix(mTotal);
+    return q.toEulerAngles();
+  }
+
+  /**
+   * Sincroniza la orientación de la Tierra 3D con unas coordenadas (lat, lon) específicas,
+   * manteniendo el eje vertical (Norte Arriba) alineado exactamente con la cartografía 2D.
+   */
+  public orientToCoordinates(lat: number, lon: number) {
+    const euler = EarthSceneManager.calculateOrientationEuler(lat, lon);
+    this.earthRoot.rotation.x = euler.x;
+    this.earthRoot.rotation.y = euler.y;
+    this.earthRoot.rotation.z = euler.z;
   }
 
   public getEarthRoot(): BABYLON.TransformNode {
