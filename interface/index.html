@@ -207,6 +207,44 @@
     </div>
   </div>
 
+  <!-- Modal Holográfico de Bienvenida para Gafas de Realidad Virtual (WebXR) -->
+  <div id="vrWelcomeModal" class="vr-welcome-modal hidden">
+    <div class="vr-welcome-backdrop"></div>
+    <div class="vr-welcome-card">
+      <div class="vr-welcome-badge">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M2 10s2-4 10-4 10 4 10 4-2 8-10 8-10-8-10-8z"></path>
+          <circle cx="7" cy="12" r="2.5"></circle>
+          <circle cx="17" cy="12" r="2.5"></circle>
+          <path d="M9.5 12h5"></path>
+        </svg>
+        <span>REALIDAD VIRTUAL DETECTADA</span>
+      </div>
+
+      <h1 class="vr-welcome-title">BIENVENIDO</h1>
+      <p class="vr-welcome-subtitle">SALA DE MANDO HOLOGRÁFICA ESPACIAL • NASA SPACE APPS 2026</p>
+
+      <div class="vr-welcome-desc">
+        Has abierto TERRAIN-X con un visor de Realidad Virtual.
+        Al pulsar <strong>EMPEZAR</strong>, accederás a la sala inmersiva 3D con la Tierra, Marte y la Luna flotando con cartografía oficial de la NASA y análogos geológicos.
+      </div>
+
+      <div class="vr-welcome-actions">
+        <button id="btnStartVR" class="btn-vr-start">
+          <span class="btn-vr-pulse"></span>
+          <span class="btn-vr-text">EMPEZAR</span>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="6 4 20 12 6 20 6 4"></polygon>
+          </svg>
+        </button>
+      </div>
+
+      <div class="vr-welcome-footer">
+        <button id="btnExitVRMode" class="btn-vr-flat">Continuar en Modo Pantalla Estándar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 1. Barra de Navegación Superior -->
   <header class="top-nav">
     <div class="nav-left">
@@ -247,6 +285,10 @@
       </button>
 
       <div class="user-avatar" title="Usuario científico">EM</div>
+      <button id="btnToggleXR" class="btn-toggle-xr" title="Iniciar Entorno Holográfico de Realidad Virtual (WebXR)">
+        <span class="vr-icon-badge">🥽</span>
+        <span>Modo VR / XR</span>
+      </button>
     </div>
   </header>
 

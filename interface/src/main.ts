@@ -6,6 +6,7 @@ import { generateRandomAnalogCoordinates, PLANET_METRICS } from './data/analogs'
 import { sound } from './audio';
 import { CelestialBody, AnalogSite, PlanetaryLayerMode } from './types';
 import { formatPlanetaryCoordinates, VERIFIED_PLANETARY_POIS } from './nasa/trekProviders';
+import { XRDetector } from './xr/xrDetector';
 
 // Estado global de la aplicación
 let activeBody: CelestialBody = 'Earth';
@@ -15,6 +16,7 @@ let earthScene: EarthSceneManager;
 let miniMoon: MiniPlanetViewer;
 let miniMars: MiniPlanetViewer;
 let map2DManager: AnalogMap2DManager;
+let isVRModeActive = false;
 
 /**
  * Coordinador de carga en tiempo real para el splash screen:
@@ -144,6 +146,11 @@ class SplashLoadingCoordinator {
         setTimeout(() => {
           this.splashEl?.remove();
           cancelAnimationFrame(this.animId);
+
+          // Si se detectó o solicitó Realidad Virtual, abrir el modal de bienvenida
+          if (isVRModeActive) {
+            showVRWelcomeModal();
+          }
         }, 750);
       }
     }, 380);
@@ -158,8 +165,44 @@ class SplashLoadingCoordinator {
   }
 }
 
+function showVRWelcomeModal() {
+  const modal = document.getElementById('vrWelcomeModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+  }
+
+  const btnStartVR = document.getElementById('btnStartVR');
+  if (btnStartVR) {
+    btnStartVR.onclick = () => {
+      sound.playClick(900);
+      modal?.classList.add('hidden');
+      document.body.classList.add('vr-mode');
+      earthScene.enterXREnvironment((switchedPlanet) => {
+        selectCelestialTarget(switchedPlanet);
+      });
+    };
+  }
+
+  const btnExitVRMode = document.getElementById('btnExitVRMode');
+  if (btnExitVRMode) {
+    btnExitVRMode.onclick = () => {
+      sound.playClick(500);
+      modal?.classList.add('hidden');
+      isVRModeActive = false;
+      document.body.classList.remove('vr-mode');
+      earthScene.exitXREnvironment();
+    };
+  }
+}
+
 async function initApp() {
   const coordinator = new SplashLoadingCoordinator();
+
+  // Detección proactiva de Realidad Virtual (Meta Quest, Pico, VisionPro o ?vr=1)
+  isVRModeActive = await XRDetector.isVRDeviceOrRequested();
+  if (isVRModeActive) {
+    document.body.classList.add('vr-mode');
+  }
 
   // Transición suave del círculo mientras avanza el loadbar
   setTimeout(() => {
@@ -428,7 +471,24 @@ function setupUIEventListeners() {
     });
   }
 
-  // 6. Pestañas de subcategoría en las tarjetas
+  // 6. Botón de activación de Realidad Virtual (WebXR)
+  const btnToggleXR = document.getElementById('btnToggleXR');
+  if (btnToggleXR) {
+    btnToggleXR.addEventListener('click', () => {
+      sound.playClick(750);
+      if (!earthScene.getIsXRActive()) {
+        isVRModeActive = true;
+        document.body.classList.add('vr-mode');
+        showVRWelcomeModal();
+      } else {
+        isVRModeActive = false;
+        document.body.classList.remove('vr-mode');
+        earthScene.exitXREnvironment();
+      }
+    });
+  }
+
+  // 7. Pestañas de subcategoría en las tarjetas
   setupCardSubtabs('moonCard', 'Moon');
   setupCardSubtabs('marsCard', 'Mars');
 }

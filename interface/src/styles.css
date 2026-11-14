@@ -2123,4 +2123,230 @@ body {
   box-shadow: 0 0 10px rgba(203, 213, 225, 0.25);
 }
 
+/* ==========================================================================
+   Modo Realidad Virtual (WebXR) y Pantalla de Bienvenida Holográfica
+   ========================================================================== */
+
+/* Botón disparador de Realidad Virtual en el Top Nav */
+.btn-toggle-xr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(14, 165, 233, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-left: 12px;
+}
+
+.btn-toggle-xr:hover {
+  background: rgba(14, 165, 233, 0.3);
+  border-color: var(--cyan-glow);
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.4);
+  transform: translateY(-1px);
+  color: #ffffff;
+}
+
+.btn-toggle-xr .vr-icon-badge {
+  font-size: 16px;
+}
+
+/* Ocultar la interfaz 2D tradicional cuando el modo VR está activo */
+body.vr-mode .top-nav,
+body.vr-mode .center-selector-wrapper,
+body.vr-mode .panel-left-wrapper,
+body.vr-mode .panel-right-wrapper,
+body.vr-mode .bottom-comparison-panel,
+body.vr-mode .camera-controls-wrapper,
+body.vr-mode .north-indicator,
+body.vr-mode .analog-overlay-bar,
+body.vr-mode #targetSiteCard {
+  display: none !important;
+}
+
+/* Modal de Bienvenida para VR */
+.vr-welcome-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.vr-welcome-modal.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.vr-welcome-backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(10, 18, 38, 0.92) 0%, rgba(4, 7, 16, 0.98) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.vr-welcome-card {
+  position: relative;
+  width: 90%;
+  max-width: 580px;
+  padding: 44px 38px 36px;
+  background: rgba(10, 18, 38, 0.88);
+  border: 1.5px solid rgba(34, 211, 238, 0.35);
+  border-radius: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(34, 211, 238, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: vrCardAppear 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes vrCardAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.vr-welcome-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  margin-bottom: 20px;
+}
+
+.vr-welcome-badge svg {
+  color: #34d399;
+}
+
+.vr-welcome-title {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #ffffff;
+  margin-bottom: 8px;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.vr-welcome-subtitle {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--cyan-glow);
+  text-transform: uppercase;
+  margin-bottom: 22px;
+}
+
+.vr-welcome-desc {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin-bottom: 34px;
+  max-width: 480px;
+}
+
+.vr-welcome-desc strong {
+  color: #ffffff;
+}
+
+.vr-welcome-actions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.btn-vr-start {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 48px;
+  background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 36px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  cursor: pointer;
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.4);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.btn-vr-start:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 45px rgba(6, 182, 212, 0.8), inset 0 0 25px rgba(255, 255, 255, 0.6);
+  border-color: #ffffff;
+}
+
+.btn-vr-start:active {
+  transform: scale(0.98);
+}
+
+.btn-vr-pulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 40px;
+  border: 2px solid var(--cyan-glow);
+  opacity: 0.6;
+  animation: vrBtnPulse 2s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes vrBtnPulse {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+.btn-vr-text {
+  position: relative;
+  z-index: 2;
+}
+
+.btn-vr-flat {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 12px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.btn-vr-flat:hover {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+}
+
 
