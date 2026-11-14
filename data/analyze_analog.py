@@ -276,22 +276,33 @@ def main():
     parser = argparse.ArgumentParser(description="TERRAIN-X Planetary Analog Analyzer")
     parser.add_argument("--body", choices=["moon", "mars", "luna", "marte"], help="Target planetary body (moon or mars)")
     parser.add_argument("--site", help="Specific Earth analog site ID (default: auto-selected best candidate)")
+    parser.add_argument("--rank-num", type=int, choices=range(1, 11), default=None, help="Select candidate site by ranking (1-10)")
     parser.add_argument("--radius-m", type=float, default=100.0, help="Exploration radius in meters (default: 100.0)")
     parser.add_argument("--generate-3d", action="store_true", help="Generate 3D WebGL model and comparative atlas")
     args = parser.parse_args()
 
     selected_body = select_target_body(args.body)
     target_info = PLANETARY_TARGETS[selected_body]
-    site_id = args.site or target_info["recommended_site"]
+    site_id = args.site
 
     print(f"\n>>> TARGET SELECTED: {target_info['name'].upper()}")
 
-    # Display dynamic comparative ranking of all candidates
+    # Display dynamic comparative ranking of all candidates and save to global_analog_catalog_20.json
+    scored_candidates = []
     try:
         from generate_terrain_3d import print_analog_ranking, RealisticTerrainComparisonEngine
-        print_analog_ranking(selected_body)
+        scored_candidates = print_analog_ranking(selected_body, save_json=True)
     except Exception as e:
         print(f"(Ranking module info: {e})")
+
+    if not site_id:
+        if args.rank_num and scored_candidates and 1 <= args.rank_num <= len(scored_candidates):
+            site_id = scored_candidates[args.rank_num - 1][1].id
+        elif scored_candidates:
+            # Pick #1 ranked candidate by default
+            site_id = scored_candidates[0][1].id
+        else:
+            site_id = target_info["recommended_site"]
 
     print(f">>> EVALUATING SELECTED ANALOG: {site_id}")
     time.sleep(0.5)

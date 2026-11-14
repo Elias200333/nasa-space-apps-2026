@@ -43,6 +43,25 @@ export interface GeoCoordinates {
   label?: string;
 }
 
+export interface AnalogCandidateItem {
+  rank: number;
+  id: string;
+  name: string;
+  target_body: 'Moon' | 'Mars';
+  pairing: string;
+  country: string;
+  lat: number;
+  lon: number;
+  score_pct: number;
+  elevation_range_m?: [number, number];
+  local_utm_epsg?: string;
+  status?: string;
+  strong_analogies?: string[];
+  analogy_limitations?: string[];
+  mission_training_value?: string;
+  metrics_table?: any[];
+}
+
 export interface AnalogSite {
   id: string;
   name: string;
@@ -60,6 +79,12 @@ export interface AnalogSite {
   gravity_ratio?: number;
   sources: string[];
   status: 'validated' | 'candidate' | 'local_only';
+  rank?: number;
+  pairing?: string;
+  candidates?: AnalogCandidateItem[];
+  strong_analogies?: string[];
+  analogy_limitations?: string[];
+  mission_training_value?: string;
 }
 
 export interface PlanetMetrics {

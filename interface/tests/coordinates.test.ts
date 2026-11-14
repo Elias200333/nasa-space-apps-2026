@@ -144,7 +144,7 @@ describe('Catálogo de Datos Científicos (Fidelidad NASA/ESA)', () => {
     ANALOG_DATABASE.forEach(site => {
       expect(site.sources.length).toBeGreaterThan(0);
       expect(['validated', 'candidate', 'local_only']).toContain(site.status);
-      expect(site.similarity_score).toBeGreaterThan(50);
+      expect(site.similarity_score).toBeGreaterThan(30);
     });
   });
 

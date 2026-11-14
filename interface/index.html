@@ -310,6 +310,12 @@
         Mars
       </button>
     </div>
+
+    <!-- Botón Superior en barra principal para generar con main.py -->
+    <button id="btnTopNavMainPyRegen" class="nav-mainpy-btn" title="Ejecutar motor científico main.py para calcular y regenerar ranking de 10 candidatos">
+      <span class="mainpy-bolt">⚡</span>
+      <span id="btnTopNavMainPyText">Generar Lista Luna (main.py)</span>
+    </button>
   </div>
 
   <!-- 3. Escenario Principal: Visor 3D BabylonJS y Paneles Laterales -->
@@ -677,6 +683,26 @@
       </div>
 
       <div class="map-hud-center">
+        <!-- Botón Superior en HUD 2D para Generar con main.py -->
+        <button id="btnMainPyRegen" class="mainpy-regen-hud-btn" title="Ejecutar motor científico main.py para calcular y regenerar ranking de 10 análogos">
+          <span class="regen-pulse-glow"></span>
+          <svg class="regen-lightning" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          <span id="btnMainPyRegenText">⚡ Generar Lista Luna (main.py)</span>
+        </button>
+
+        <!-- Botón para Desplegar / Alternar el Panel Lateral de 10 Análogos -->
+        <button id="btnToggleDrawerHud" class="drawer-hud-toggle-btn active" title="Alternar panel lateral derecho con las 10 ubicaciones análogas">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path>
+            <rect x="9" y="3" width="6" height="4" rx="1"></rect>
+            <path d="M9 12h6M9 16h6"></path>
+          </svg>
+          <span>Top 10 Análogos</span>
+          <span class="hud-count-pill" id="hudCandidatesCount">10</span>
+        </button>
+
         <button id="btnCenterTarget" class="center-target-btn" title="Centrar la vista en las coordenadas sugeridas">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
@@ -715,6 +741,56 @@
         </button>
       </div>
     </div>
+
+    <!-- Panel Desplegable Lateral Derecho: Ranking de los 10 Análogos Planetarios Oficiales NASA -->
+    <aside id="candidatesDrawerPanel" class="candidates-drawer-panel open">
+      <!-- Pestaña / Tirador para abrir o cerrar con 1 clic -->
+      <button id="btnCandidatesDrawerTab" class="drawer-tab-handle" title="Ocultar / Mostrar panel lateral de análogos">
+        <span class="tab-arrow" id="drawerTabArrow">❯</span>
+        <span class="tab-label">TOP 10 ANÁLOGOS</span>
+        <span id="drawerBadgeTab" class="tab-badge">10</span>
+      </button>
+
+      <div class="drawer-content-box">
+        <!-- Encabezado del Panel Lateral -->
+        <div class="drawer-header">
+          <div class="drawer-title-group">
+            <div class="drawer-badge" id="candidatesTargetBadge">LUNA • 10 UBICACIONES EVALUADAS</div>
+            <h3 class="drawer-title">Ranking de Análogos</h3>
+            <p class="drawer-subtitle" id="candidatesSubtitle">Cálculo científico multivariable (main.py & IGN LiDAR)</p>
+          </div>
+          <div class="drawer-actions">
+            <button id="btnDrawerRegen" class="drawer-action-btn regen-btn" title="Recalcular ranking con main.py">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+              <span>main.py</span>
+            </button>
+            <button id="btnCloseDrawer" class="drawer-action-btn close-btn" title="Cerrar panel lateral">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Conmutador Rápido entre Ranking y Modelo 3D -->
+        <div class="drawer-view-tabs">
+          <button id="tabSwitchCandidates" class="drawer-view-tab active">
+            <span>📋 Top 10 Candidatos</span>
+          </button>
+          <button id="tabSwitch3D" class="drawer-view-tab">
+            <span>🏔️ Visor 3D DEM (LiDAR)</span>
+          </button>
+        </div>
+
+        <!-- Lista Vertical de Candidatos Desplegable -->
+        <div id="candidatesCardsList" class="candidates-cards-list">
+          <!-- Tarjetas renderizadas con detalles científicos completos -->
+        </div>
+      </div>
+    </aside>
 
     <!-- Lienzo del mapa interactivo Leaflet -->
     <div id="leafletMap" class="leaflet-map-view"></div>

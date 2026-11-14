@@ -2349,4 +2349,597 @@ body.vr-mode #targetSiteCard {
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* ==========================================================================
+   Candidate Selector (Top 10 Analog Locations - NASA Benchmark Catalog)
+   ========================================================================== */
+.target-candidates-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  overflow-x: auto;
+  max-width: 650px;
+  padding-bottom: 4px;
+}
+
+.target-candidates-strip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.target-candidates-strip::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.4);
+  border-radius: 4px;
+}
+
+.card-candidate-btn {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: #94a3b8;
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.card-candidate-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  color: #ffffff;
+  border-color: #38bdf8;
+}
+
+.card-candidate-btn.active {
+  background: rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  border-color: #38bdf8;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.card-candidate-btn .cand-score {
+  font-size: 0.68rem;
+  opacity: 0.85;
+}
+
+/* ==========================================================================
+   Botón Superior de Generación con main.py (Barra Principal y HUD 2D)
+   ========================================================================== */
+.nav-mainpy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(14, 165, 233, 0.1) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  color: #e0f2fe;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+  user-select: none;
+}
+
+.nav-mainpy-btn:hover {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.35) 0%, rgba(14, 165, 233, 0.2) 100%);
+  border-color: #38bdf8;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.45);
+}
+
+.nav-mainpy-btn.mars-mode {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(234, 88, 12, 0.1) 100%);
+  border-color: rgba(249, 115, 22, 0.5);
+  color: #ffedd5;
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.25);
+}
+
+.nav-mainpy-btn.mars-mode:hover {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.35) 0%, rgba(234, 88, 12, 0.2) 100%);
+  border-color: #f97316;
+  box-shadow: 0 0 18px rgba(249, 115, 22, 0.45);
+}
+
+.nav-mainpy-btn .mainpy-bolt {
+  color: #38bdf8;
+  font-size: 0.95rem;
+  animation: pulseBolt 1.8s infinite;
+}
+
+.nav-mainpy-btn.mars-mode .mainpy-bolt {
+  color: #fb923c;
+}
+
+@keyframes pulseBolt {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.8; }
+}
+
+.mainpy-regen-hud-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(14, 165, 233, 0.12) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  color: #f0f9ff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+  user-select: none;
+}
+
+.mainpy-regen-hud-btn:hover {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.4) 0%, rgba(14, 165, 233, 0.25) 100%);
+  border-color: #38bdf8;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.55);
+}
+
+.mainpy-regen-hud-btn.mars-mode {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(234, 88, 12, 0.12) 100%);
+  border-color: rgba(249, 115, 22, 0.6);
+  color: #ffedd5;
+  box-shadow: 0 0 15px rgba(249, 115, 22, 0.3);
+}
+
+.mainpy-regen-hud-btn.mars-mode:hover {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.4) 0%, rgba(234, 88, 12, 0.25) 100%);
+  border-color: #f97316;
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.55);
+}
+
+.mainpy-regen-hud-btn.loading {
+  opacity: 0.85;
+  cursor: wait;
+  pointer-events: none;
+}
+
+.mainpy-regen-hud-btn.loading .regen-lightning {
+  animation: spinLightning 0.8s linear infinite;
+}
+
+@keyframes spinLightning {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.drawer-hud-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.drawer-hud-toggle-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.drawer-hud-toggle-btn.active {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.hud-count-pill {
+  background: #38bdf8;
+  color: #020617;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  font-family: var(--font-mono);
+}
+
+/* ==========================================================================
+   Panel Desplegable Lateral Derecho (Top 10 Análogos)
+   ========================================================================== */
+.candidates-drawer-panel {
+  position: absolute;
+  top: 76px;
+  right: 0;
+  bottom: 0;
+  width: 380px;
+  max-width: 90vw;
+  background: rgba(9, 14, 26, 0.96);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(56, 189, 248, 0.28);
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.65);
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(0);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+  pointer-events: auto;
+}
+
+.candidates-drawer-panel.collapsed {
+  transform: translateX(100%);
+  box-shadow: none;
+}
+
+/* Tirador / Pestaña Flotante al borde del panel */
+.drawer-tab-handle {
+  position: absolute;
+  left: -42px;
+  top: 90px;
+  width: 42px;
+  height: 150px;
+  background: rgba(9, 14, 26, 0.95);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  color: #e0f2fe;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 4px;
+  box-shadow: -6px 4px 18px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s ease;
+  z-index: 1051;
+}
+
+.drawer-tab-handle:hover {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: -8px 4px 22px rgba(56, 189, 248, 0.3);
+}
+
+.drawer-tab-handle .tab-arrow {
+  font-size: 0.85rem;
+  color: #38bdf8;
+  transition: transform 0.3s ease;
+}
+
+.candidates-drawer-panel.collapsed .drawer-tab-handle .tab-arrow {
+  transform: rotate(180deg);
+}
+
+.drawer-tab-handle .tab-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.drawer-tab-handle .tab-badge {
+  background: rgba(56, 189, 248, 0.25);
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  color: #38bdf8;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  font-family: var(--font-mono);
+}
+
+.drawer-content-box {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Encabezado del Drawer */
+.drawer-header {
+  padding: 14px 18px 12px 18px;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.18);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.drawer-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.drawer-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  width: fit-content;
+}
+
+.drawer-badge.mars-badge {
+  color: #f97316;
+  background: rgba(249, 115, 22, 0.15);
+  border-color: rgba(249, 115, 22, 0.35);
+}
+
+.drawer-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.drawer-subtitle {
+  margin: 0;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+.drawer-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drawer-action-btn {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: #94a3b8;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.drawer-action-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.drawer-action-btn.regen-btn {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+.drawer-action-btn.close-btn {
+  padding: 5px 6px;
+}
+
+/* Conmutador Rápido de Vistas (Ranking vs Modelo 3D) */
+.drawer-view-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.drawer-view-tab {
+  flex: 1;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.drawer-view-tab:hover {
+  color: #ffffff;
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.drawer-view-tab.active {
+  color: #38bdf8;
+  border-bottom-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  font-weight: 700;
+}
+
+/* Lista Vertical de Tarjetas */
+.candidates-cards-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.candidates-cards-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.candidates-cards-list::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.candidates-cards-list::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.35);
+  border-radius: 4px;
+}
+
+.candidates-cards-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.6);
+}
+
+/* Tarjeta Individual de Candidato */
+.candidate-card {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.candidate-card:hover {
+  background: rgba(22, 34, 60, 0.95);
+  border-color: #38bdf8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.2);
+}
+
+.candidate-card.active {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.18) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border-color: #38bdf8;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+}
+
+.candidate-card.active.mars-active {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.18) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border-color: #f97316;
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.35);
+}
+
+.card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: rgba(56, 189, 248, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.candidate-card.active.mars-active .card-rank-badge {
+  background: rgba(249, 115, 22, 0.18);
+  color: #fb923c;
+  border-color: rgba(249, 115, 22, 0.4);
+}
+
+.card-country-tag {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.card-score-pill {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #38bdf8;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.candidate-card.active.mars-active .card-score-pill {
+  color: #fb923c;
+  border-color: rgba(249, 115, 22, 0.35);
+}
+
+.card-site-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.3;
+}
+
+.card-coords-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: #38bdf8;
+  opacity: 0.9;
+}
+
+.candidate-card.active.mars-active .card-coords-row {
+  color: #fb923c;
+}
+
+.card-pairing-row {
+  font-size: 0.72rem;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.card-analogy-snippet {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Integración y Convivencia entre Drawer y Panel 3D */
+@media (min-width: 1400px) {
+  .map2d-wrapper:not(.drawer-collapsed) .terrain-3d-panel {
+    right: 395px !important;
+    transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+
+
 
