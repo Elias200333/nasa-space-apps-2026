@@ -21,13 +21,18 @@ dependencies = [
 # Conexion real con el Go2. Version fijada: el codigo se ha verificado contra
 # el codigo fuente de esta version concreta (ver docs/NOTAS_LIBRERIA_GO2.md).
 go2 = ["unitree_webrtc_connect==2.2.0"]
-dev = ["pytest>=8"]
+# Dashboard web local (camara, LiDAR 3D, telemetria, WASD). Requiere tambien [go2].
+dashboard = ["fastapi>=0.110", "uvicorn[standard]>=0.27"]
+dev = ["pytest>=8", "httpx>=0.27"]
 
 [project.scripts]
 terrainx-robot = "terrainx_robot.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"terrainx_robot.dashboard" = ["static/*", "static/vendor/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

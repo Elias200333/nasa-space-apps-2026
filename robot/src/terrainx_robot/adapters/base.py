@@ -226,6 +226,7 @@ class RobotAdapter(ABC):
         self.lidar_decode_errors = 0
         self.last_lidar_frame_info = None  # LidarFrameInfo del último frame recibido
         self.last_decode_error: str | None = None
+        self.last_points = None  # np.ndarray (N,3) del último frame válido (vista en vivo)
 
     # ------------------------------------------------------------ propiedades
     @property
@@ -416,6 +417,10 @@ class RobotAdapter(ABC):
         if frame.info.decode_error:
             self.lidar_decode_errors += 1
             self.last_decode_error = frame.info.decode_error
+        elif frame.points.shape[0] > 0:
+            # Último frame válido, para la vista LiDAR en vivo del dashboard
+            # (independiente de si hay captura en curso).
+            self.last_points = frame.points
         if self._capture_state is CaptureState.CAPTURING and self._accumulator is not None:
             self._accumulator.add(frame)
 

@@ -29,6 +29,8 @@ ALLOWED = [
     _msg(type="rtc_inner_req", topic="", data={"req_type": "public_network_status", "uuid": "x"}),
     _msg(type="rtc_inner_req", topic="", data={"req_type": "rtt_probe_send_from_mechine"}),
     _msg(type="msg", topic="rt/utlidar/switch", data="on"),
+    _msg(type="vid", topic="", data="on"),   # activar recepción de cámara
+    _msg(type="vid", topic="", data="off"),  # detener recepción de cámara
 ]
 
 BLOCKED = [
@@ -37,8 +39,8 @@ BLOCKED = [
     _msg(type="msg", topic="rt/lowcmd", data={}),
     _msg(type="msg", topic="rt/wirelesscontroller", data={"lx": 1}),
     _msg(type="msg", topic="rt/utlidar/switch", data="reboot"),
-    _msg(type="vid", topic="", data="on"),
-    _msg(type="aud", topic="", data="on"),
+    _msg(type="vid", topic="", data="reboot"),  # vid solo admite on/off
+    _msg(type="aud", topic="", data="on"),      # audio es send/recv: bloqueado
     _msg(type="rtc_inner_req", topic="", data={"req_type": "push_static_file"}),
     "no es json",
     b"\x00binario",
