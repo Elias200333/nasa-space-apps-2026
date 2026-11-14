@@ -1,27 +1,27 @@
 {
-  "site_id": "US_DEATH_VALLEY",
-  "site_name": "Custom AOI (36.24694\u00b0, -116.82606\u00b0)",
+  "site_id": "US_ARIZONA_SP_CRATER",
+  "site_name": "Custom AOI (35.58329\u00b0, -111.63886\u00b0)",
   "center_gps": {
-    "lat": 36.24694,
-    "lon": -116.82606
+    "lat": 35.58329,
+    "lon": -111.63886
   },
   "exploration_radius_m": 100.0,
   "target_body": "Earth",
-  "similarity_pct": 49.0,
+  "similarity_pct": 59.77,
   "metrics_100m": {
     "radius_m": 100.0,
     "area_sq_m": 31415.926535897932,
     "area_hectares": 3.14,
-    "elev_min_m": -85.1,
-    "elev_max_m": -82.1,
-    "elev_mean_m": -83.8,
-    "elev_range_m": 3.0,
-    "slope_mean_deg": 1.75,
-    "slope_max_deg": 2.66,
-    "points_sampled": 69
+    "elev_min_m": 1972.0,
+    "elev_max_m": 2033.1,
+    "elev_mean_m": 2002.3,
+    "elev_range_m": 61.1,
+    "slope_mean_deg": 19.57,
+    "slope_max_deg": 24.26,
+    "points_sampled": 75
   },
   "dem_metadata": {
-    "source": "Copernicus DEM / Mapzen SRTM 30m (Global)",
+    "source": "Copernicus DEM / SRTM 30m (Cache verificado)",
     "nominal_resolution_m": 30.0,
     "crs": "EPSG:4326 (WGS84)",
     "verified_real_data": true
@@ -37,39 +37,39 @@
   "evaluation": {
     "target_body": "Mars",
     "target_benchmark_name": "Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum)",
-    "total_similarity_pct": 49.0,
+    "total_similarity_pct": 59.77,
     "metrics_table": [
       {
         "id": "elevation_relief",
         "name": "Rango Altim\u00e9trico y Relieve",
-        "terrestrial_value": "7.6 m (cota -85--78 m)",
+        "terrestrial_value": "235.1 m (cota 1867-2102 m)",
         "planetary_target": "~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))",
-        "similarity_score": 0.258,
+        "similarity_score": 0.598,
         "weight_pct": 10.0,
-        "contribution_pct": 2.58
+        "contribution_pct": 5.98
       },
       {
         "id": "slope_morphometry",
         "name": "Gradiente de Pendiente (Horn)",
-        "terrestrial_value": "0.27\u00b0 (m\u00e1x 0.7\u00b0)",
+        "terrestrial_value": "3.60\u00b0 (m\u00e1x 8.8\u00b0)",
         "planetary_target": "8.0\u00b0 \u00b1 4.0\u00b0",
-        "similarity_score": 0.155,
+        "similarity_score": 0.546,
         "weight_pct": 15.0,
-        "contribution_pct": 2.32
+        "contribution_pct": 8.19
       },
       {
         "id": "surface_roughness_tri",
         "name": "Rugosidad Superficial (TRI)",
-        "terrestrial_value": "0.39 m",
+        "terrestrial_value": "5.19 m",
         "planetary_target": "3.0 \u00b1 1.5 m",
-        "similarity_score": 0.221,
+        "similarity_score": 0.346,
         "weight_pct": 12.0,
-        "contribution_pct": 2.65
+        "contribution_pct": 4.15
       },
       {
         "id": "curvature_profile",
         "name": "Curvatura Topogr\u00e1fica y Sumideros",
-        "terrestrial_value": "-0.0000 m\u207b\u00b9",
+        "terrestrial_value": "0.0000 m\u207b\u00b9",
         "planetary_target": "Inversi\u00f3n de colapso (-0.05)",
         "similarity_score": 0.2,
         "weight_pct": 8.0,
@@ -113,13 +113,13 @@
       }
     ],
     "dem_statistics": {
-      "elev_min_m": -85.5,
-      "elev_max_m": -77.9,
-      "elev_mean_m": -81.8,
-      "elev_range_m": 7.6,
-      "slope_mean_deg": 0.27,
-      "slope_max_deg": 0.69,
-      "tri_mean_m": 0.39,
+      "elev_min_m": 1867.0,
+      "elev_max_m": 2102.1,
+      "elev_mean_m": 1980.1,
+      "elev_range_m": 235.1,
+      "slope_mean_deg": 3.6,
+      "slope_max_deg": 8.81,
+      "tri_mean_m": 5.19,
       "grid_cells": 1681
     }
   }

@@ -2,7 +2,7 @@ import './styles.css';
 import { EarthSceneManager } from './babylon/earthScene';
 import { MiniPlanetViewer } from './babylon/miniPlanets';
 import { AnalogMap2DManager } from './map/analogMap2D';
-import { generateRandomAnalogCoordinates, PLANET_METRICS, getCandidatesForBody } from './data/analogs';
+import { generateRandomAnalogCoordinates, PLANET_METRICS, getCandidatesForBody, ANALOG_DATABASE } from './data/analogs';
 import { sound } from './audio';
 import { CelestialBody, AnalogSite, PlanetaryLayerMode, AnalogCandidateItem } from './types';
 import { formatPlanetaryCoordinates, VERIFIED_PLANETARY_POIS } from './nasa/trekProviders';
@@ -349,15 +349,6 @@ function init2DMapManager() {
  * Configuración de eventos de interacción y botones del panel
  */
 function setupUIEventListeners() {
-  // Botón superior en barra principal para ejecutar main.py
-  const btnTopNavMainPyRegen = document.getElementById('btnTopNavMainPyRegen');
-  if (btnTopNavMainPyRegen) {
-    btnTopNavMainPyRegen.addEventListener('click', () => {
-      const target = (activeBody === 'Mars') ? 'Mars' : 'Moon';
-      generateListFromMainPy(target);
-    });
-  }
-
   // 1. Selector Superior Central (Moon / Earth / Mars)
   const selectorOptions = document.querySelectorAll('.selector-option');
   selectorOptions.forEach(btn => {
@@ -373,7 +364,7 @@ function setupUIEventListeners() {
   if (moonCard) {
     moonCard.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
-      if (target.closest('.card-subtabs, .card-more-btn, .card-action-btn, .mini-planet-viewport')) return;
+      if (target.closest('.card-subtabs, .card-more-btn, .card-action-btn, .mini-planet-viewport, .btn-compare')) return;
       sound.playClick(600);
       selectCelestialTarget('Moon');
     });
@@ -383,13 +374,30 @@ function setupUIEventListeners() {
   if (marsCard) {
     marsCard.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
-      if (target.closest('.card-subtabs, .card-more-btn, .card-action-btn, .mini-planet-viewport')) return;
+      if (target.closest('.card-subtabs, .card-more-btn, .card-action-btn, .mini-planet-viewport, .btn-compare')) return;
       sound.playClick(600);
       selectCelestialTarget('Mars');
     });
   }
 
-  // 3. Botones "Compare with Earth" (generan análogo terrestre e inician descenso guiado)
+  // 3. Botones "Compare with Earth" de las tarjetas (abren modal comparativo multivariable)
+  const btnCompareMoon = document.getElementById('btnCompareMoon');
+  if (btnCompareMoon) {
+    btnCompareMoon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openScienceModal('modalCompare');
+    });
+  }
+
+  const btnCompareMars = document.getElementById('btnCompareMars');
+  if (btnCompareMars) {
+    btnCompareMars.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openScienceModal('modalCompare');
+    });
+  }
+
+  // Botones de acción "Generar y Bucear hacia Análogo"
   const moonActionBtn = document.getElementById('moonActionBtn');
   if (moonActionBtn) {
     moonActionBtn.addEventListener('click', (e) => {
@@ -407,6 +415,10 @@ function setupUIEventListeners() {
       generateAndDiveToAnalog('Mars');
     });
   }
+
+  // 4. Inicializar Buscador Global y Modales Científicos
+  setupGlobalSearch();
+  setupScienceModals();
 
   // 4. Selector de capas cartográficas NASA (Superficie / Topografía / Exploración)
   const layerButtons = document.querySelectorAll('.planet-layer-selector .layer-btn');
@@ -947,5 +959,352 @@ function toggleFullscreen() {
     document.documentElement.requestFullscreen().catch(() => {});
   } else {
     document.exitFullscreen().catch(() => {});
+  }
+}
+
+// =========================================================================
+// SISTEMA DE BÚSQUEDA UNIVERSAL (PLANETARIA Y ANÁLOGA)
+// =========================================================================
+
+interface SearchItem {
+  id: string;
+  name: string;
+  nameEs?: string;
+  category: 'Moon' | 'Mars' | 'Earth' | 'Mission';
+  categoryLabel: string;
+  body: CelestialBody;
+  latitude: number;
+  longitude: number;
+  description: string;
+  siteId?: string;
+}
+
+const SEARCH_CATALOG: SearchItem[] = [
+  // Marte
+  { id: 'mars_olympus_mons', name: 'Olympus Mons', nameEs: 'Monte Olimpo', category: 'Mars', categoryLabel: 'MARTE • VOLCÁN', body: 'Mars', latitude: 18.65, longitude: -133.8, description: 'El mayor volcán del sistema solar (22 km de elevación).' },
+  { id: 'mars_valles_marineris', name: 'Valles Marineris', nameEs: 'Valles Marineris', category: 'Mars', categoryLabel: 'MARTE • CAÑÓN', body: 'Mars', latitude: -13.9, longitude: -59.2, description: 'Gigantesco sistema de cañones tectónicos de más de 4,000 km.' },
+  { id: 'mars_jezero', name: 'Jezero Crater', nameEs: 'Cráter Jezero', category: 'Mars', categoryLabel: 'MARTE • CRÁTER / MISIÓN', body: 'Mars', latitude: 18.38, longitude: 77.58, description: 'Sitio de aterrizaje de Perseverance con paleolago y delta fluvial.' },
+  { id: 'mars_gale', name: 'Gale Crater', nameEs: 'Cráter Gale', category: 'Mars', categoryLabel: 'MARTE • CRÁTER / MISIÓN', body: 'Mars', latitude: -5.4, longitude: 137.8, description: 'Sitio de exploración del rover Curiosity en el Monte Sharp.' },
+  { id: 'mars_syrtis', name: 'Syrtis Major Planum', nameEs: 'Syrtis Major', category: 'Mars', categoryLabel: 'MARTE • MESETA', body: 'Mars', latitude: 8.4, longitude: 69.5, description: 'Escudo volcánico oscuro basáltico visible desde la Tierra.' },
+  { id: 'mars_elysium', name: 'Elysium Mons', nameEs: 'Monte Elysium', category: 'Mars', categoryLabel: 'MARTE • VOLCÁN', body: 'Mars', latitude: 25.02, longitude: 147.21, description: 'Volcán masivo en la provincia volcánica de Elysium.' },
+
+  // Luna
+  { id: 'moon_tycho', name: 'Tycho Crater', nameEs: 'Cráter Tycho', category: 'Moon', categoryLabel: 'LUNA • CRÁTER', body: 'Moon', latitude: -43.31, longitude: -11.36, description: 'Cráter de impacto prominente con espectacular sistema de rayos.' },
+  { id: 'moon_copernicus', name: 'Copernicus Crater', nameEs: 'Cráter Copérnico', category: 'Moon', categoryLabel: 'LUNA • CRÁTER', body: 'Moon', latitude: 9.62, longitude: -20.08, description: 'Cráter de impacto clásico de 93 km con picos centrales.' },
+  { id: 'moon_tranquillitatis', name: 'Mare Tranquillitatis', nameEs: 'Mar de la Tranquilidad', category: 'Moon', categoryLabel: 'LUNA • MARE / MISIÓN', body: 'Moon', latitude: 8.5, longitude: 31.4, description: 'Sitio de alunizaje del Apollo 11 (Base Tranquilidad, 1969).' },
+  { id: 'moon_shackleton', name: 'Shackleton Crater', nameEs: 'Cráter Shackleton', category: 'Moon', categoryLabel: 'LUNA • POLO SUR', body: 'Moon', latitude: -89.9, longitude: 0.0, description: 'Objetivo de Artemis III con hielo de agua en sombra permanente.' },
+  { id: 'moon_aristarchus', name: 'Aristarchus Plateau', nameEs: 'Meseta de Aristarco', category: 'Moon', categoryLabel: 'LUNA • MESETA', body: 'Moon', latitude: 23.7, longitude: -47.4, description: 'Región volcánica anómala con tubos de lava y ceniza piroclástica.' },
+  { id: 'moon_marius', name: 'Marius Hills & Pit', nameEs: 'Colinas de Marius', category: 'Moon', categoryLabel: 'LUNA • TUBO DE LAVA', body: 'Moon', latitude: 14.09, longitude: -56.77, description: 'Claraboya de tubo de lava subterráneo de >65 metros de profundidad.' },
+
+  // Tierra (Análogos)
+  { id: 'analog_caldera_blanca', name: 'Caldera Blanca & Timanfaya (Lanzarote)', nameEs: 'Lanzarote, Islas Canarias', category: 'Earth', categoryLabel: 'TIERRA • ANÁLOGO LUNA/MARTE', body: 'Earth', latitude: 29.038, longitude: -13.719, siteId: 'ES_LANZAROTE_TIMANFAYA', description: 'Campo de lava holoceno y cráter hidromagmático. Campaña ESA PANGAEA.' },
+  { id: 'analog_sp_crater', name: 'SP Crater & San Francisco Volcanic Field', nameEs: 'Arizona, EE.UU.', category: 'Earth', categoryLabel: 'TIERRA • ANÁLOGO LUNAR', body: 'Earth', latitude: 35.582, longitude: -111.637, siteId: 'US_ARIZONA_SP_CRATER', description: 'Cono de ceniza basáltica y lavas escarpadas. Pruebas NASA Desert RATS.' },
+  { id: 'analog_mauna_kea', name: 'Mauna Kea & Tephra Cones', nameEs: 'Hawái, EE.UU.', category: 'Earth', categoryLabel: 'TIERRA • ANÁLOGO LUNAR', body: 'Earth', latitude: 19.82, longitude: -155.46, siteId: 'US_HAWAII_MAUNA_KEA', description: 'Ceniza volcánica expuesta a meteorización criogénica a 4,200 m.' },
+  { id: 'analog_krafla', name: 'Caldera de Krafla & Námafjall', nameEs: 'Islandia', category: 'Earth', categoryLabel: 'TIERRA • ANÁLOGO MARTE', body: 'Earth', latitude: 65.717, longitude: -16.755, siteId: 'IS_KRAFLA_BASALT', description: 'Campos hidrotermales solfatáricos y basaltos similares al Hespérico.' },
+  { id: 'analog_fuerteventura', name: 'Malpaís de la Arena & Complejo Basal', nameEs: 'Fuerteventura, España', category: 'Earth', categoryLabel: 'TIERRA • ANÁLOGO LUNAR', body: 'Earth', latitude: 28.65, longitude: -13.91, siteId: 'ES_FUERTEVENTURA_ARENA', description: 'Lavas basálticas en bloques y cavidades sin vegetación.' }
+];
+
+function setupGlobalSearch() {
+  const searchInput = document.getElementById('globalSearchInput') as HTMLInputElement;
+  const dropdown = document.getElementById('searchResultsDropdown');
+  const searchBox = document.getElementById('globalSearchBox');
+  if (!searchInput || !dropdown) return;
+
+  const renderResults = (query: string) => {
+    const q = query.trim().toLowerCase();
+    let matches: SearchItem[] = [];
+
+    if (!q) {
+      matches = SEARCH_CATALOG.slice(0, 6);
+    } else {
+      matches = SEARCH_CATALOG.filter(item => {
+        return item.name.toLowerCase().includes(q) ||
+               (item.nameEs && item.nameEs.toLowerCase().includes(q)) ||
+               item.description.toLowerCase().includes(q) ||
+               item.categoryLabel.toLowerCase().includes(q);
+      });
+    }
+
+    if (matches.length === 0) {
+      dropdown.innerHTML = `
+        <div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 0.75rem;">
+          No se encontraron resultados para "${query}".<br/>
+          Prueba con <em>Jezero</em>, <em>Tycho</em>, <em>Lanzarote</em> o <em>SP Crater</em>.
+        </div>
+      `;
+      dropdown.classList.remove('hidden');
+      return;
+    }
+
+    dropdown.innerHTML = '';
+    matches.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'search-result-item';
+      const pillClass = item.body === 'Mars' ? 'mars' : (item.body === 'Moon' ? 'moon' : 'earth');
+      row.innerHTML = `
+        <div class="search-res-info">
+          <div class="search-res-title">
+            <span>${item.name}</span>
+            <span class="pill-tag ${pillClass}">${item.body.toUpperCase()}</span>
+          </div>
+          <div class="search-res-desc">${item.description}</div>
+          <div class="search-res-coords">📍 ${Math.abs(item.latitude).toFixed(2)}° ${item.latitude >= 0 ? 'N' : 'S'}, ${Math.abs(item.longitude).toFixed(2)}° ${item.longitude >= 0 ? 'E' : 'W'}</div>
+        </div>
+      `;
+
+      row.addEventListener('click', () => {
+        dropdown.classList.add('hidden');
+        searchInput.value = item.name;
+        navigateToCoordinateLocation(item.body, item.latitude, item.longitude, item.name, item.siteId);
+      });
+
+      dropdown.appendChild(row);
+    });
+
+    dropdown.classList.remove('hidden');
+  };
+
+  searchInput.addEventListener('focus', () => {
+    renderResults(searchInput.value);
+  });
+
+  searchInput.addEventListener('input', () => {
+    renderResults(searchInput.value);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!searchBox?.contains(e.target as Node)) {
+      dropdown.classList.add('hidden');
+    }
+  });
+
+  // Atajo de teclado '/' para enfocar el buscador
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && document.activeElement !== searchInput) {
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    } else if (e.key === 'Escape') {
+      dropdown.classList.add('hidden');
+      searchInput.blur();
+    }
+  });
+}
+
+function navigateToCoordinateLocation(body: CelestialBody, lat: number, lon: number, title?: string, siteId?: string) {
+  sound.playClick(750);
+  closeAllScienceModals();
+
+  if (activeBody !== body) {
+    selectCelestialTarget(body);
+  }
+
+  if (body === 'Earth') {
+    if (siteId) {
+      const site = ANALOG_DATABASE.find(s => s.id === siteId);
+      if (site) {
+        map2DManager.triggerSeamlessZoomDive(site);
+        return;
+      }
+    }
+    generateAndDiveToAnalog('Moon', siteId);
+    return;
+  }
+
+  // Si el mapa 2D ya está activo
+  if (map2DManager && map2DManager.isMapActive()) {
+    map2DManager.triggerFreeExplorationDive(lat, lon, 5, body, 'exploration');
+    setTimeout(() => {
+      const poi = VERIFIED_PLANETARY_POIS[body]?.find(p => Math.abs(p.latitude - lat) < 0.2 && Math.abs(p.longitude - lon) < 0.2);
+      if (poi) {
+        map2DManager.flyToPlanetaryPOI(poi);
+      }
+    }, 550);
+  } else {
+    // Si estamos en la órbita espacial 3D
+    earthScene.flyToPOI(lat, lon);
+  }
+}
+
+// =========================================================================
+// GESTIÓN DE MODALES CIENTÍFICOS (COMPARE, DATA, MISSIONS)
+// =========================================================================
+
+function openScienceModal(modalId: 'modalCompare' | 'modalData' | 'modalMissions') {
+  sound.playClick(650);
+  closeAllScienceModals();
+  const m = document.getElementById(modalId);
+  if (m) {
+    m.classList.remove('hidden');
+  }
+  updateNavTabActive(modalId === 'modalCompare' ? 'compare' : (modalId === 'modalData' ? 'data' : 'missions'));
+}
+
+function closeAllScienceModals() {
+  document.querySelectorAll('.science-modal').forEach(m => m.classList.add('hidden'));
+  updateNavTabActive('explore');
+}
+
+function updateNavTabActive(target: 'explore' | 'compare' | 'terrain' | 'data' | 'missions') {
+  const tabs = document.querySelectorAll('.nav-tab-btn');
+  tabs.forEach(tab => {
+    if (tab.getAttribute('data-nav') === target) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+}
+
+function setupScienceModals() {
+  // 1. Botones de cierre de modal
+  document.querySelectorAll('[data-close-modal]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sound.playClick(450);
+      closeAllScienceModals();
+    });
+  });
+
+  // Tecla Escape para cerrar modales
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeAllScienceModals();
+    }
+  });
+
+  // 2. Pestañas de Navegación Superior
+  const btnExplore = document.getElementById('navBtnExplore');
+  const btnCompare = document.getElementById('navBtnCompare');
+  const btnTerrain = document.getElementById('navBtnTerrain');
+  const btnData = document.getElementById('navBtnData');
+  const btnMissions = document.getElementById('navBtnMissions');
+
+  if (btnExplore) {
+    btnExplore.addEventListener('click', () => {
+      sound.playClick(500);
+      closeAllScienceModals();
+      updateNavTabActive('explore');
+    });
+  }
+
+  if (btnCompare) {
+    btnCompare.addEventListener('click', () => {
+      openScienceModal('modalCompare');
+    });
+  }
+
+  if (btnTerrain) {
+    btnTerrain.addEventListener('click', () => {
+      sound.playClick(600);
+      closeAllScienceModals();
+      updateNavTabActive('terrain');
+      if (map2DManager && map2DManager.isMapActive()) {
+        map2DManager.toggle3DPanel();
+      } else {
+        if (activeBody === 'Earth') {
+          generateAndDiveToAnalog('Moon');
+        } else {
+          const targetPlanet = activeBody === 'Mars' || activeBody === 'Moon' ? activeBody : 'Moon';
+          updateLayerModeUI(targetPlanet, 'topography');
+          earthScene.setLayerMode('topography');
+          sound.playSuccess();
+        }
+      }
+    });
+  }
+
+  if (btnData) {
+    btnData.addEventListener('click', () => {
+      openScienceModal('modalData');
+    });
+  }
+
+  if (btnMissions) {
+    btnMissions.addEventListener('click', () => {
+      openScienceModal('modalMissions');
+    });
+  }
+
+  // 3. Botón Full Comparison en dock inferior
+  const btnFullComp = document.getElementById('btnFullComparison');
+  if (btnFullComp) {
+    btnFullComp.addEventListener('click', () => {
+      openScienceModal('modalCompare');
+    });
+  }
+
+  // 4. Pestañas internas del Modal Compare
+  const compareTabBtns = document.querySelectorAll('#modalCompare .modal-tab-btn');
+  compareTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      sound.playClick(500);
+      compareTabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const targetTab = btn.getAttribute('data-tab');
+      const paneCelestial = document.getElementById('tabCompareCelestial');
+      const paneAnalogs = document.getElementById('tabCompareAnalogs');
+
+      if (targetTab === 'celestial') {
+        paneCelestial?.classList.remove('hidden');
+        paneAnalogs?.classList.add('hidden');
+      } else {
+        paneCelestial?.classList.add('hidden');
+        paneAnalogs?.classList.remove('hidden');
+      }
+    });
+  });
+
+  // 5. Filtros internos del Modal Missions
+  const missionFilterBtns = document.querySelectorAll('.missions-filter-btn');
+  const missionCards = document.querySelectorAll('.mission-card');
+  missionFilterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      sound.playClick(500);
+      missionFilterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const filter = btn.getAttribute('data-filter');
+      missionCards.forEach(card => {
+        const cardBody = card.getAttribute('data-body');
+        if (filter === 'all' || cardBody === filter) {
+          (card as HTMLElement).style.display = 'flex';
+        } else {
+          (card as HTMLElement).style.display = 'none';
+        }
+      });
+    });
+  });
+
+  // 6. Botones de "Volar al Sitio" en las tarjetas de misiones
+  const flyBtns = document.querySelectorAll('.mission-fly-btn');
+  flyBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const b = (btn.getAttribute('data-fly-body') || 'Moon') as CelestialBody;
+      const lat = Number(btn.getAttribute('data-fly-lat') || 0);
+      const lon = Number(btn.getAttribute('data-fly-lon') || 0);
+      const title = btn.getAttribute('data-fly-title') || '';
+      navigateToCoordinateLocation(b, lat, lon, title);
+    });
+  });
+
+  // 7. Descargas de reportes e informes científicos
+  const btnDownloadReport = document.getElementById('btnDownloadReportMd');
+  if (btnDownloadReport) {
+    btnDownloadReport.addEventListener('click', () => {
+      sound.playSuccess();
+      window.open('/output_3d/terrain_comparison_report.md', '_blank');
+    });
+  }
+
+  const btnDownloadMetrics = document.getElementById('btnDownloadMetricsJson');
+  if (btnDownloadMetrics) {
+    btnDownloadMetrics.addEventListener('click', () => {
+      sound.playSuccess();
+      const a = document.createElement('a');
+      a.href = '/output_3d/comparison_metrics.json';
+      a.download = 'comparison_metrics.json';
+      a.click();
+    });
   }
 }
