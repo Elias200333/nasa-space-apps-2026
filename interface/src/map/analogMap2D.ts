@@ -19,6 +19,7 @@ export class AnalogMap2DManager {
   private isReturning = false;
   private isTransitioning = false;
   private is3DPanelOpen = true;
+  private is3DMaximized = false;
   private isCandidatesDrawerOpen = true;
   private onMainPyRegenCallback?: (body: 'Moon' | 'Mars') => void;
   private currentLat = 29.0380;
@@ -364,10 +365,9 @@ export class AnalogMap2DManager {
   }
 
   private setupPlanetary3DPanelNotice(body: CelestialBody, layerMode: PlanetaryLayerMode) {
-    const metricsEl = document.getElementById('terrainMetricsContent');
     const badgeEl = document.getElementById('terrain3DBadge');
     const titleEl = document.getElementById('terrain3DTitle');
-    const subtitleEl = document.getElementById('terrain3DSubtitle');
+    const subtitleEl = document.getElementById('terrain3dSubtitle') || document.getElementById('terrain3DSubtitle');
 
     if (badgeEl) {
       badgeEl.textContent = body === 'Mars' ? 'NASA MARS TREK 3D' : 'NASA MOON TREK 3D';
@@ -380,34 +380,16 @@ export class AnalogMap2DManager {
       subtitleEl.textContent = `Datos orbitales oficiales de NASA Trek • Modo: ${layerMode.toUpperCase()}`;
     }
 
-    if (metricsEl) {
-      const isTopo = layerMode === 'topography';
-      metricsEl.innerHTML = `
-        <div class="terrain-stat-card" style="grid-column: span 2;">
-          <div class="stat-meta">
-            <span class="stat-label">Capa Cartográfica Activa</span>
-            <span class="stat-val-highlight">${isTopo ? 'Relieve Altimétrico Sombreado' : 'Mosaico Visual Orbital'}</span>
-          </div>
-          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
-            ${isTopo
-              ? 'Visualización de gradientes de elevación sobre el datum areoide/selenográfico de NASA Trek. No constituye una malla 3D física sino gradientes altimétricos hipsométricos.'
-              : 'Imágenes espectrales y fotográficas reales capturadas por sensores orbitales de la NASA (LRO / Viking).'}
-          </p>
-        </div>
-        <div class="terrain-stat-card">
-          <div class="stat-meta">
-            <span class="stat-label">Sistema de Coordenadas</span>
-            <span class="stat-val-highlight">${body === 'Mars' ? 'IAU2000 Planetocéntrico' : 'IAU2000 Selenográfico'}</span>
-          </div>
-        </div>
-        <div class="terrain-stat-card">
-          <div class="stat-meta">
-            <span class="stat-label">Resolución Cartográfica</span>
-            <span class="stat-val-highlight">${body === 'Mars' ? '232 m/px (Viking) / 463 m/px (MOLA)' : '100 m/px (LRO WAC) / 128 ppd (LOLA)'}</span>
-          </div>
-        </div>
-      `;
-    }
+    const isTopo = layerMode === 'topography';
+    const topSimEl = document.getElementById('topSimVal');
+    const topElevEl = document.getElementById('topElevVal');
+    const topSlopeEl = document.getElementById('topSlopeVal');
+    const topCavitiesEl = document.getElementById('topCavitiesVal');
+
+    if (topSimEl) topSimEl.textContent = '100% NASA';
+    if (topElevEl) topElevEl.textContent = body === 'Mars' ? (isTopo ? 'MOLA DEM' : 'Viking Clr') : (isTopo ? 'LOLA Altimetry' : 'LRO WAC');
+    if (topSlopeEl) topSlopeEl.textContent = isTopo ? 'Relieve Sombreado' : 'Mosaico Orbital';
+    if (topCavitiesEl) topCavitiesEl.textContent = body === 'Mars' ? 'IAU2000 Mars' : 'IAU2000 Moon';
   }
 
   private renderPlanetaryPOIs(body: 'Mars' | 'Moon') {
@@ -875,6 +857,15 @@ export class AnalogMap2DManager {
     const btnToggle = document.getElementById('btnToggle3DPreview');
     const btnClose = document.getElementById('btnClose3DPanel');
     const btnRegen = document.getElementById('btnRegen3D');
+    const btnTab = document.getElementById('btnTerrain3DTab');
+    const btnMaximize = document.getElementById('btnMaximize3DPanel');
+
+    if (btnTab) {
+      btnTab.addEventListener('click', () => {
+        sound.playClick(500);
+        this.toggle3DPanel();
+      });
+    }
 
     if (btnToggle) {
       btnToggle.addEventListener('click', () => {
@@ -887,6 +878,13 @@ export class AnalogMap2DManager {
       btnClose.addEventListener('click', () => {
         sound.playClick(450);
         this.toggle3DPanel(false);
+      });
+    }
+
+    if (btnMaximize) {
+      btnMaximize.addEventListener('click', () => {
+        sound.playClick(550);
+        this.toggle3DMaximize();
       });
     }
 
@@ -935,6 +933,7 @@ export class AnalogMap2DManager {
   public toggle3DPanel(show?: boolean) {
     const panel = document.getElementById('terrain3DPanel');
     const btnToggle = document.getElementById('btnToggle3DPreview');
+    const tabArrow = document.getElementById('terrain3DTabArrow');
     if (!panel) return;
 
     if (show !== undefined) {
@@ -944,11 +943,57 @@ export class AnalogMap2DManager {
     }
 
     if (this.is3DPanelOpen) {
-      panel.classList.remove('hidden');
+      panel.classList.remove('collapsed');
+      panel.classList.add('open');
       btnToggle?.classList.add('active');
+      if (tabArrow) tabArrow.textContent = '❮';
     } else {
-      panel.classList.add('hidden');
+      panel.classList.add('collapsed');
+      panel.classList.remove('open');
       btnToggle?.classList.remove('active');
+      if (tabArrow) tabArrow.textContent = '❯';
+    }
+  }
+
+  public toggle3DMaximize(maximize?: boolean) {
+    const panel = document.getElementById('terrain3DPanel');
+    const maxBtn = document.getElementById('btnMaximize3DPanel');
+    if (!panel) return;
+
+    if (maximize !== undefined) {
+      this.is3DMaximized = maximize;
+    } else {
+      this.is3DMaximized = !this.is3DMaximized;
+    }
+
+    if (this.is3DMaximized) {
+      panel.classList.add('maximized');
+      maxBtn?.setAttribute('title', 'Restaurar tamaño normal');
+      maxBtn?.classList.add('active');
+      if (maxBtn) {
+        maxBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="4 14 10 14 10 20"></polyline>
+            <polyline points="20 10 14 10 14 4"></polyline>
+            <line x1="14" y1="10" x2="21" y2="3"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        `;
+      }
+    } else {
+      panel.classList.remove('maximized');
+      maxBtn?.setAttribute('title', 'Ampliar a pantalla completa (respetando panel derecho)');
+      maxBtn?.classList.remove('active');
+      if (maxBtn) {
+        maxBtn.innerHTML = `
+          <svg id="maximizeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        `;
+      }
     }
   }
 

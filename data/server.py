@@ -48,8 +48,8 @@ def get_candidates_for_body(target_body: str, force_regen: bool = False) -> list
 
     try:
         from generate_terrain_3d import print_analog_ranking
-        print(f"[Backend API] Executing main.py / generate_terrain_3d ranking for {body_key}...")
-        print_analog_ranking(body_key, save_json=True)
+        print(f"[Backend API] Executing main.py / generate_terrain_3d ranking for {body_key} (randomize={force_regen})...")
+        print_analog_ranking(body_key, save_json=True, randomize=force_regen)
         if os.path.exists(catalog_path):
             with open(catalog_path, "r", encoding="utf-8") as f:
                 cat = json.load(f)

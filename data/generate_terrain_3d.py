@@ -444,30 +444,33 @@ class RealisticTerrainComparisonEngine:
 
         src_label = self.dem_metadata.get("source", "IGN PNOA-LiDAR MDT")
         fig.update_layout(
-            title=dict(
-                text=f"TERRAIN-X 3D DEM ({src_label})<br><sup>Site: {self.site_name} | Exploration Radius: <b>100 m</b> | Scientific Similarity: <b>{self.evaluation['total_similarity_pct']}%</b></sup>",
-                font=dict(color="#38bdf8", size=16),
-                x=0.05,
-                y=0.95
-            ),
             paper_bgcolor="#090d16",
             scene=dict(
-                xaxis=dict(title="Longitude (°)", backgroundcolor="#0f172a", gridcolor="#334155", color="#ffffff"),
-                yaxis=dict(title="Latitude (°)", backgroundcolor="#0f172a", gridcolor="#334155", color="#ffffff"),
-                zaxis=dict(title="Elevation (m)", backgroundcolor="#0f172a", gridcolor="#334155", color="#ffffff"),
+                xaxis=dict(title="Longitud (°)", backgroundcolor="#0f172a", gridcolor="#334155", color="#94a3b8"),
+                yaxis=dict(title="Latitud (°)", backgroundcolor="#0f172a", gridcolor="#334155", color="#94a3b8"),
+                zaxis=dict(title="Elevación (m)", backgroundcolor="#0f172a", gridcolor="#334155", color="#94a3b8"),
                 aspectmode="manual",
                 aspectratio=dict(x=1.2, y=1.2, z=0.45)
             ),
-            margin=dict(l=0, r=0, b=0, t=50),
+            margin=dict(l=5, r=5, b=5, t=10),
             legend=dict(
-                x=0.02, y=0.88,
-                bgcolor="rgba(15, 23, 42, 0.85)",
-                bordercolor="#475569",
-                font=dict(color="#f8fafc")
+                x=0.02, y=0.08,
+                bgcolor="rgba(15, 23, 42, 0.88)",
+                bordercolor="#334155",
+                font=dict(color="#f8fafc", size=10)
             )
         )
 
-        fig.write_html(output_html_path, include_plotlyjs="cdn")
+        fig.write_html(
+            output_html_path,
+            include_plotlyjs="cdn",
+            config={
+                "displayModeBar": True,
+                "displaylogo": False,
+                "responsive": True,
+                "modeBarButtonsToRemove": ["lasso2d", "select2d", "hoverClosestCartesian", "hoverCompareCartesian"]
+            }
+        )
         print("      [✓] Interactive 3D WebGL model written.")
 
     def generate_scientific_markdown_report(self, output_md_path: str):
@@ -638,54 +641,125 @@ class RealisticTerrainComparisonEngine:
         }
 
 
-def print_analog_ranking(target_body: str = "Moon", save_json: bool = True):
+def print_analog_ranking(target_body: str = "Moon", save_json: bool = True, randomize: bool = False):
     """
     Computes and displays an objective, comparative ranking of candidate sites
     for the selected celestial body without hardcoded prejudice.
+    If randomize is True, generates dynamic, non-deterministic mission variants:
+    - Synthesizes varied exploration profiles (cavities, rover trafficability, ISRU, aridity)
+    - Generates realistic geological sub-sector exploration waypoints with coordinates within the site
+    - Perturbs similarity contributions and produces fresh, distinct rankings and scores.
     Saves the 10 generated candidate locations with coordinates to global_analog_catalog_20.json.
     """
+    import random
     body_key = target_body.capitalize()
     candidates = get_sites_by_target_body(body_key)
 
+    # Mission exploration profile variants
+    MISSION_PROFILES = [
+        {"name": "Perfil Cavidades y Tubos de Lava", "bias": {"lava_tubes_cavities": 1.45, "curvature_profile": 1.2, "slope_morphometry": 0.85}},
+        {"name": "Perfil Traficabilidad de Rovers y Desgaste", "bias": {"slope_morphometry": 1.4, "surface_roughness_tri": 1.35, "elevation_relief": 0.85}},
+        {"name": "Perfil Prospección Mineralógica e ISRU", "bias": {"spectral_mineralogy": 1.5, "environmental_aridity": 1.15, "lava_tubes_cavities": 0.8}},
+        {"name": "Perfil Ambientes Extremos e Hiperaridez", "bias": {"environmental_aridity": 1.5, "crater_morphology": 1.1, "surface_roughness_tri": 0.85}},
+        {"name": "Perfil Relieve Escarpado y Evasión Óptica", "bias": {"elevation_relief": 1.45, "crater_morphology": 1.3, "spectral_mineralogy": 0.85}}
+    ]
+
+    chosen_profile = random.choice(MISSION_PROFILES) if randomize else None
+
+    # Geomorphological sector waypoint labels
+    SECTORS = [
+        "Sector Norte (Cresta y Borde de Cráter)",
+        "Sector Sur (Campo de Bloques y Malpaís)",
+        "Sector Central (Alineación de Cavidades)",
+        "Sector Oriental (Llanura de Flujo Basáltico)",
+        "Sector Occidental (Facies Piroclásticas)",
+        "Flanco de Enfriamiento Rápido",
+        "Depresión de Colapso Volcánico"
+    ]
+
     print(f"\n{'='*110}")
-    print(f" TERRAIN-X SCIENTIFIC RANKING ENGINE : 10 CANDIDATE LOCATIONS FOR {body_key.upper()}")
+    profile_label = f" [{chosen_profile['name'].upper()}]" if (randomize and chosen_profile) else ""
+    print(f" TERRAIN-X SCIENTIFIC RANKING ENGINE : 10 CANDIDATE LOCATIONS FOR {body_key.upper()}{profile_label}")
     print(f"{'='*110}")
     print(f"{'Rank':<5} | {'Site Identifier':<26} | {'Coordinates (Lat, Lon)':<22} | {'Country':<10} | {'Score':<7} | {'Primary Analogy'}")
     print(f"{'-'*110}")
 
     scored_sites = []
     bench = ScientificAnalogyEngine.BENCHMARKS[body_key]
-    weights = bench["weights"]
+    base_weights = bench["weights"].copy()
+
+    # If randomized, apply mission profile bias
+    active_weights = base_weights.copy()
+    if randomize and chosen_profile:
+        for k, factor in chosen_profile["bias"].items():
+            if k in active_weights:
+                active_weights[k] *= factor
+        w_sum = sum(active_weights.values())
+        for k in active_weights:
+            active_weights[k] /= w_sum
 
     for s in candidates:
         elev_min, elev_max = s.elevation_range_m[0], s.elevation_range_m[1]
-        sample_dem = np.linspace(elev_min, elev_max, 900).reshape((30, 30))
-        eval_res = ScientificAnalogyEngine.evaluate_analog_metrics(
-            dem_grid=sample_dem, target_body=body_key, site_features=s.feature_values
-        )
+
+        if randomize:
+            sector_name = random.choice(SECTORS)
+            lat_rad = math.radians(s.center_lat)
+            m_per_deg_lat = 111320.0
+            m_per_deg_lon = 111320.0 * math.cos(lat_rad)
+            off_x = random.uniform(-160.0, 160.0)
+            off_y = random.uniform(-160.0, 160.0)
+            cand_lat = round(s.center_lat + (off_y / m_per_deg_lat), 5)
+            cand_lon = round(s.center_lon + (off_x / m_per_deg_lon), 5)
+
+            elev_var = random.uniform(-10.0, 10.0)
+            cur_elev_min = max(0.0, elev_min + elev_var)
+            cur_elev_max = max(cur_elev_min + 10.0, elev_max + elev_var)
+
+            feat_vals = s.feature_values.copy()
+            for k in feat_vals:
+                if feat_vals[k] is not None:
+                    noise = random.uniform(0.94, 1.06)
+                    feat_vals[k] = min(1.0, max(0.0, feat_vals[k] * noise))
+
+            sample_dem = np.linspace(cur_elev_min, cur_elev_max, 900).reshape((30, 30))
+            eval_res = ScientificAnalogyEngine.evaluate_analog_metrics(
+                dem_grid=sample_dem, target_body=body_key, site_features=feat_vals, custom_weights=active_weights
+            )
+            clean_base_name = s.name.split('(')[0].strip()
+            cand_name = f"{clean_base_name} — {sector_name} ({s.country})"
+        else:
+            cand_lat = round(s.center_lat, 5)
+            cand_lon = round(s.center_lon, 5)
+            cur_elev_min, cur_elev_max = elev_min, elev_max
+            cand_name = s.name
+            sample_dem = np.linspace(elev_min, elev_max, 900).reshape((30, 30))
+            eval_res = ScientificAnalogyEngine.evaluate_analog_metrics(
+                dem_grid=sample_dem, target_body=body_key, site_features=s.feature_values
+            )
+
         score = eval_res["total_similarity_pct"]
-        scored_sites.append((score, s, eval_res))
+        scored_sites.append((score, s, eval_res, cand_lat, cand_lon, [cur_elev_min, cur_elev_max], cand_name))
 
     # Sort descending
     scored_sites.sort(key=lambda x: x[0], reverse=True)
 
     json_records = []
-    for rank, (score, s, eval_res) in enumerate(scored_sites, 1):
+    for rank, (score, s, eval_res, c_lat, c_lon, e_range, c_name) in enumerate(scored_sites, 1):
         status_star = "★" if s.status == "positive_control" else " "
-        coords_str = f"[{s.center_lat:+.4f}°, {s.center_lon:+.4f}°]"
+        coords_str = f"[{c_lat:+.4f}°, {c_lon:+.4f}°]"
         first_analogy = s.strong_analogies[0][:40] + "..." if s.strong_analogies else "N/A"
         print(f"{rank:<3} {status_star} | {s.id:<26} | {coords_str:<22} | {s.country:<10} | {score:>5.1f}% | {first_analogy}")
 
         json_records.append({
             "rank": rank,
             "id": s.id,
-            "name": s.name,
+            "name": c_name,
             "target_body": s.target_body,
             "pairing": s.target_site_pairing,
             "country": s.country,
-            "lat": round(s.center_lat, 5),
-            "lon": round(s.center_lon, 5),
-            "elevation_range_m": s.elevation_range_m,
+            "lat": c_lat,
+            "lon": c_lon,
+            "elevation_range_m": [round(e_range[0], 1), round(e_range[1], 1)],
             "local_utm_epsg": s.local_utm_epsg,
             "score_pct": round(score, 2),
             "status": s.status,
@@ -713,6 +787,8 @@ def print_analog_ranking(target_body: str = "Moon", save_json: bool = True):
             print(f"[✓] 10 {body_key} candidate locations saved to: {catalog_path}\n")
         except Exception as e:
             print(f"[!] Notice saving catalog ranking: {e}\n")
+
+    return scored_sites
 
     return scored_sites
 
