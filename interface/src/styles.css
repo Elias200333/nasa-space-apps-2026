@@ -945,12 +945,23 @@ body {
   z-index: 90;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.5s ease;
-  background: radial-gradient(circle at center, rgba(147, 197, 253, 0.45) 0%, rgba(14, 165, 233, 0.35) 45%, rgba(7, 11, 20, 0.9) 100%);
+  transition: opacity 0.4s ease;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.75) 0%, rgba(220, 235, 250, 0.45) 40%, rgba(7, 11, 20, 0.95) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+}
+
+.zoom-out-hint {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  background: rgba(15, 23, 42, 0.6);
+  padding: 6px 12px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-mono);
+  margin-right: 12px;
 }
 
 .atmospheric-overlay.active {

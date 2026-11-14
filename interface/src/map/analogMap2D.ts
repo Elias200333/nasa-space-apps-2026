@@ -10,6 +10,7 @@ export class AnalogMap2DManager {
   private currentMarker: L.Marker | null = null;
   private currentCircle: L.Circle | null = null;
   private onReturnToOrbitCallback?: () => void;
+  private isReturning = false;
 
   constructor(mapContainerId: string, transitionOverlayId: string) {
     this.mapContainer = document.getElementById(mapContainerId) as HTMLElement;
@@ -21,34 +22,32 @@ export class AnalogMap2DManager {
   }
 
   /**
-   * Inicia la secuencia cinematográfica de inmersión atmosférica
-   * y abre el mapa satelital 2D de alta resolución
+   * Inicia la secuencia cinematográfica de inmersión y despliega el mapa satelital 2D
    */
   public triggerAtmosphericDive(site: AnalogSite) {
+    this.isReturning = false;
     sound.playTargetLock();
 
-    // 1. Fase 1: Activar efecto de fricción y niebla de reentrada en la atmósfera
+    // 1. Activar efecto sutil de transición
     this.transitionOverlay.classList.remove('hidden', 'fade-out', 'ascent-effect');
     this.transitionOverlay.classList.add('active', 'dive-effect');
 
-    // Sonido de estruendo atmosférico acelerado
     setTimeout(() => {
       sound.playWhoosh();
-    }, 400);
+    }, 300);
 
-    // 2. Fase 2: Tras penetrar las nubes (1.8s), inicializar y desplegar el mapa 2D
+    // 2. Cargar mapa satelital 2D
     setTimeout(() => {
       this.display2DMap(site);
 
-      // Desvanecer nubes de reentrada para revelar el mapa satelital
       this.transitionOverlay.classList.remove('dive-effect');
       this.transitionOverlay.classList.add('fade-out');
 
       setTimeout(() => {
         this.transitionOverlay.classList.remove('active', 'fade-out');
         this.transitionOverlay.classList.add('hidden');
-      }, 700);
-    }, 1700);
+      }, 600);
+    }, 1500);
   }
 
   /**
@@ -65,20 +64,44 @@ export class AnalogMap2DManager {
       this.map = L.map('leafletMap', {
         center: [lat, lon],
         zoom: 12,
+        minZoom: 2,
         zoomControl: false,
         attributionControl: false
       });
 
-      // Capa de satélite fotorrealista de alta definición de Esri / NASA
+      // Capa de satélite fotorrealista de alta definición de Esri
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 18,
-        attribution: 'Esri, Maxar, Earthstar Geographics, USDA, USGS'
+        attribution: 'Esri, Maxar, Earthstar Geographics'
       }).addTo(this.map);
 
-      // Controles de zoom abajo a la derecha
       L.control.zoom({ position: 'bottomright' }).addTo(this.map);
+
+      // =========================================================================
+      // SOLICITUD CLAVE:
+      // "Cuando me aleje con la ruleta del ratón hasta casi llegar a ver el mapa
+      // de la tierra, quiero que cambie el mapa 2D por la interfaz 3D"
+      // =========================================================================
+      this.map.on('zoomend', () => {
+        if (!this.map || this.isReturning) return;
+        // Si el usuario hace zoom-out con la rueda del ratón hasta nivel 3 o menos (vista casi global)
+        if (this.map.getZoom() <= 3) {
+          this.returnToSpaceOrbit();
+        }
+      });
+
+      // Detectar también el scroll directo hacia afuera si ya está en nivel bajo
+      const mapElem = document.getElementById('leafletMap');
+      if (mapElem) {
+        mapElem.addEventListener('wheel', (e) => {
+          if (!this.map || this.isReturning) return;
+          if (e.deltaY > 0 && this.map.getZoom() <= 4) {
+            this.returnToSpaceOrbit();
+          }
+        }, { passive: true });
+      }
     } else {
-      this.map.setView([lat, lon], 12, { animate: true });
+      this.map.setView([lat, lon], 12, { animate: false });
       this.map.invalidateSize();
     }
 
@@ -90,17 +113,17 @@ export class AnalogMap2DManager {
       this.map.removeLayer(this.currentCircle);
     }
 
-    // 1. Anillo pulsante de radar georreferenciado sobre el análogo
+    // Anillo pulsante de radar sobre el análogo
     const accentColor = site.target_body === 'Moon' ? '#22d3ee' : '#f97316';
     this.currentCircle = L.circle([lat, lon], {
       color: accentColor,
       fillColor: accentColor,
       fillOpacity: 0.2,
-      radius: 2500,
+      radius: 2000,
       weight: 2
     }).addTo(this.map);
 
-    // 2. Icono holográfico personalizado para el marcador
+    // Marcador personalizado de alta tecnología
     const customIcon = L.divIcon({
       className: 'analog-radar-marker',
       html: `
@@ -113,7 +136,6 @@ export class AnalogMap2DManager {
 
     this.currentMarker = L.marker([lat, lon], { icon: customIcon }).addTo(this.map);
 
-    // Popup informativo geológico
     this.currentMarker.bindPopup(`
       <div class="map-popup-card">
         <span class="popup-tag ${site.target_body.toLowerCase()}">${site.target_body} Analog</span>
@@ -127,7 +149,6 @@ export class AnalogMap2DManager {
       </div>
     `).openPopup();
 
-    // Actualizar HUD superior del mapa 2D
     this.updateMapHUD(site);
   }
 
@@ -147,26 +168,24 @@ export class AnalogMap2DManager {
   }
 
   /**
-   * Regresa desde el mapa 2D a la vista orbital 3D en el espacio
+   * Regresa desde el mapa 2D a la interfaz 3D en el espacio
    */
   public returnToSpaceOrbit() {
+    if (this.isReturning) return;
+    this.isReturning = true;
     sound.playClick(600);
 
-    // Activar nubes ascendentes de despegue
     this.transitionOverlay.classList.remove('hidden', 'fade-out');
     this.transitionOverlay.classList.add('active', 'ascent-effect');
 
     setTimeout(() => {
-      // Ocultar mapa 2D
       this.mapContainer.classList.remove('active');
       this.mapContainer.classList.add('hidden');
 
-      // Notificar a la escena 3D para que aleje la cámara a órbita
       if (this.onReturnToOrbitCallback) {
         this.onReturnToOrbitCallback();
       }
 
-      // Desvanecer nubes de ascenso al llegar al espacio
       setTimeout(() => {
         this.transitionOverlay.classList.remove('ascent-effect');
         this.transitionOverlay.classList.add('fade-out');
@@ -174,9 +193,9 @@ export class AnalogMap2DManager {
         setTimeout(() => {
           this.transitionOverlay.classList.remove('active', 'fade-out');
           this.transitionOverlay.classList.add('hidden');
-        }, 600);
-      }, 700);
-    }, 600);
+          this.isReturning = false;
+        }, 500);
+      }, 500);
+    }, 450);
   }
 }
-
