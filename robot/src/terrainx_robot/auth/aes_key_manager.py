@@ -81,6 +81,22 @@ class _CloudLike(Protocol):
 CloudFactory = Callable[[str, str], _CloudLike]  # (region, device_type) -> cloud
 
 
+def _ascii_header_value(value: Any) -> Any:
+    """Deja una cabecera HTTP en ASCII puro, quitando los caracteres no ASCII.
+
+    Solo altera valores que no sean ya ASCII; los demás (firma MD5, token,
+    etc.) quedan intactos.
+    """
+    if isinstance(value, str):
+        return value.encode("ascii", "ignore").decode("ascii")
+    return value
+
+
+# Huella TLS coherente para esquivar el WAF de Tencent EdgeOne (ver abajo).
+# La primera disponible en el curl_cffi instalado es la que se usa.
+_IMPERSONATE_PREFERENCE = ("edge101", "edge104", "edge99", "chrome131", "chrome120")
+
+
 def _default_cloud_factory(region: str, device_type: str) -> _CloudLike:
     try:
         from unitree_webrtc_connect import UnitreeCloud
@@ -89,7 +105,45 @@ def _default_cloud_factory(region: str, device_type: str) -> _CloudLike:
             "La librería unitree_webrtc_connect no está instalada. "
             'Instálela con:  .\\.venv\\Scripts\\python.exe -m pip install -e ".[go2]"'
         ) from exc
-    return UnitreeCloud(region=region, device_type=device_type)
+
+    class _PatchedCloud(UnitreeCloud):  # type: ignore[valid-type,misc]
+        """UnitreeCloud adaptado a Windows + al WAF de Unitree, SIN tocar la librería.
+
+        Dos parches, ambos probados como necesarios con una cuenta real:
+
+        1) Cabeceras ASCII. En Windows en español ``time.strftime("%Z")``
+           devuelve p. ej. ``"Hora estándar romance"``; la librería lo mete en
+           la cabecera ``AppTimezone`` y ``curl_cffi`` falla con
+           ``'ascii' codec can't decode byte 0xe1`` antes de salir.
+
+        2) Huella anti-bot. La nube de Unitree está tras el WAF de Tencent
+           EdgeOne. La librería impersona ``chrome120`` (huella TLS de
+           escritorio) pero a la vez sobreescribe ``User-Agent`` con uno de
+           móvil Android; esa contradicción dispara el bloqueo -> ``HTTP 567``.
+           Usamos una huella coherente (Edge) y dejamos que ``curl_cffi`` ponga
+           su propio ``User-Agent``. El inicio de sesión sigue exigiendo las
+           credenciales reales de la cuenta: no se elude ninguna autenticación.
+        """
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            try:
+                from curl_cffi import requests as _cffi_requests
+            except ImportError:  # pragma: no cover - curl_cffi viene con la librería
+                return
+            for target in _IMPERSONATE_PREFERENCE:
+                try:
+                    self._session = _cffi_requests.Session(impersonate=target)
+                    break
+                except Exception:  # huella no disponible en esta versión
+                    continue
+
+        def _headers(self) -> dict:  # type: ignore[override]
+            headers = super()._headers()
+            headers.pop("User-Agent", None)  # coherente con la huella Edge
+            return {k: _ascii_header_value(v) for k, v in headers.items()}
+
+    return _PatchedCloud(region=region, device_type=device_type)
 
 
 def _fingerprint(key: str) -> str:
