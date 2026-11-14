@@ -3,6 +3,11 @@ Tests for Planetary CRS guards and geodetic rules.
 Ensures extraterrestrial bodies (Moon, Mars) are never silently assigned WGS84.
 """
 
+import sys, os
+_DATA_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+if _DATA_ROOT not in sys.path:
+    sys.path.insert(0, _DATA_ROOT)
+
 import pytest
 from modules.science.processing.planetary import (
     PlanetaryCRSGuard,

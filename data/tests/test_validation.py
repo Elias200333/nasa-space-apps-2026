@@ -3,6 +3,11 @@ Tests for scientific validation, control discrimination, and sensitivity analysi
 Ensures positive controls rank highest, negative controls are penalized, and provenance is complete.
 """
 
+import sys, os
+_DATA_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+if _DATA_ROOT not in sys.path:
+    sys.path.insert(0, _DATA_ROOT)
+
 import pytest
 from modules.science.validation import (
     run_benchmark_evaluation,

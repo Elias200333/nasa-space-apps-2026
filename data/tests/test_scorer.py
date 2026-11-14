@@ -3,6 +3,11 @@ Tests for AnalogScorer and MissionProfile evaluation.
 Verifies missing essential features trigger insufficient_evidence and scoring is deterministic.
 """
 
+import sys, os
+_DATA_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+if _DATA_ROOT not in sys.path:
+    sys.path.insert(0, _DATA_ROOT)
+
 import pytest
 from modules.science.schemas import AnalogSite
 from modules.science.features.catalog import ANALOG_CATALOG

@@ -108,7 +108,22 @@ Inspect the generated provenance audit report in:
 
 ---
 
-## 5. CLI Usage
+## 5. Interactive Planetary Analog Analyzer (`main.py`)
+
+Run the interactive multi-domain scientific analyzer. Before computing, it asks you to specify whether the analysis is for **the Moon** or for **Mars**, fetches real telemetry from NASA CMR & NASA POWER, and outputs a complete scientific breakdown:
+
+```bash
+# Interactive mode (prompts for Moon or Mars):
+python main.py
+
+# Direct target execution:
+python main.py --body moon
+python main.py --body mars
+```
+
+---
+
+## 6. CLI Usage
 
 The command-line tool allows instant ranking and sensitivity inspection.
 

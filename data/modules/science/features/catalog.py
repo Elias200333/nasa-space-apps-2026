@@ -9,7 +9,15 @@ Controls:
 - Negative Control: Yungay Atacama Desert (Hyperarid sedimentary evaporite - no basaltic tubes)
 """
 
+import os
+import sys
 from typing import Dict, List, Optional
+
+# Ensure data root is on sys.path for direct execution
+_DATA_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+if _DATA_ROOT not in sys.path:
+    sys.path.insert(0, _DATA_ROOT)
+
 from modules.science.schemas import AnalogSite
 
 
@@ -187,4 +195,10 @@ def get_all_sites() -> List[AnalogSite]:
 
 def get_site_by_id(site_id: str) -> Optional[AnalogSite]:
     return ANALOG_CATALOG.get(site_id)
+
+
+if __name__ == "__main__":
+    print(f"\n--- Registered Analog Sites ({len(ANALOG_CATALOG)} sites) ---")
+    for sid, site in ANALOG_CATALOG.items():
+        print(f"[{site.status.upper()}] {sid}: {site.name}")
 
