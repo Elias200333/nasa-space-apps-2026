@@ -1227,3 +1227,323 @@ body {
   color: #0284c7;
   font-size: 0.85rem;
 }
+
+/* ==========================================================================
+   Previsualización 3D del Terreno (Radio 10 km) - Backend generate_terrain_3d.py
+   ========================================================================== */
+.preview-3d-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid var(--border-cyan);
+  color: var(--cyan-glow);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(10px);
+}
+
+.preview-3d-toggle-btn:hover,
+.preview-3d-toggle-btn.active {
+  background: rgba(34, 211, 238, 0.25);
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.4);
+  color: #ffffff;
+  border-color: var(--cyan-glow);
+}
+
+.preview-status-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: rgba(16, 185, 129, 0.25);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 2px 7px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.preview-status-pill.loading {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.4);
+  animation: pulseLoading 1.2s infinite;
+}
+
+@keyframes pulseLoading {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.terrain-3d-panel {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  width: 640px;
+  max-width: calc(100vw - 48px);
+  height: 540px;
+  max-height: calc(100vh - 130px);
+  background: rgba(11, 19, 38, 0.94);
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 18px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75), 0 0 24px rgba(34, 211, 238, 0.2);
+  display: flex;
+  flex-direction: column;
+  z-index: 85;
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.terrain-3d-panel.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(20px) scale(0.98);
+  display: none;
+}
+
+.terrain-3d-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: rgba(15, 23, 42, 0.85);
+  border-bottom: 1px solid rgba(34, 211, 238, 0.2);
+}
+
+.terrain-3d-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--cyan-glow);
+  margin-bottom: 2px;
+}
+
+.terrain-3d-title-group h3 {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.terrain-3d-title-group p {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+
+.terrain-3d-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.regen-3d-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(34, 211, 238, 0.15);
+  border: 1px solid var(--border-cyan);
+  color: var(--cyan-glow);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.regen-3d-btn:hover {
+  background: rgba(34, 211, 238, 0.3);
+  color: #ffffff;
+}
+
+.close-3d-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.close-3d-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.terrain-3d-tabs {
+  display: flex;
+  background: rgba(15, 23, 42, 0.6);
+  border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+  padding: 0 16px;
+  gap: 8px;
+}
+
+.terrain-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.terrain-tab:hover {
+  color: #ffffff;
+}
+
+.terrain-tab.active {
+  color: var(--cyan-glow);
+  border-bottom-color: var(--cyan-glow);
+}
+
+.terrain-3d-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #090e1a;
+}
+
+.terrain-tab-pane {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.terrain-tab-pane.hidden {
+  display: none !important;
+}
+
+.iframe-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.iframe-container iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.terrain-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 19, 38, 0.88);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--cyan-glow);
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 10;
+}
+
+.terrain-loading-overlay.hidden {
+  display: none;
+}
+
+.thematic-maps-viewer {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thematic-maps-viewer img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(51, 65, 85, 0.6);
+}
+
+.cavities-analytics-grid {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.metrics-cards-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.metric-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-card .m-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.metric-card .m-val {
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--cyan-glow);
+}
+
+.cavities-table-container h4 {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.cavities-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  color: var(--text-main);
+}
+
+.cavities-table th {
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text-muted);
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+  font-weight: 600;
+}
+
+.cavities-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+}
+
+.cavities-table tr:hover td {
+  background: rgba(34, 211, 238, 0.08);
+}
+

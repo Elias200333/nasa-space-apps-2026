@@ -3,7 +3,7 @@ TERRAIN-X Spatial Data Quality & Integrity Checker
 Validates nodata fractions, bounding box sanity, and physical range plausibility.
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 import numpy as np
 
 
