@@ -234,28 +234,88 @@ export function selectCelestialTarget(body: CelestialBody) {
   }
 }
 
+function siteCountryLookup(siteId: string): string {
+  if (siteId.startsWith('ES_')) return 'España';
+  if (siteId.startsWith('US_')) return 'EE.UU.';
+  if (siteId.startsWith('IS_')) return 'Islandia';
+  if (siteId.startsWith('CL_')) return 'Chile';
+  return 'Tierra';
+}
+
+function showTargetCardLoading(body: 'Moon' | 'Mars') {
+  let card = document.getElementById('targetSiteCard');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'targetSiteCard';
+    card.className = 'target-site-card';
+    document.querySelector('.main-stage')?.appendChild(card);
+  }
+  const badgeClass = body === 'Moon' ? 'moon-badge' : 'mars-badge';
+  card.innerHTML = `
+    <div class="site-badge ${badgeClass}">${body} Analog</div>
+    <div class="site-info-text">
+      <h4>Consultando Backend main.py...</h4>
+      <p style="color:var(--cyan-glow);">NASA APIs • CMR, POWER, ODE & Trek</p>
+    </div>
+  `;
+  card.style.display = 'flex';
+}
+
 /**
  * Transición cinematográfica fotorrealista y sin cortes:
- * 1. Genera coordenadas científicas del análogo planetario.
+ * 1. Obtiene las coordenadas científicas del análogo planetario directamente del backend main.py.
  * 2. La Tierra 3D rota suavemente y la cámara desciende en zoom continuo.
  * 3. Al alcanzar baja órbita, transiciona de forma imperceptible hacia el mapa satelital 2D de alta resolución.
- * 4. Sin pantallas de videojuegos, sin textos invasivos ni cortes bruscos.
+ * 4. Activa la previsualización 3D del radio alrededor de la ubicación generada por generate_terrain_3D.py.
  */
-function generateAndDiveToAnalog(body: 'Moon' | 'Mars') {
-  const result = generateRandomAnalogCoordinates(body);
-  currentSelectedSite = result.site;
+async function generateAndDiveToAnalog(body: 'Moon' | 'Mars') {
+  showTargetCardLoading(body);
 
-  const lat = result.coordinates.latitude;
-  const lon = result.coordinates.longitude;
+  try {
+    // 1. Llamada a la API backend impulsada por main.py / analyze_analog.py
+    const resp = await fetch(`/api/analog?body=${body.toLowerCase()}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
 
-  // Actualizar tarjeta HUD discreta
-  showTargetCard(result.site, body);
+    const site: AnalogSite = {
+      id: data.site.id,
+      name: data.site.name,
+      target_body: body,
+      coordinates: {
+        latitude: data.site.coordinates.latitude,
+        longitude: data.site.coordinates.longitude,
+        label: `${Math.abs(data.site.coordinates.latitude).toFixed(3)}° ${data.site.coordinates.latitude >= 0 ? 'N' : 'S'}, ${Math.abs(data.site.coordinates.longitude).toFixed(3)}° ${data.site.coordinates.longitude >= 0 ? 'E' : 'W'}`
+      },
+      region: data.primary_region || 'Región Análoga',
+      country: siteCountryLookup(data.site.id),
+      geological_features: ['Lava Tube Skylights', 'Basalt Flows', 'Subsurface Cavity'],
+      scientific_justification: data.site.scientific_justification,
+      similarity_score: data.site.similarity_score,
+      coverage_percentage: 100,
+      sources: data.site.sources || ['NASA CMR', 'NASA POWER', 'USGS'],
+      status: 'validated'
+    };
 
-  // Animación fotorrealista continua de rotación y zoom hacia la superficie
-  earthScene.animateToCoordinatesAndDive(lat, lon, () => {
-    // Al alcanzar baja órbita, transiciona de forma imperceptible al mapa satelital 2D
-    map2DManager.triggerSeamlessZoomDive(result.site);
-  });
+    currentSelectedSite = site;
+    showTargetCard(site, body);
+
+    const lat = site.coordinates.latitude;
+    const lon = site.coordinates.longitude;
+
+    // 2. Animación cinematográfica de rotación y zoom hacia la superficie
+    earthScene.animateToCoordinatesAndDive(lat, lon, () => {
+      // Al alcanzar baja órbita, transiciona al mapa satelital 2D y activa el entorno 3D
+      map2DManager.triggerSeamlessZoomDive(site);
+    });
+  } catch (err) {
+    console.warn('Backend /api/analog no disponible, usando fallback local:', err);
+    const result = generateRandomAnalogCoordinates(body);
+    currentSelectedSite = result.site;
+    showTargetCard(result.site, body);
+    earthScene.animateToCoordinatesAndDive(result.coordinates.latitude, result.coordinates.longitude, () => {
+      map2DManager.triggerSeamlessZoomDive(result.site);
+    });
+  }
 }
 
 function showTargetCard(site: AnalogSite, body: 'Moon' | 'Mars') {

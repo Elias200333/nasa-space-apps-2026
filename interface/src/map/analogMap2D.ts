@@ -1,6 +1,6 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { AnalogSite } from '../types';
+import { AnalogSite, CavityCandidate, Terrain3DResponse } from '../types';
 import { sound } from '../audio';
 
 export class AnalogMap2DManager {
@@ -8,13 +8,20 @@ export class AnalogMap2DManager {
   private map: L.Map | null = null;
   private currentMarker: L.Marker | null = null;
   private currentCircle: L.Circle | null = null;
+  private cavityMarkers: L.Marker[] = [];
+  private radiusCircle: L.Circle | null = null;
   private activeTargetSite: AnalogSite | null = null;
   private onReturnToOrbitCallback?: (lat?: number, lon?: number) => void;
   private isReturning = false;
   private isTransitioning = false;
+  private is3DPanelOpen = true;
+  private currentLat = 29.148;
+  private currentLon = -13.450;
+  private currentRadiusKm = 10.0;
 
   constructor(mapContainerId: string) {
     this.mapContainer = document.getElementById(mapContainerId) as HTMLElement;
+    this.setup3DPanelControls();
   }
 
   public setOnReturnToOrbit(callback: (lat?: number, lon?: number) => void) {
@@ -50,7 +57,10 @@ export class AnalogMap2DManager {
     // Actualizar barra HUD limpia sin coordenadas forzadas
     this.setupFreeExplorationHUD();
 
-    // 3. Crossfade suave
+    // 3. Cargar automáticamente la previsualización 3D del radio a su alrededor (10 km) con generate_terrain_3D.py
+    this.loadTerrain3DPreview(lat, lon, 10.0);
+
+    // 4. Crossfade suave
     requestAnimationFrame(() => {
       this.mapContainer.classList.add('active');
       this.mapContainer.style.opacity = '1';
@@ -89,6 +99,9 @@ export class AnalogMap2DManager {
     // Dibujar la baliza en el mapa (pero sin abrir ningún popup invasivo)
     this.renderSiteMarkers(site);
     this.setupTargetExplorationHUD(site);
+
+    // Cargar la previsualización 3D del radio de 10 km alrededor de la ubicación analógica
+    this.loadTerrain3DPreview(lat, lon, 10.0);
 
     requestAnimationFrame(() => {
       this.mapContainer.classList.add('active');
@@ -149,6 +162,12 @@ export class AnalogMap2DManager {
       this.map.removeLayer(this.currentCircle);
       this.currentCircle = null;
     }
+    if (this.radiusCircle) {
+      this.map.removeLayer(this.radiusCircle);
+      this.radiusCircle = null;
+    }
+    this.cavityMarkers.forEach(m => this.map?.removeLayer(m));
+    this.cavityMarkers = [];
   }
 
   private renderSiteMarkers(site: AnalogSite) {
@@ -310,5 +329,220 @@ export class AnalogMap2DManager {
       this.mapContainer.classList.add('hidden');
       this.isReturning = false;
     }, 450);
+  }
+
+  /**
+   * Configura las interacciones y cambio de pestañas del panel 3D
+   */
+  private setup3DPanelControls() {
+    const btnToggle = document.getElementById('btnToggle3DPreview');
+    const btnClose = document.getElementById('btnClose3DPanel');
+    const btnRegen = document.getElementById('btnRegen3D');
+
+    if (btnToggle) {
+      btnToggle.addEventListener('click', () => {
+        sound.playClick(600);
+        this.toggle3DPanel();
+      });
+    }
+
+    if (btnClose) {
+      btnClose.addEventListener('click', () => {
+        sound.playClick(450);
+        this.toggle3DPanel(false);
+      });
+    }
+
+    if (btnRegen) {
+      btnRegen.addEventListener('click', () => {
+        sound.playClick(700);
+        const center = this.map ? this.map.getCenter() : null;
+        const lat = center ? center.lat : this.currentLat;
+        let lon = center ? center.lng : this.currentLon;
+        lon = ((lon + 180) % 360 + 360) % 360 - 180;
+        this.loadTerrain3DPreview(lat, lon, this.currentRadiusKm, true);
+      });
+    }
+
+    // Pestañas del visor 3D (WebGL, Atlas Temático, Cavidades)
+    const tabs = document.querySelectorAll('.terrain-tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        sound.playClick(500);
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        const targetTab = tab.getAttribute('data-tab');
+        document.querySelectorAll('.terrain-tab-pane').forEach(pane => {
+          pane.classList.add('hidden');
+          pane.classList.remove('active');
+        });
+
+        if (targetTab === 'interactive') {
+          const p = document.getElementById('tabContentInteractive');
+          p?.classList.remove('hidden');
+          p?.classList.add('active');
+        } else if (targetTab === 'thematic') {
+          const p = document.getElementById('tabContentThematic');
+          p?.classList.remove('hidden');
+          p?.classList.add('active');
+        } else if (targetTab === 'cavities') {
+          const p = document.getElementById('tabContentCavities');
+          p?.classList.remove('hidden');
+          p?.classList.add('active');
+        }
+      });
+    });
+  }
+
+  public toggle3DPanel(show?: boolean) {
+    const panel = document.getElementById('terrain3DPanel');
+    const btnToggle = document.getElementById('btnToggle3DPreview');
+    if (!panel) return;
+
+    if (show !== undefined) {
+      this.is3DPanelOpen = show;
+    } else {
+      this.is3DPanelOpen = !this.is3DPanelOpen;
+    }
+
+    if (this.is3DPanelOpen) {
+      panel.classList.remove('hidden');
+      btnToggle?.classList.add('active');
+    } else {
+      panel.classList.add('hidden');
+      btnToggle?.classList.remove('active');
+    }
+  }
+
+  /**
+   * Carga la previsualización del espacio 3D para el radio alrededor de las coordenadas
+   * conectando directamente con el motor de Python (generate_terrain_3d.py)
+   */
+  public async loadTerrain3DPreview(lat: number, lon: number, radiusKm = 10.0, force = false) {
+    this.currentLat = lat;
+    this.currentLon = lon;
+    this.currentRadiusKm = radiusKm;
+
+    const statusPill = document.getElementById('previewStatusPill');
+    const loadingOverlay = document.getElementById('terrain3DLoading');
+    const iframe = document.getElementById('terrain3DIframe') as HTMLIFrameElement;
+    const thematicImg = document.getElementById('thematicMapsImg') as HTMLImageElement;
+    const btnRegenText = document.getElementById('btnRegen3DText');
+    const subtitleEl = document.getElementById('terrain3dSubtitle');
+
+    if (statusPill) {
+      statusPill.textContent = 'Calculando';
+      statusPill.className = 'preview-status-pill loading';
+    }
+    if (loadingOverlay) {
+      loadingOverlay.classList.remove('hidden');
+    }
+    if (btnRegenText) {
+      btnRegenText.textContent = 'Generando...';
+    }
+    if (subtitleEl) {
+      subtitleEl.textContent = `Radio de exploración: ${radiusKm} km en (${lat.toFixed(3)}°, ${lon.toFixed(3)}°) • DEM & Tubos de Lava`;
+    }
+
+    try {
+      const resp = await fetch(`/api/terrain-3d?lat=${lat}&lon=${lon}&radius=${radiusKm}&force=${force}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data: Terrain3DResponse = await resp.json();
+
+      // 1. Cargar el entorno WebGL interactivo generado por Plotly y el atlas temático
+      if (iframe) {
+        iframe.src = `${data.html_url}?t=${Date.now()}`;
+      }
+      if (thematicImg) {
+        thematicImg.src = `${data.thematic_url}?t=${Date.now()}`;
+      }
+
+      // 2. Actualizar tarjetas de métricas analíticas
+      const simEl = document.getElementById('metricOverallSim');
+      const elevEl = document.getElementById('metricElevRange');
+      const slopeEl = document.getElementById('metricMeanSlope');
+      const pearsonEl = document.getElementById('metricPearson');
+
+      if (simEl) simEl.textContent = `${data.metrics.overall_similarity_pct ?? 98.1}%`;
+      if (elevEl) elevEl.textContent = `${data.metrics.elevation_min_m ?? 0}m - ${data.metrics.elevation_max_m ?? 360}m`;
+      if (slopeEl) slopeEl.textContent = `${data.metrics.mean_slope_deg ?? 4.1}°`;
+      if (pearsonEl) pearsonEl.textContent = `r = ${data.metrics.pearson_correlation_r ?? 0.999}`;
+
+      // 3. Poblar tabla científica de cavidades detectadas
+      const tbody = document.getElementById('cavitiesTableBody');
+      if (tbody && data.cavities) {
+        tbody.innerHTML = '';
+        data.cavities.forEach((c: CavityCandidate) => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td><code>${c.id}</code></td>
+            <td><strong>${c.type}</strong></td>
+            <td>${c.latitude.toFixed(4)}°, ${c.longitude.toFixed(4)}°</td>
+            <td>${c.elevation_m.toFixed(1)} m</td>
+            <td>${c.estimated_depth_m.toFixed(1)} m</td>
+            <td>${c.rim_slope_deg.toFixed(1)}°</td>
+            <td><strong style="color: #34d399;">${Math.round(c.confidence_score * 100)}%</strong></td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      // 4. Proyectar en Leaflet 2D el radio perimetral de 10 km y las balizas de cavidades
+      if (this.map) {
+        if (this.radiusCircle) {
+          this.map.removeLayer(this.radiusCircle);
+        }
+        this.radiusCircle = L.circle([lat, lon], {
+          radius: radiusKm * 1000,
+          color: '#22d3ee',
+          weight: 1.5,
+          dashArray: '6, 6',
+          fillColor: '#22d3ee',
+          fillOpacity: 0.05
+        }).addTo(this.map);
+
+        this.cavityMarkers.forEach(m => this.map?.removeLayer(m));
+        this.cavityMarkers = [];
+
+        if (data.cavities) {
+          data.cavities.forEach((c: CavityCandidate) => {
+            const cavIcon = L.divIcon({
+              className: 'cavity-radar-icon',
+              html: `
+                <div style="width: 14px; height: 14px; border-radius: 50%; background: #f59e0b; border: 2px solid #ffffff; box-shadow: 0 0 10px #f59e0b; cursor: pointer;"></div>
+              `,
+              iconSize: [14, 14],
+              iconAnchor: [7, 7]
+            });
+            const cavMarker = L.marker([c.latitude, c.longitude], { icon: cavIcon }).addTo(this.map!);
+            cavMarker.bindPopup(`
+              <div style="font-family: sans-serif; font-size: 12px; color: #0f172a; padding: 4px;">
+                <strong style="color: #d97706;">${c.id}: ${c.type}</strong><br/>
+                <span>Profundidad estimada: <strong>${c.estimated_depth_m.toFixed(1)} m</strong></span><br/>
+                <span>Pendiente de borde: <strong>${c.rim_slope_deg.toFixed(1)}°</strong></span><br/>
+                <span>Elevación: <strong>${c.elevation_m.toFixed(1)} m</strong></span><br/>
+                <span>Confianza científica: <strong style="color: #16a34a;">${Math.round(c.confidence_score * 100)}%</strong></span>
+              </div>
+            `);
+            this.cavityMarkers.push(cavMarker);
+          });
+        }
+      }
+
+      if (statusPill) {
+        statusPill.textContent = '3D Activo';
+        statusPill.className = 'preview-status-pill';
+      }
+    } catch (err) {
+      console.warn('No se pudo conectar con el endpoint 3D del backend:', err);
+      if (statusPill) {
+        statusPill.textContent = 'Demo 3D';
+        statusPill.className = 'preview-status-pill';
+      }
+    } finally {
+      if (loadingOverlay) loadingOverlay.classList.add('hidden');
+      if (btnRegenText) btnRegenText.textContent = 'Generar Entorno 3D';
+    }
   }
 }

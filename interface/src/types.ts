@@ -46,3 +46,38 @@ export interface PlanetMetrics {
   data_text: string;
 }
 
+export interface CavityCandidate {
+  id: string;
+  type: string;
+  latitude: number;
+  longitude: number;
+  elevation_m: number;
+  estimated_depth_m: number;
+  rim_slope_deg: number;
+  confidence_score: number;
+}
+
+export interface Terrain3DMetrics {
+  elevation_rmse_m?: number;
+  elevation_mae_m?: number;
+  pearson_correlation_r?: number;
+  elevation_accuracy_pct?: number;
+  relief_accuracy_pct?: number;
+  overall_similarity_pct?: number;
+  total_pixels_evaluated?: number;
+  elevation_min_m?: number;
+  elevation_max_m?: number;
+  mean_slope_deg?: number;
+  max_slope_deg?: number;
+}
+
+export interface Terrain3DResponse {
+  success: boolean;
+  center: { lat: number; lon: number };
+  radius_km: number;
+  metrics: Terrain3DMetrics;
+  cavities: CavityCandidate[];
+  html_url: string;
+  thematic_url: string;
+}
+
