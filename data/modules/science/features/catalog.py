@@ -96,6 +96,172 @@ EXPANDED_ANALOG_CATALOG: Dict[str, ExtendedAnalogSite] = {
         sources=["ESA_PANGAEA_2017_2024", "Sauro_et_al_2020_Earth_Sci_Rev", "Carracedo_et_al_2003_Geol_Soc_Am"]
     ),
 
+    "ES_LANZAROTE_CALDERA_BLANCA": ExtendedAnalogSite(
+        id="ES_LANZAROTE_CALDERA_BLANCA",
+        name="Cráter de Caldera Blanca (Lanzarote, Islas Canarias, España)",
+        target_body="Both",
+        target_site_pairing="Cráteres de Impacto Complejos y Calderas Lunares/Marcianas",
+        country="España",
+        center_lat=29.0380,
+        center_lon=-13.7190,
+        earth_geojson={
+            "type": "Polygon",
+            "coordinates": [[
+                [-13.735, 29.025], [-13.700, 29.025],
+                [-13.700, 29.055], [-13.735, 29.055], [-13.735, 29.025]
+            ]]
+        },
+        local_utm_epsg="EPSG:32628",
+        elevation_range_m=[160.0, 458.0],
+        status="candidate",
+        feature_values={
+            "volcanic_context": 0.98,
+            "cave_accessibility_evidence": 0.70,
+            "slope_mean_deg": 14.5,
+            "roughness_tri_m": 3.8,
+            "spectral_basaltic_match": 0.92,
+            "crater_morphology_proxy": 0.96,
+            "surface_aridity_proxy": 0.90,
+            "subsurface_thermal_stability": 0.85
+        },
+        strong_analogies=[
+            "Cráter de toba volcánica freatomagmático de 1.2 km de diámetro con cresta circular casi perfecta y fondo deprimido.",
+            "Geometría de borde empinado y fondo plano idéntica a cráteres de impacto de transición simple-complejo en la Luna y Marte.",
+            "Rodeado por el mar de lavas basálticas históricas del Parque Nacional de Timanfaya (1730-1736)."
+        ],
+        analogy_limitations=[
+            "Origen freatomagmático por interacción agua-magma terrestre frente al origen por impacto meteórico de la mayoría de cráteres lunares.",
+            "Presencia de vegetación de líquenes xerófilos sobre las tobas."
+        ],
+        mission_training_value="Entrenamiento de astronautas en cartografía de paredes de cráteres, muestreo de estratos en acantilados y navegación perimetral.",
+        sources=["IGME_Geologia_Lanzarote", "Romero_et_al_2016_Canary_Volcanism"]
+    ),
+
+    "ES_LANZAROTE_TIMANFAYA": ExtendedAnalogSite(
+        id="ES_LANZAROTE_TIMANFAYA",
+        name="Parque Nacional de Timanfaya / Montañas del Fuego (Lanzarote, España)",
+        target_body="Both",
+        target_site_pairing="Campos Fisurales de Lava y Cuencas Basálticas Recientes",
+        country="España",
+        center_lat=29.0060,
+        center_lon=-13.7430,
+        earth_geojson={
+            "type": "Polygon",
+            "coordinates": [[
+                [-13.765, 28.985], [-13.720, 28.985],
+                [-13.720, 29.025], [-13.765, 29.025], [-13.765, 28.985]
+            ]]
+        },
+        local_utm_epsg="EPSG:32628",
+        elevation_range_m=[50.0, 510.0],
+        status="candidate",
+        feature_values={
+            "volcanic_context": 0.99,
+            "cave_accessibility_evidence": 0.85,
+            "slope_mean_deg": 12.0,
+            "roughness_tri_m": 4.2,
+            "spectral_basaltic_match": 0.95,
+            "crater_morphology_proxy": 0.88,
+            "surface_aridity_proxy": 0.94,
+            "subsurface_thermal_stability": 0.82
+        },
+        strong_analogies=[
+            "Uno de los campos de lava basáltica más extensos y jóvenes de Europa (más de 200 km² de malpaíses casi inalterados).",
+            "Ausencia casi total de vegetación superior; terreno virgen idéntico a las planicies volcánicas de Elysium Planitia en Marte.",
+            "Anomalías geotérmicas someras activas ideales para ensayos de instrumentación de flujo térmico (Heat Flow)."
+        ],
+        analogy_limitations=[
+            "Protección ambiental estricta (Parque Nacional y Reserva de la Biosfera) con restricciones de acceso para vehículos pesados.",
+            "Erosión marina periférica en la costa."
+        ],
+        mission_training_value="Pruebas de tracción y desgaste de ruedas metálicas en lavas 'aa' y 'pahoehoe' caóticas; calibración de radiómetros térmicos.",
+        sources=["Carracedo_et_al_1992_Timanfaya", "ESA_Pangaea_Field_Reports"]
+    ),
+
+    "ES_GRACIOSA_AMARILLA": ExtendedAnalogSite(
+        id="ES_GRACIOSA_AMARILLA",
+        name="Montaña Amarilla (Isla de La Graciosa, Islas Canarias, España)",
+        target_body="Both",
+        target_site_pairing="Conos de Toba Amarilla y Capas Piroclásticas de Marte/Luna",
+        country="España",
+        center_lat=29.2890,
+        center_lon=-13.5260,
+        earth_geojson={
+            "type": "Polygon",
+            "coordinates": [[
+                [-13.540, 29.275], [-13.510, 29.275],
+                [-13.510, 29.305], [-13.540, 29.305], [-13.540, 29.275]
+            ]]
+        },
+        local_utm_epsg="EPSG:32628",
+        elevation_range_m=[0.0, 172.0],
+        status="candidate",
+        feature_values={
+            "volcanic_context": 0.92,
+            "cave_accessibility_evidence": 0.65,
+            "slope_mean_deg": 16.0,
+            "roughness_tri_m": 3.1,
+            "spectral_basaltic_match": 0.85,
+            "spectral_iron_sulfate_match": 0.78,
+            "crater_morphology_proxy": 0.90,
+            "surface_aridity_proxy": 0.95,
+            "subsurface_thermal_stability": 0.78
+        },
+        strong_analogies=[
+            "Cono freatomagmático de toba estratificada amarillenta rica en palagonita y arcillas esmectitas, análogo directo a la alteración hidrovolcánica marciana.",
+            "Cráter circular abierto con acantilados que dejan expuestos los mantos piroclásticos con laminaciones cruzadas.",
+            "Aislamiento geográfico y desierto arenoso eólico sin carreteras asfaltadas."
+        ],
+        analogy_limitations=[
+            "Ambiente costero marino con oleaje activo que esculpe la base del cono.",
+            "Presión atmosférica normal y brisa marina salina."
+        ],
+        mission_training_value="Reconocimiento estratigráfico visual de capas piroclásticas y sedimentarias para cámaras de alta resolución tipo Mastcam-Z.",
+        sources=["IGME_Mapa_Geologico_La_Graciosa", "Valentin_et_al_2008_Canary_Tuff_Cones"]
+    ),
+
+    "ES_GRACIOSA_BERMEJA": ExtendedAnalogSite(
+        id="ES_GRACIOSA_BERMEJA",
+        name="Montaña Bermeja (Isla de La Graciosa, Islas Canarias, España)",
+        target_body="Mars",
+        target_site_pairing="Conos de Escoria Roja y Arenas Oxidada Marcianas",
+        country="España",
+        center_lat=29.3620,
+        center_lon=-13.5040,
+        earth_geojson={
+            "type": "Polygon",
+            "coordinates": [[
+                [-13.520, 29.348], [-13.488, 29.348],
+                [-13.488, 29.375], [-13.520, 29.375], [-13.520, 29.348]
+            ]]
+        },
+        local_utm_epsg="EPSG:32628",
+        elevation_range_m=[0.0, 157.0],
+        status="candidate",
+        feature_values={
+            "volcanic_context": 0.90,
+            "cave_accessibility_evidence": 0.55,
+            "slope_mean_deg": 13.0,
+            "roughness_tri_m": 2.8,
+            "spectral_basaltic_match": 0.75,
+            "spectral_iron_sulfate_match": 0.92,
+            "crater_morphology_proxy": 0.88,
+            "surface_aridity_proxy": 0.96,
+            "subsurface_thermal_stability": 0.75
+        },
+        strong_analogies=[
+            "Cono de escoria de color rojo intenso por oxidación térmica de minerales de hierro (hematites y maghemita), idéntico al color y composición de las colinas oxidadas de Marte.",
+            "Rodeado de dunas y mantos de arena eólica móvil que imitan los mares de dunas marcianos (erg).",
+            "Condiciones de hiperaridez con vegetación xerófila enana dispersa."
+        ],
+        analogy_limitations=[
+            "Erosión eólica húmeda con sales marinas aerotransportadas.",
+            "Dimensiones modestas en comparación con los gigantescos volcanes de escudo marcianos."
+        ],
+        mission_training_value="Calibración de espectrómetros de reflectancia visible e infrarroja cercana (VNIR) para discriminación de óxidos de hierro.",
+        sources=["IGME_Geologia_Canarias", "Astrobiology_Canary_Islands_Field_Guide"]
+    ),
+
     "US_LAVA_BEDS_VALENTINE": ExtendedAnalogSite(
         id="US_LAVA_BEDS_VALENTINE",
         name="Valentine Cave, Lava Beds National Monument (California, EE.UU.)",

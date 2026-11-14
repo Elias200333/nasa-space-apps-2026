@@ -329,6 +329,57 @@
       </button>
     </div>
 
+    <!-- Selector de Capas Cartográficas de la NASA (Visible cuando Marte o la Luna están activos) -->
+    <div id="planetLayerSelector" class="planet-layer-selector hidden">
+      <div class="layer-selector-header">
+        <div class="layer-selector-title">
+          <span class="pulse-indicator"></span>
+          <span id="layerSelectorPlanetTitle">MARTE • CARTOGRAFÍA NASA</span>
+        </div>
+        <span id="layerProvenanceBadge" class="layer-provenance-badge">NASA Mars Trek / Viking MDIM2.1</span>
+      </div>
+
+      <div class="layer-selector-buttons">
+        <button class="layer-btn active" data-layer="surface" id="btnLayerSurface" title="Mosaico orbital global de superficie real">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span>Superficie</span>
+        </button>
+
+        <button class="layer-btn" data-layer="topography" id="btnLayerTopography" title="Cartografía de relieve sombreado y gradiente altimétrico">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          <span>Topografía</span>
+        </button>
+
+        <button class="layer-btn" data-layer="exploration" id="btnLayerExploration" title="Accidentes geográficos y puntos de interés verificados">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="22" y1="12" x2="18" y2="12"></line>
+            <line x1="6" y1="12" x2="2" y2="12"></line>
+            <line x1="12" y1="6" x2="12" y2="2"></line>
+            <line x1="12" y1="22" x2="12" y2="18"></line>
+          </svg>
+          <span>Exploración</span>
+        </button>
+      </div>
+
+      <div class="layer-selector-footer">
+        <span id="layerInfoNotice" class="layer-info-notice">Mosaico orbital global fotográfico Viking MDIM2.1 (232 m/px)</span>
+      </div>
+    </div>
+
+    <!-- Indicador discreto de carga de teselas cartográficas NASA Trek -->
+    <div id="nasaTrekLoadingBadge" class="nasa-trek-loading-badge hidden">
+      <div class="trek-spinner"></div>
+      <span id="nasaTrekLoadingText">Cargando cartografía NASA Trek...</span>
+    </div>
+
     <!-- TARJETA IZQUIERDA: MOON -->
     <aside class="planet-card" id="moonCard" style="cursor:pointer;" title="Haz clic para seleccionar la Luna y descender a su análogo en la Tierra">
       <div class="card-header">
@@ -632,7 +683,7 @@
         <div class="terrain-3d-title-group">
           <div class="terrain-3d-badge">MODELO GEOMORFOMÉTRICO 3D (DATA BACKEND)</div>
           <h3>Entorno Topográfico y Detección de Cavidades</h3>
-          <p id="terrain3dSubtitle">Radio de exploración: 10 km • DEM, Pendiente y Detección de Tubos de Lava</p>
+          <p id="terrain3dSubtitle">Radio de exploración: 100 m en (29.038°, -13.719°) • IGN PNOA-LiDAR & NASA Trek</p>
         </div>
         <div class="terrain-3d-actions">
           <button id="btnRegen3D" class="regen-3d-btn" title="Recalcular modelo 3D con generate_terrain_3D.py">
@@ -654,19 +705,19 @@
       <div class="terrain-3d-quick-bar">
         <div class="quick-stat">
           <span class="qs-label">Similitud</span>
-          <span class="qs-val" id="topSimVal">98.1%</span>
+          <span class="qs-val" id="topSimVal">68.5%</span>
         </div>
         <div class="quick-stat">
           <span class="qs-label">Elevación</span>
-          <span class="qs-val" id="topElevVal">0 - 361 m</span>
+          <span class="qs-val" id="topElevVal">261 - 265 m</span>
         </div>
         <div class="quick-stat">
           <span class="qs-label">Pendiente Media</span>
-          <span class="qs-val" id="topSlopeVal">4.1°</span>
+          <span class="qs-val" id="topSlopeVal">1.3°</span>
         </div>
         <div class="quick-stat">
           <span class="qs-label">Cavidades / Tubos</span>
-          <span class="qs-val" id="topCavitiesVal">-- detectadas</span>
+          <span class="qs-val" id="topCavitiesVal">IGN MDT05</span>
         </div>
         <div class="quick-stat">
           <span class="qs-label">Pearson (r)</span>
@@ -707,15 +758,15 @@
             <div class="metrics-cards-row">
               <div class="metric-card">
                 <span class="m-label">Similitud de Terreno</span>
-                <span class="m-val" id="metricOverallSim">98.1%</span>
+                <span class="m-val" id="metricOverallSim">68.5%</span>
               </div>
               <div class="metric-card">
                 <span class="m-label">Rango de Elevación</span>
-                <span class="m-val" id="metricElevRange">0 m - 361 m</span>
+                <span class="m-val" id="metricElevRange">261 m - 265 m</span>
               </div>
               <div class="metric-card">
                 <span class="m-label">Pendiente Media</span>
-                <span class="m-val" id="metricMeanSlope">4.12°</span>
+                <span class="m-val" id="metricMeanSlope">1.3°</span>
               </div>
               <div class="metric-card">
                 <span class="m-label">Correlación Pearson</span>

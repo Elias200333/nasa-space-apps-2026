@@ -1,44 +1,102 @@
 {
-  "site_id": "ES_LANZAROTE_CORONA",
-  "site_name": "Volc\u00e1n de la Corona & Tubo de Lava (Lanzarote, Islas Canarias, Espa\u00f1a)",
+  "site_id": "ES_LANZAROTE_CALDERA_BLANCA",
+  "site_name": "Cr\u00e1ter de Caldera Blanca (Lanzarote, Islas Canarias, Espa\u00f1a)",
+  "center_gps": {
+    "lat": 29.038,
+    "lon": -13.719
+  },
+  "exploration_radius_m": 100.0,
   "target_body": "Moon",
-  "similarity_pct": 57.3,
+  "similarity_pct": 68.48,
+  "metrics_100m": {
+    "radius_m": 100.0,
+    "area_sq_m": 31415.926535897932,
+    "area_hectares": 3.14,
+    "elev_min_m": 261.4,
+    "elev_max_m": 265.2,
+    "elev_mean_m": 263.9,
+    "elev_range_m": 3.8,
+    "slope_mean_deg": 1.31,
+    "slope_max_deg": 5.08,
+    "points_sampled": 73
+  },
+  "dem_metadata": {
+    "source": "IGN PNOA-LiDAR Elevacion4258_5 (5m)",
+    "institution": "Instituto Geogr\u00e1fico Nacional (IGN) / IDEE (Espa\u00f1a)",
+    "product": "Modelo Digital del Terreno de Alta Resoluci\u00f3n (MDT)",
+    "coverage_id": "Elevacion4258_5",
+    "nominal_resolution_m": 5.0,
+    "crs": "EPSG:4258 (ETRS89)",
+    "wcs_service": "https://servicios.idee.es/wcs-inspire/mdt",
+    "documentation_url": "https://centrodedescargas.cnig.es/CentroDescargas/modelos-digitales-elevaciones",
+    "bbox_requested": {
+      "min_lat": 29.034406755300036,
+      "max_lat": 29.041593244699964,
+      "min_lon": -13.723109862764126,
+      "max_lon": -13.714890137235873
+    },
+    "bbox_coverage": {
+      "min_lat": 29.034406755300036,
+      "max_lat": 29.041593244699964,
+      "min_lon": -13.723109862764126,
+      "max_lon": -13.714890137235873
+    },
+    "grid_shape": [
+      41,
+      41
+    ],
+    "elev_min_m": 202.99,
+    "elev_max_m": 320.93,
+    "elev_mean_m": 265.86,
+    "elev_delta_m": 117.94,
+    "mdt01_status": "MDT01 (1m) disponible como descarga MTN25 en CNIG; servicio WCS continuo opera en MDT05 (5m PNOA-LiDAR).",
+    "verified_real_data": true,
+    "timestamp": "2026-11-14T10:39:09.488427+00:00"
+  },
+  "deliverables": {
+    "topographic_image": "topographic_map_ign_100m.png",
+    "dem_geotiff": "dem_ign_real.tif",
+    "dem_numpy": "dem_ign_real.npy",
+    "atlas_png": "thematic_comparison_atlas.png",
+    "terrain_3d_html": "terrain_3d.html",
+    "report_md": "terrain_comparison_report.md"
+  },
   "evaluation": {
     "target_body": "Moon",
     "target_benchmark_name": "Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit)",
-    "total_similarity_pct": 57.3,
+    "total_similarity_pct": 68.48,
     "metrics_table": [
       {
         "id": "elevation_relief",
         "name": "Rango Altim\u00e9trico y Relieve",
-        "terrestrial_value": "483.7 m (cota 26-510 m)",
+        "terrestrial_value": "117.9 m (cota 203-321 m)",
         "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
-        "similarity_score": 0.992,
+        "similarity_score": 0.469,
         "weight_pct": 12.0,
-        "contribution_pct": 11.91
+        "contribution_pct": 5.63
       },
       {
         "id": "slope_morphometry",
         "name": "Gradiente de Pendiente (Horn)",
-        "terrestrial_value": "13.54\u00b0 (m\u00e1x 26.7\u00b0)",
+        "terrestrial_value": "1.77\u00b0 (m\u00e1x 9.6\u00b0)",
         "planetary_target": "6.5\u00b0 \u00b1 3.0\u00b0",
-        "similarity_score": 0.064,
+        "similarity_score": 0.288,
         "weight_pct": 16.0,
-        "contribution_pct": 1.02
+        "contribution_pct": 4.61
       },
       {
         "id": "surface_roughness_tri",
         "name": "Rugosidad Superficial (TRI)",
-        "terrestrial_value": "20.13 m",
+        "terrestrial_value": "2.80 m",
         "planetary_target": "2.6 \u00b1 1.2 m",
-        "similarity_score": 0.0,
+        "similarity_score": 0.986,
         "weight_pct": 14.0,
-        "contribution_pct": 0.0
+        "contribution_pct": 13.8
       },
       {
         "id": "curvature_profile",
         "name": "Curvatura Topogr\u00e1fica y Sumideros",
-        "terrestrial_value": "0.0000 m\u207b\u00b9",
+        "terrestrial_value": "-0.0000 m\u207b\u00b9",
         "planetary_target": "Inversi\u00f3n de colapso (-0.04)",
         "similarity_score": 0.2,
         "weight_pct": 10.0,
@@ -47,49 +105,49 @@
       {
         "id": "lava_tubes_cavities",
         "name": "Tubos de Lava y Cavidades",
-        "terrestrial_value": "Evidencia: 98% (Contexto volc\u00e1nico: 95%)",
+        "terrestrial_value": "Evidencia: 70% (Contexto volc\u00e1nico: 98%)",
         "planetary_target": "Claraboyas intactas / Pit Craters",
-        "similarity_score": 0.967,
+        "similarity_score": 0.826,
         "weight_pct": 20.0,
-        "contribution_pct": 19.33
+        "contribution_pct": 16.52
       },
       {
         "id": "crater_morphology",
         "name": "Morfolog\u00eda de Conos / Cr\u00e1teres",
-        "terrestrial_value": "\u00cdndice: 65%",
+        "terrestrial_value": "\u00cdndice: 96%",
         "planetary_target": "Cr\u00e1teres de impacto / conos pirocl\u00e1sticos",
-        "similarity_score": 0.65,
+        "similarity_score": 0.96,
         "weight_pct": 8.0,
-        "contribution_pct": 5.2
+        "contribution_pct": 7.68
       },
       {
         "id": "spectral_mineralogy",
         "name": "Composici\u00f3n Espectral y Mineral\u00f3gica",
-        "terrestrial_value": "Concordancia: 90%",
+        "terrestrial_value": "Concordancia: 92%",
         "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-        "similarity_score": 0.9,
+        "similarity_score": 0.92,
         "weight_pct": 12.0,
-        "contribution_pct": 10.8
+        "contribution_pct": 11.04
       },
       {
         "id": "environmental_aridity",
         "name": "Extremos Ambientales e Hiperaridez",
-        "terrestrial_value": "Proxy Aridez: 88%",
+        "terrestrial_value": "Proxy Aridez: 90%",
         "planetary_target": "Desierto poliextremo / Vac\u00edo",
-        "similarity_score": 0.88,
+        "similarity_score": 0.9,
         "weight_pct": 8.0,
-        "contribution_pct": 7.04
+        "contribution_pct": 7.2
       }
     ],
     "dem_statistics": {
-      "elev_min_m": 26.3,
-      "elev_max_m": 510.0,
-      "elev_mean_m": 176.2,
-      "elev_range_m": 483.7,
-      "slope_mean_deg": 13.54,
-      "slope_max_deg": 26.68,
-      "tri_mean_m": 20.13,
-      "grid_cells": 900
+      "elev_min_m": 203.0,
+      "elev_max_m": 320.9,
+      "elev_mean_m": 265.9,
+      "elev_range_m": 117.9,
+      "slope_mean_deg": 1.77,
+      "slope_max_deg": 9.6,
+      "tri_mean_m": 2.8,
+      "grid_cells": 1681
     }
   }
 }

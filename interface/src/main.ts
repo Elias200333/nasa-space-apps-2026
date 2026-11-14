@@ -4,10 +4,12 @@ import { MiniPlanetViewer } from './babylon/miniPlanets';
 import { AnalogMap2DManager } from './map/analogMap2D';
 import { generateRandomAnalogCoordinates, PLANET_METRICS } from './data/analogs';
 import { sound } from './audio';
-import { CelestialBody, AnalogSite } from './types';
+import { CelestialBody, AnalogSite, PlanetaryLayerMode } from './types';
+import { formatPlanetaryCoordinates, VERIFIED_PLANETARY_POIS } from './nasa/trekProviders';
 
 // Estado global de la aplicación
 let activeBody: CelestialBody = 'Earth';
+let currentLayerMode: PlanetaryLayerMode = 'surface';
 let currentSelectedSite: AnalogSite | null = null;
 let earthScene: EarthSceneManager;
 let miniMoon: MiniPlanetViewer;
@@ -173,16 +175,38 @@ async function initApp() {
       coordinator.setStatus(`Cargando ${texName}...`);
     };
 
-    earthScene.onCoordinatesChange = (lat, lon) => {
-      const latDir = lat >= 0 ? 'N' : 'S';
-      const lonDir = lon >= 0 ? 'E' : 'W';
-      const coordsText = `${Math.abs(lat).toFixed(4)}° ${latDir}, ${Math.abs(lon).toFixed(4)}° ${lonDir}`;
+    earthScene.onCoordinatesChange = (lat, lon, planet) => {
+      const active = planet || activeBody;
+      const coordsText = formatPlanetaryCoordinates(active, lat, lon);
       const readoutElem = document.getElementById('hudCoordsText');
       if (readoutElem) readoutElem.textContent = coordsText;
+
+      const scaleSpan = document.querySelector('.hud-scale span');
+      if (scaleSpan) {
+        if (active === 'Mars') scaleSpan.textContent = '3,390 km (Radio)';
+        else if (active === 'Moon') scaleSpan.textContent = '1,737 km (Radio)';
+        else scaleSpan.textContent = '5,000 km';
+      }
     };
 
-    earthScene.onZoomDiveTrigger = (lat, lon) => {
-      map2DManager.triggerFreeExplorationDive(lat, lon);
+    earthScene.onZoomDiveTrigger = (lat, lon, planet) => {
+      const body = planet || activeBody;
+      if (body === 'Earth') {
+        map2DManager.triggerFreeExplorationDive(lat, lon, 5, 'Earth', 'surface');
+      } else {
+        map2DManager.triggerFreeExplorationDive(lat, lon, 5, body, currentLayerMode);
+      }
+    };
+
+    earthScene.onPOIClicked = (poi) => {
+      sound.playClick(850);
+      const body = (activeBody === 'Mars' || activeBody === 'Moon') ? activeBody : 'Mars';
+      setTimeout(() => {
+        map2DManager.triggerFreeExplorationDive(poi.latitude, poi.longitude, 5, body, 'exploration');
+        setTimeout(() => {
+          map2DManager.flyToPlanetaryPOI(poi);
+        }, 550);
+      }, 700);
     };
   }
 
@@ -287,11 +311,13 @@ function setupUIEventListeners() {
     });
   });
 
-  // 2. Clic en las tarjetas laterales completas
+  // 2. Clic en las tarjetas laterales completas (selecciona el cuerpo celeste en el globo central)
   const moonCard = document.getElementById('moonCard');
   if (moonCard) {
     moonCard.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('.card-subtabs')) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('.card-subtabs, .card-more-btn, .card-action-btn, .mini-planet-viewport')) return;
+      sound.playClick(600);
       selectCelestialTarget('Moon');
     });
   }
@@ -299,17 +325,20 @@ function setupUIEventListeners() {
   const marsCard = document.getElementById('marsCard');
   if (marsCard) {
     marsCard.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('.card-subtabs')) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('.card-subtabs, .card-more-btn, .card-action-btn, .mini-planet-viewport')) return;
+      sound.playClick(600);
       selectCelestialTarget('Mars');
     });
   }
 
-  // 3. Botones "Compare with Earth"
+  // 3. Botones "Compare with Earth" (generan análogo terrestre e inician descenso guiado)
   const moonActionBtn = document.getElementById('moonActionBtn');
   if (moonActionBtn) {
     moonActionBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      selectCelestialTarget('Moon');
+      sound.playClick(600);
+      generateAndDiveToAnalog('Moon');
     });
   }
 
@@ -317,11 +346,31 @@ function setupUIEventListeners() {
   if (marsActionBtn) {
     marsActionBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      selectCelestialTarget('Mars');
+      sound.playClick(600);
+      generateAndDiveToAnalog('Mars');
     });
   }
 
-  // 4. Barra de herramientas flotante sobre la Tierra
+  // 4. Selector de capas cartográficas NASA (Superficie / Topografía / Exploración)
+  const layerButtons = document.querySelectorAll('.planet-layer-selector .layer-btn');
+  layerButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-layer') as PlanetaryLayerMode;
+      if (!mode) return;
+      currentLayerMode = mode;
+      sound.playClick(650);
+
+      const targetPlanet = activeBody === 'Mars' || activeBody === 'Moon' ? activeBody : 'Mars';
+      updateLayerModeUI(targetPlanet, mode);
+      earthScene.setLayerMode(mode);
+
+      if (map2DManager && map2DManager.isMapActive()) {
+        map2DManager.switchPlanetaryLayer(mode);
+      }
+    });
+  });
+
+  // 5. Barra de herramientas flotante sobre la Tierra / planeta activo
   const btnResetEarth = document.getElementById('btnResetEarth');
   if (btnResetEarth) {
     btnResetEarth.addEventListener('click', () => {
@@ -338,8 +387,20 @@ function setupUIEventListeners() {
   const btnRandomTarget = document.getElementById('btnRandomTarget');
   if (btnRandomTarget) {
     btnRandomTarget.addEventListener('click', () => {
-      const target: 'Moon' | 'Mars' = activeBody === 'Mars' ? 'Mars' : 'Moon';
-      generateAndDiveToAnalog(target);
+      sound.playClick(600);
+      if (activeBody === 'Earth') {
+        generateAndDiveToAnalog('Mars');
+      } else {
+        const pois = VERIFIED_PLANETARY_POIS[activeBody];
+        const randomPoi = pois[Math.floor(Math.random() * pois.length)];
+        earthScene.flyToPOI(randomPoi.latitude, randomPoi.longitude);
+        setTimeout(() => {
+          map2DManager.triggerFreeExplorationDive(randomPoi.latitude, randomPoi.longitude, 5, activeBody, currentLayerMode);
+          setTimeout(() => {
+            map2DManager.flyToPlanetaryPOI(randomPoi);
+          }, 550);
+        }, 700);
+      }
     });
   }
 
@@ -367,13 +428,16 @@ function setupUIEventListeners() {
     });
   }
 
-  // 5. Pestañas de subcategoría en las tarjetas
+  // 6. Pestañas de subcategoría en las tarjetas
   setupCardSubtabs('moonCard', 'Moon');
   setupCardSubtabs('marsCard', 'Mars');
 }
 
 /**
- * Selecciona un cuerpo celeste: Moon, Earth o Mars
+ * Selecciona un cuerpo celeste central: Moon, Earth o Mars
+ * - Transiciona suavemente el globo esférico central de BabylonJS
+ * - Actualiza texturas y materiales científicos de NASA Trek
+ * - Gestiona el selector de capas y el dock de métricas
  */
 export function selectCelestialTarget(body: CelestialBody) {
   activeBody = body;
@@ -391,16 +455,30 @@ export function selectCelestialTarget(body: CelestialBody) {
   moonCard?.classList.remove('card-selected');
   marsCard?.classList.remove('card-selected', 'mars-selected');
 
+  updateBottomDockHighlight(body);
+
   if (body === 'Moon') {
     moonCard?.classList.add('card-selected');
     miniMoon?.spinFast();
-    generateAndDiveToAnalog('Moon');
+    showPlanetaryLayerSelector('Moon');
+    earthScene.switchPlanet('Moon', currentLayerMode);
+    if (map2DManager && map2DManager.isMapActive()) {
+      map2DManager.returnToSpaceOrbit();
+    }
+    hideTargetCard();
   } else if (body === 'Mars') {
     marsCard?.classList.add('card-selected', 'mars-selected');
     miniMars?.spinFast();
-    generateAndDiveToAnalog('Mars');
+    showPlanetaryLayerSelector('Mars');
+    earthScene.switchPlanet('Mars', currentLayerMode);
+    if (map2DManager && map2DManager.isMapActive()) {
+      map2DManager.returnToSpaceOrbit();
+    }
+    hideTargetCard();
   } else {
-    // Si pulsa Earth, regresa a la vista de órbita global
+    // Earth
+    hidePlanetaryLayerSelector();
+    earthScene.switchPlanet('Earth');
     if (map2DManager && map2DManager.isMapActive()) {
       map2DManager.returnToSpaceOrbit();
     } else {
@@ -408,6 +486,77 @@ export function selectCelestialTarget(body: CelestialBody) {
     }
     hideTargetCard();
   }
+}
+
+function showPlanetaryLayerSelector(body: 'Mars' | 'Moon') {
+  const selector = document.getElementById('planetLayerSelector');
+  if (!selector) return;
+
+  selector.classList.remove('hidden', 'mars-theme', 'moon-theme');
+  selector.classList.add(body === 'Mars' ? 'mars-theme' : 'moon-theme');
+
+  const titleEl = document.getElementById('layerSelectorPlanetTitle');
+  if (titleEl) {
+    titleEl.textContent = `${body === 'Mars' ? 'MARTE' : 'LUNA'} • CARTOGRAFÍA NASA`;
+  }
+
+  updateLayerModeUI(body, currentLayerMode);
+}
+
+function hidePlanetaryLayerSelector() {
+  const selector = document.getElementById('planetLayerSelector');
+  if (selector) selector.classList.add('hidden');
+}
+
+function updateLayerModeUI(body: 'Mars' | 'Moon', mode: PlanetaryLayerMode) {
+  const btns = document.querySelectorAll('.planet-layer-selector .layer-btn');
+  btns.forEach(b => {
+    b.classList.remove('active');
+    if (b.getAttribute('data-layer') === mode) {
+      b.classList.add('active');
+    }
+  });
+
+  const provenanceBadge = document.getElementById('layerProvenanceBadge');
+  const infoNotice = document.getElementById('layerInfoNotice');
+
+  if (body === 'Mars') {
+    if (mode === 'surface') {
+      if (provenanceBadge) provenanceBadge.textContent = 'NASA Mars Trek / Viking MDIM2.1 (232 m/px)';
+      if (infoNotice) infoNotice.textContent = 'Mosaico orbital global en color real Viking MDIM2.1 (NASA Trek WMTS)';
+    } else if (mode === 'topography') {
+      if (provenanceBadge) provenanceBadge.textContent = 'NASA Mars Trek / MGS MOLA (463 m/px)';
+      if (infoNotice) infoNotice.textContent = 'Altimetría de relieve sombreado en color MOLA • Gradiente hipsométrico (relieve visual, no malla DEM 3D)';
+    } else {
+      if (provenanceBadge) provenanceBadge.textContent = 'NASA Mars Trek / 5 Accidentes Científicos';
+      if (infoNotice) infoNotice.textContent = 'Exploración de Olympus Mons, Valles Marineris, Jezero, Gale y Elysium Mons con coordenadas verificadas';
+    }
+  } else {
+    // Moon
+    if (mode === 'surface') {
+      if (provenanceBadge) provenanceBadge.textContent = 'NASA Moon Trek / LRO WAC (100 m/px)';
+      if (infoNotice) infoNotice.textContent = 'Mosaico global fotográfico Lunar Reconnaissance Orbiter WAC 303ppd (NASA Trek WMTS)';
+    } else if (mode === 'topography') {
+      if (provenanceBadge) provenanceBadge.textContent = 'NASA Moon Trek / LRO LOLA (128 ppd)';
+      if (infoNotice) infoNotice.textContent = 'Cartografía de elevación en color LOLA • Relieve sombreado altimétrico (relieve visual, no malla DEM 3D)';
+    } else {
+      if (provenanceBadge) provenanceBadge.textContent = 'NASA Moon Trek / 5 Accidentes Científicos';
+      if (infoNotice) infoNotice.textContent = 'Exploración de Tycho, Copernicus, Mare Tranquillitatis, Aristarchus y Shackleton con coordenadas verificadas';
+    }
+  }
+}
+
+function updateBottomDockHighlight(body: CelestialBody) {
+  const items = document.querySelectorAll('.dock-metrics-grid .val-item');
+  items.forEach(item => {
+    item.classList.remove('active-planet-metric', 'mars-metric', 'moon-metric');
+    const tag = item.querySelector('.tag')?.textContent?.trim();
+    if (body === 'Mars' && tag === 'Mars') {
+      item.classList.add('active-planet-metric', 'mars-metric');
+    } else if (body === 'Moon' && tag === 'Moon') {
+      item.classList.add('active-planet-metric', 'moon-metric');
+    }
+  });
 }
 
 function siteCountryLookup(siteId: string): string {

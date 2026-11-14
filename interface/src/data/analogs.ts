@@ -6,11 +6,26 @@ import { AnalogSite, PlanetMetrics } from '../types';
 export const ANALOG_DATABASE: AnalogSite[] = [
   // --- ANÁLOGOS LUNARES ---
   {
-    id: 'site-moon-lanzarote',
-    name: 'Tubos de Lava de Lanzarote',
+    id: 'ES_LANZAROTE_CALDERA_BLANCA',
+    name: 'Cráter de Caldera Blanca',
     target_body: 'Moon',
-    coordinates: { latitude: 29.035, longitude: -13.633, label: '29.0350° N, 13.6330° W' },
-    region: 'Islas Canarias',
+    coordinates: { latitude: 29.0380, longitude: -13.7190, label: '29.0380° N, 13.7190° W' },
+    region: 'Lanzarote, Islas Canarias',
+    country: 'España',
+    geological_features: ['Cráter freatomagmático 1.2 km', 'Anillo de toba', 'Mar de lavas Timanfaya'],
+    scientific_justification: 'Geometría de borde empinado y fondo plano idéntica a cráteres de impacto de transición simple-complejo en la Luna y Marte.',
+    similarity_score: 68.5,
+    coverage_percentage: 100,
+    dominant_terrain: 'Tobas volcánicas y malpaís basáltico',
+    sources: ['IGN PNOA-LiDAR', 'IGME', 'ESA PANGAEA'],
+    status: 'candidate'
+  },
+  {
+    id: 'site-moon-lanzarote',
+    name: 'Tubos de Lava de Lanzarote (Volcán de la Corona)',
+    target_body: 'Moon',
+    coordinates: { latitude: 29.148, longitude: -13.450, label: '29.1480° N, 13.4500° W' },
+    region: 'Lanzarote, Islas Canarias',
     country: 'España',
     geological_features: ['Tubos de lava basáltica', 'Jameos', 'Campos de ceniza piroclástica'],
     scientific_justification: 'Estructuras subterráneas análogas a los tubos de lava de Marius Hills en la Luna para hábitats protegidos de radiación.',
@@ -36,6 +51,21 @@ export const ANALOG_DATABASE: AnalogSite[] = [
     status: 'validated'
   },
   {
+    id: 'ES_GRACIOSA_AMARILLA',
+    name: 'Montaña Amarilla (La Graciosa)',
+    target_body: 'Moon',
+    coordinates: { latitude: 29.2890, longitude: -13.5260, label: '29.2890° N, 13.5260° W' },
+    region: 'La Graciosa, Islas Canarias',
+    country: 'España',
+    geological_features: ['Cono de toba palagonítica', 'Laminación piroclástica', 'Acantilados expuestos'],
+    scientific_justification: 'Estratificación piroclástica rica en palagonita y arcillas esmectitas, análogo de alteración hidrovolcánica.',
+    similarity_score: 66.1,
+    coverage_percentage: 100,
+    dominant_terrain: 'Toba amarillenta estratificada',
+    sources: ['IGN PNOA-LiDAR', 'IGME'],
+    status: 'candidate'
+  },
+  {
     id: 'site-moon-sudbury',
     name: 'Estructura de Impacto de Sudbury',
     target_body: 'Moon',
@@ -52,6 +82,36 @@ export const ANALOG_DATABASE: AnalogSite[] = [
   },
 
   // --- ANÁLOGOS MARCIANOS ---
+  {
+    id: 'ES_LANZAROTE_TIMANFAYA',
+    name: 'Parque Nacional de Timanfaya / Montañas del Fuego',
+    target_body: 'Mars',
+    coordinates: { latitude: 29.0060, longitude: -13.7430, label: '29.0060° N, 13.7430° W' },
+    region: 'Lanzarote, Islas Canarias',
+    country: 'España',
+    geological_features: ['Campos de lava pahoehoe y aa', 'Anomalías geotérmicas', 'Conos fisurales'],
+    scientific_justification: 'Más de 200 km² de malpaíses basálticos vírgenes casi inalterados, análogo de primer nivel a Elysium Planitia en Marte.',
+    similarity_score: 70.5,
+    coverage_percentage: 100,
+    dominant_terrain: 'Malpaís basáltico holoceno',
+    sources: ['IGN PNOA-LiDAR', 'ESA PANGAEA', 'IGME'],
+    status: 'candidate'
+  },
+  {
+    id: 'ES_GRACIOSA_BERMEJA',
+    name: 'Montaña Bermeja (La Graciosa)',
+    target_body: 'Mars',
+    coordinates: { latitude: 29.3620, longitude: -13.5040, label: '29.3620° N, 13.5040° W' },
+    region: 'La Graciosa, Islas Canarias',
+    country: 'España',
+    geological_features: ['Cono de escoria roja', 'Arenas oxidadas ricas en hierro', 'Dunas eólicas'],
+    scientific_justification: 'Oxidación térmica de minerales de hierro (hematites/maghemita) con arenas eólicas móviles idénticas a dunas marcianas.',
+    similarity_score: 68.9,
+    coverage_percentage: 100,
+    dominant_terrain: 'Piroclastos rojizos oxidados y dunas',
+    sources: ['IGN PNOA-LiDAR', 'Astrobiology Field Guide'],
+    status: 'candidate'
+  },
   {
     id: 'site-mars-atacama',
     name: 'Desierto de Atacama (Yungay)',

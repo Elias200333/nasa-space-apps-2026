@@ -1,6 +1,8 @@
 import * as BABYLON from 'babylonjs';
 import { TargetPin } from './targetPin';
 import { DeepSpaceEnvironment } from './spaceBackground';
+import { CelestialBody, PlanetaryLayerMode, PlanetaryPOI } from '../types';
+import { PLANETARY_DETAILS, VERIFIED_PLANETARY_POIS } from '../nasa/trekProviders';
 
 export class EarthSceneManager {
   private engine: BABYLON.Engine;
@@ -13,6 +15,21 @@ export class EarthSceneManager {
   private spaceEnv!: DeepSpaceEnvironment;
   private earthRadius = 2.8;
 
+  // Estado planetario activo
+  private currentPlanet: CelestialBody = 'Earth';
+  private currentLayerMode: PlanetaryLayerMode = 'surface';
+
+  // Materiales planetarios de alta resolución (Tierra, Marte, Luna)
+  private earthMat!: BABYLON.ShaderMaterial;
+  private marsMatSurface!: BABYLON.StandardMaterial;
+  private marsMatTopo!: BABYLON.StandardMaterial;
+  private moonMatSurface!: BABYLON.StandardMaterial;
+  private moonMatTopo!: BABYLON.StandardMaterial;
+
+  // Balizas 3D para puntos de interés verificados
+  private marsPOIPins: { poi: PlanetaryPOI; pin: TargetPin }[] = [];
+  private moonPOIPins: { poi: PlanetaryPOI; pin: TargetPin }[] = [];
+
   // Control de auto-rotación e inactividad
   private autoRotate = true;
   private isPointerDown = false;
@@ -23,9 +40,10 @@ export class EarthSceneManager {
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
   private sunDirection = new BABYLON.Vector3(-1.4, 0.15, 0.75).normalize();
 
-  public onCoordinatesChange?: (lat: number, lon: number) => void;
+  public onCoordinatesChange?: (lat: number, lon: number, body?: CelestialBody) => void;
   public onAtmosphericEntry?: (lat: number, lon: number) => void;
-  public onZoomDiveTrigger?: (lat: number, lon: number) => void;
+  public onZoomDiveTrigger?: (lat: number, lon: number, body?: CelestialBody) => void;
+  public onPOIClicked?: (poi: PlanetaryPOI) => void;
   public onTextureProgress?: (name: string) => void;
   private firstFrameRendered = false;
   private onReadyCallbacks: (() => void)[] = [];
@@ -52,7 +70,7 @@ export class EarthSceneManager {
     // 1. Fondo de espacio profundo con estrellas puntuales
     this.spaceEnv = new DeepSpaceEnvironment(this.scene);
 
-    // 2. Nodo raíz que sostiene la Tierra y permite rotar el planeta directamente
+    // 2. Nodo raíz que sostiene la Tierra/planeta y permite rotar el planeta directamente
     this.earthRoot = new BABYLON.TransformNode('earthRoot', this.scene);
 
     // 3. Cámara fija en posición frontal para ver la mitad de día y la mitad de noche
@@ -65,7 +83,7 @@ export class EarthSceneManager {
       this.scene
     );
     this.camera.minZ = 0.05; // Evita cualquier corte del plano cercano
-    this.camera.lowerRadiusLimit = 3.85; // Cota segura: nunca atraviesa la superficie de la Tierra (radio 2.8)
+    this.camera.lowerRadiusLimit = 3.60; // Cota segura sin atravesar la superficie
     this.camera.upperRadiusLimit = 16.0;
     this.camera.wheelPrecision = 30;
     this.camera.inertia = 0.88;
@@ -74,10 +92,10 @@ export class EarthSceneManager {
     this.camera.inputs.remove(this.camera.inputs.attached.pointers);
     this.camera.attachControl(canvas, false, false); // Mantiene el zoom con la rueda del ratón
 
-    // Detección de zoom in anticipado: al aproximarse a escala continental (radius <= 4.6), transiciona
+    // Detección de zoom in anticipado: al aproximarse a escala continental, transiciona a exploración
     canvas.addEventListener('wheel', (e) => {
       if (this.isTransitioning) return;
-      if (e.deltaY < 0 && this.camera.radius <= 4.6) {
+      if (e.deltaY < 0 && this.camera.radius <= 4.4) {
         this.triggerManualZoomDive();
       }
     }, { passive: true });
@@ -87,18 +105,22 @@ export class EarthSceneManager {
     sunLight.intensity = 1.6;
     sunLight.diffuse = new BABYLON.Color3(1.0, 1.0, 1.0);
 
-    // 5. Construcción de Tierra con shader de día/noche y luces urbanas nocturnas
+    // 5. Construcción de Tierra y shaders fotorealistas
     this.buildDayNightEarthShader();
     this.buildRealisticClouds();
+    this.buildPlanetaryMaterials();
 
-    // 6. Baliza holográfica vinculada al giro de la Tierra
+    // 6. Baliza holográfica vinculada al giro planetario
     this.targetPin = new TargetPin(this.scene, this.earthRadius);
     this.targetPin.getRoot().parent = this.earthRoot;
 
-    // 7. Configuración de controles de ratón para rotar el planeta y temporizador de 30s
+    // 7. Balizas 3D para puntos de interés científicos de Marte y la Luna
+    this.setupPlanetaryPOIMarkers();
+
+    // 8. Configuración de controles de ratón para rotar el planeta y temporizador de 30s
     this.setupPlanetRotationControls(canvas);
 
-    // 8. Bucle de renderizado
+    // 9. Bucle de renderizado
     this.setupRenderLoop();
 
     window.addEventListener('resize', () => {
@@ -197,7 +219,7 @@ export class EarthSceneManager {
     }, this.scene);
     this.earthMesh.parent = this.earthRoot;
 
-    const earthMat = new BABYLON.ShaderMaterial('earthShaderMat', this.scene, {
+    this.earthMat = new BABYLON.ShaderMaterial('earthShaderMat', this.scene, {
       vertex: 'earthPhotoreal',
       fragment: 'earthPhotoreal'
     }, {
@@ -216,18 +238,81 @@ export class EarthSceneManager {
     const specTex = new BABYLON.Texture('./textures/earth_specular.jpg', this.scene, false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE, () => notifyTex('Máscara Oceánica'));
     const normTex = new BABYLON.Texture('./textures/earth_normal.jpg', this.scene, false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE, () => notifyTex('Relieve Topográfico'));
 
-    earthMat.setTexture('dayTexture', dayTex);
-    earthMat.setTexture('nightTexture', nightTex);
-    earthMat.setTexture('specularTexture', specTex);
-    earthMat.setTexture('normalTexture', normTex);
+    this.earthMat.setTexture('dayTexture', dayTex);
+    this.earthMat.setTexture('nightTexture', nightTex);
+    this.earthMat.setTexture('specularTexture', specTex);
+    this.earthMat.setTexture('normalTexture', normTex);
 
-    earthMat.setVector3('vSunDirection', this.sunDirection);
+    this.earthMat.setVector3('vSunDirection', this.sunDirection);
 
     this.scene.onBeforeRenderObservable.add(() => {
-      earthMat.setVector3('vCameraPosition', this.camera.position);
+      this.earthMat.setVector3('vCameraPosition', this.camera.position);
     });
 
-    this.earthMesh.material = earthMat;
+    this.earthMesh.material = this.earthMat;
+  }
+
+  /**
+   * Construye los materiales de cartografía real de NASA Trek para Marte y la Luna:
+   * - Superficie visual (Viking MDIM2.1 y LRO WAC)
+   * - Topografía altimétrica en relieve sombreado (MOLA y LOLA)
+   */
+  private buildPlanetaryMaterials() {
+    // 1. MARTE - Superficie Visual (Viking MDIM2.1)
+    this.marsMatSurface = new BABYLON.StandardMaterial('marsMatSurface', this.scene);
+    const marsSurfaceTex = new BABYLON.Texture('./textures/mars.jpg', this.scene, false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+    this.marsMatSurface.diffuseTexture = marsSurfaceTex;
+    const marsBumpTex = new BABYLON.Texture('./textures/mars_bump.jpg', this.scene, false, false);
+    marsBumpTex.level = 0.55;
+    this.marsMatSurface.bumpTexture = marsBumpTex;
+    this.marsMatSurface.specularColor = new BABYLON.Color3(0.06, 0.03, 0.02);
+    this.marsMatSurface.ambientColor = new BABYLON.Color3(0.12, 0.08, 0.06);
+
+    // 2. MARTE - Topografía Altimétrica (MGS MOLA Color Hillshade)
+    this.marsMatTopo = new BABYLON.StandardMaterial('marsMatTopo', this.scene);
+    const marsTopoTex = new BABYLON.Texture('./textures/mars_mola_topo.jpg', this.scene, false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+    this.marsMatTopo.diffuseTexture = marsTopoTex;
+    this.marsMatTopo.bumpTexture = marsBumpTex;
+    this.marsMatTopo.bumpTexture.level = 0.35;
+    this.marsMatTopo.specularColor = new BABYLON.Color3(0.04, 0.04, 0.04);
+
+    // 3. LUNA - Superficie Visual (LRO LROC WAC Mosaic)
+    this.moonMatSurface = new BABYLON.StandardMaterial('moonMatSurface', this.scene);
+    const moonSurfaceTex = new BABYLON.Texture('./textures/moon.jpg', this.scene, false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+    this.moonMatSurface.diffuseTexture = moonSurfaceTex;
+    this.moonMatSurface.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+    this.moonMatSurface.roughness = 0.95;
+
+    // 4. LUNA - Topografía Altimétrica (LRO LOLA Color Hillshade)
+    this.moonMatTopo = new BABYLON.StandardMaterial('moonMatTopo', this.scene);
+    const moonTopoTex = new BABYLON.Texture('./textures/moon_lola_topo.jpg', this.scene, false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+    this.moonMatTopo.diffuseTexture = moonTopoTex;
+    this.moonMatTopo.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+  }
+
+  /**
+   * Instancia las balizas tridimensionales en las coordenadas verificadas de accidentes geográficos
+   */
+  private setupPlanetaryPOIMarkers() {
+    // Marcadores para Marte (radio escalado 2.65)
+    VERIFIED_PLANETARY_POIS.Mars.forEach(poi => {
+      const pin = new TargetPin(this.scene, 2.65);
+      pin.getRoot().parent = this.earthRoot;
+      pin.setColor(new BABYLON.Color3(0.98, 0.45, 0.09)); // Naranja marciano
+      pin.setCoordinates(poi.latitude, poi.longitude);
+      pin.setVisible(false);
+      this.marsPOIPins.push({ poi, pin });
+    });
+
+    // Marcadores para la Luna (radio escalado 2.50)
+    VERIFIED_PLANETARY_POIS.Moon.forEach(poi => {
+      const pin = new TargetPin(this.scene, 2.50);
+      pin.getRoot().parent = this.earthRoot;
+      pin.setColor(new BABYLON.Color3(0.75, 0.85, 0.98)); // Plata/azul lunar
+      pin.setCoordinates(poi.latitude, poi.longitude);
+      pin.setVisible(false);
+      this.moonPOIPins.push({ poi, pin });
+    });
   }
 
   private buildRealisticClouds() {
@@ -267,6 +352,9 @@ export class EarthSceneManager {
       e.preventDefault();
     });
 
+    let startPointerX = 0;
+    let startPointerY = 0;
+
     canvas.addEventListener('pointerdown', (e) => {
       if (e.button === 0) {
         this.activeDragMode = 'earth';
@@ -277,6 +365,8 @@ export class EarthSceneManager {
       }
 
       this.isPointerDown = true;
+      startPointerX = e.clientX;
+      startPointerY = e.clientY;
       this.lastPointerX = e.clientX;
       this.lastPointerY = e.clientY;
       canvas.style.cursor = 'grabbing';
@@ -313,11 +403,36 @@ export class EarthSceneManager {
       }
     });
 
-    window.addEventListener('pointerup', () => {
+    window.addEventListener('pointerup', (e) => {
       if (!this.isPointerDown) return;
       this.isPointerDown = false;
       this.activeDragMode = 'none';
       canvas.style.cursor = 'grab';
+
+      // Detección de clic (sin arrastre apreciable) sobre balizas de accidentes geográficos
+      const dragDist = Math.hypot(e.clientX - startPointerX, e.clientY - startPointerY);
+      if (dragDist < 6 && this.currentLayerMode === 'exploration') {
+        const activePOIs = this.currentPlanet === 'Mars' ? this.marsPOIPins : (this.currentPlanet === 'Moon' ? this.moonPOIPins : []);
+        for (const item of activePOIs) {
+          const worldPos = item.pin.getRoot().getAbsolutePosition();
+          const screenPos = BABYLON.Vector3.Project(
+            worldPos,
+            BABYLON.Matrix.Identity(),
+            this.scene.getTransformMatrix(),
+            this.camera.viewport.toGlobal(this.engine.getRenderWidth(), this.engine.getRenderHeight())
+          );
+          if (screenPos.z >= 0 && screenPos.z <= 1) {
+            const clickDist = Math.hypot(screenPos.x - e.clientX, screenPos.y - e.clientY);
+            if (clickDist < 32) {
+              this.flyToPOI(item.poi.latitude, item.poi.longitude);
+              if (this.onPOIClicked) {
+                this.onPOIClicked(item.poi);
+              }
+              break;
+            }
+          }
+        }
+      }
 
       // Iniciar cuenta atrás de 30 segundos para volver a girar sola lentamente
       if (this.inactivityTimer) clearTimeout(this.inactivityTimer);
@@ -351,11 +466,160 @@ export class EarthSceneManager {
         if (lon > 180) lon -= 360;
         if (lon < -180) lon += 360;
 
-        this.onCoordinatesChange(Number(lat.toFixed(4)), Number(lon.toFixed(4)));
+        this.onCoordinatesChange(Number(lat.toFixed(4)), Number(lon.toFixed(4)), this.currentPlanet);
       }
 
       this.scene.render();
     });
+  }
+
+  /**
+   * Cambia el planeta activo central (Earth / Mars / Moon) con transición visual cinematográfica:
+   * - Redimensiona la escala física del cuerpo celeste
+   * - Aplica los sombreadores/texturas correspondientes (Superficie o Topografía MOLA/LOLA)
+   * - Controla la presencia o ausencia de atmósfera y nubes
+   * - Muestra u oculta los puntos de interés verificados
+   * - Reubica la cámara suavemente en órbita global
+   */
+  public switchPlanet(body: CelestialBody, layerMode: PlanetaryLayerMode = 'surface') {
+    this.currentPlanet = body;
+    this.currentLayerMode = layerMode;
+
+    const details = PLANETARY_DETAILS[body];
+    const targetScale = details.scaledGlobeRadius / 2.8;
+
+    // 1. Animación suave de escala
+    const animScale = new BABYLON.Animation('scalePlanet', 'scaling', 60, BABYLON.Animation.ANIMATIONTYPE_VECTOR3, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+    animScale.setKeys([
+      { frame: 0, value: this.earthMesh.scaling.clone() },
+      { frame: 25, value: new BABYLON.Vector3(targetScale, targetScale, targetScale) }
+    ]);
+    const easing = new BABYLON.CubicEase();
+    easing.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
+    animScale.setEasingFunction(easing);
+    this.scene.beginDirectAnimation(this.earthMesh, [animScale], 0, 25, false);
+
+    // 2. Aplicar material y capas
+    this.applyPlanetMaterial(body, layerMode);
+
+    // 3. Ocultar baliza genérica
+    this.targetPin.setVisible(false);
+
+    // 4. Actualizar balizas de exploración
+    this.updatePOIMarkersVisibility();
+
+    // 5. Retraer cámara a cota orbital estándar de 8.5
+    this.resetCameraToOrbit();
+
+    // 6. Orientar hacia la ubicación de referencia del planeta
+    this.orientToCoordinates(details.defaultLat, details.defaultLon);
+
+    if (this.onCoordinatesChange) {
+      this.onCoordinatesChange(details.defaultLat, details.defaultLon, body);
+    }
+  }
+
+  public setLayerMode(layerMode: PlanetaryLayerMode) {
+    this.currentLayerMode = layerMode;
+    this.applyPlanetMaterial(this.currentPlanet, layerMode);
+    this.updatePOIMarkersVisibility();
+  }
+
+  private applyPlanetMaterial(body: CelestialBody, layerMode: PlanetaryLayerMode) {
+    if (body === 'Earth') {
+      this.earthMesh.material = this.earthMat;
+      this.cloudsMesh.setEnabled(true);
+    } else if (body === 'Mars') {
+      this.cloudsMesh.setEnabled(false);
+      this.earthMesh.material = (layerMode === 'topography') ? this.marsMatTopo : this.marsMatSurface;
+    } else if (body === 'Moon') {
+      this.cloudsMesh.setEnabled(false);
+      this.earthMesh.material = (layerMode === 'topography') ? this.moonMatTopo : this.moonMatSurface;
+    }
+  }
+
+  public updatePOIMarkersVisibility() {
+    const isExploration = this.currentLayerMode === 'exploration';
+    this.marsPOIPins.forEach(item => item.pin.setVisible(isExploration && this.currentPlanet === 'Mars'));
+    this.moonPOIPins.forEach(item => item.pin.setVisible(isExploration && this.currentPlanet === 'Moon'));
+  }
+
+  public getCurrentPlanet(): CelestialBody {
+    return this.currentPlanet;
+  }
+
+  public getCurrentLayerMode(): PlanetaryLayerMode {
+    return this.currentLayerMode;
+  }
+
+  public resetCameraToOrbit() {
+    const animRadius = new BABYLON.Animation('resetCamRad', 'radius', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+    animRadius.setKeys([
+      { frame: 0, value: this.camera.radius },
+      { frame: 25, value: 8.5 }
+    ]);
+    const animAlpha = new BABYLON.Animation('resetCamAlpha', 'alpha', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+    animAlpha.setKeys([
+      { frame: 0, value: this.camera.alpha },
+      { frame: 25, value: -Math.PI / 2 }
+    ]);
+    const animBeta = new BABYLON.Animation('resetCamBeta', 'beta', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+    animBeta.setKeys([
+      { frame: 0, value: this.camera.beta },
+      { frame: 25, value: Math.PI / 2 }
+    ]);
+
+    const easing = new BABYLON.CubicEase();
+    easing.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
+    animRadius.setEasingFunction(easing);
+    animAlpha.setEasingFunction(easing);
+    animBeta.setEasingFunction(easing);
+
+    this.scene.beginDirectAnimation(this.camera, [animRadius, animAlpha, animBeta], 0, 25, false);
+  }
+
+  public flyToPOI(lat: number, lon: number) {
+    this.autoRotate = false;
+    if (this.inactivityTimer) clearTimeout(this.inactivityTimer);
+
+    const euler = EarthSceneManager.calculateOrientationEuler(lat, lon);
+    const targetRotX = euler.x;
+    const targetRotY = euler.y;
+    const targetRotZ = euler.z;
+
+    let currentY = this.earthRoot.rotation.y;
+    const diffY = (targetRotY - currentY) % (2 * Math.PI);
+    const shortestY = currentY + (((diffY + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+
+    let currentX = this.earthRoot.rotation.x;
+    const diffX = (targetRotX - currentX) % (2 * Math.PI);
+    const shortestX = currentX + (((diffX + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+
+    let currentZ = this.earthRoot.rotation.z;
+    const diffZ = (targetRotZ - currentZ) % (2 * Math.PI);
+    const shortestZ = currentZ + (((diffZ + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+
+    const animRotY = new BABYLON.Animation('poiRotY', 'rotation.y', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+    animRotY.setKeys([{ frame: 0, value: this.earthRoot.rotation.y }, { frame: 40, value: shortestY }]);
+
+    const animRotX = new BABYLON.Animation('poiRotX', 'rotation.x', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+    animRotX.setKeys([{ frame: 0, value: this.earthRoot.rotation.x }, { frame: 40, value: shortestX }]);
+
+    const animRotZ = new BABYLON.Animation('poiRotZ', 'rotation.z', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+    animRotZ.setKeys([{ frame: 0, value: this.earthRoot.rotation.z }, { frame: 40, value: shortestZ }]);
+
+    const animRadius = new BABYLON.Animation('poiRad', 'radius', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+    animRadius.setKeys([{ frame: 0, value: this.camera.radius }, { frame: 40, value: 5.2 }]);
+
+    const easing = new BABYLON.CubicEase();
+    easing.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
+    animRotY.setEasingFunction(easing);
+    animRotX.setEasingFunction(easing);
+    animRotZ.setEasingFunction(easing);
+    animRadius.setEasingFunction(easing);
+
+    this.scene.beginDirectAnimation(this.earthRoot, [animRotY, animRotX, animRotZ], 0, 40, false);
+    this.scene.beginDirectAnimation(this.camera, [animRadius], 0, 40, false);
   }
 
   /**
@@ -406,7 +670,7 @@ export class EarthSceneManager {
 
     setTimeout(() => {
       if (this.onZoomDiveTrigger) {
-        this.onZoomDiveTrigger(coords.lat, coords.lon);
+        this.onZoomDiveTrigger(coords.lat, coords.lon, this.currentPlanet);
       }
     }, 100);
   }
