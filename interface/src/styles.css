@@ -1894,3 +1894,233 @@ body {
   font-weight: 700;
 }
 
+/* ==========================================================================
+   Selector de Capas Planetarias NASA Trek (Marte y Luna)
+   ========================================================================== */
+.planet-layer-selector {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: rgba(10, 18, 34, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 14px;
+  padding: 8px 14px 6px 14px;
+  z-index: 45;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), 0 0 15px rgba(56, 189, 248, 0.15);
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+.planet-layer-selector.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-10px) scale(0.96);
+}
+
+.planet-layer-selector.mars-theme {
+  border-color: rgba(249, 115, 22, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), 0 0 18px rgba(249, 115, 22, 0.2);
+}
+
+.planet-layer-selector.moon-theme {
+  border-color: rgba(203, 213, 225, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), 0 0 18px rgba(203, 213, 225, 0.2);
+}
+
+.layer-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+}
+
+.layer-selector-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #f1f5f9;
+  text-transform: uppercase;
+  font-family: var(--font-mono, monospace);
+}
+
+.pulse-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cyan-glow);
+  box-shadow: 0 0 8px var(--cyan-glow);
+  animation: pulseIndicator 2s infinite ease-in-out;
+}
+
+.mars-theme .pulse-indicator {
+  background: var(--mars-accent);
+  box-shadow: 0 0 8px var(--mars-glow);
+}
+
+.moon-theme .pulse-indicator {
+  background: #cbd5e1;
+  box-shadow: 0 0 8px #cbd5e1;
+}
+
+@keyframes pulseIndicator {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.layer-provenance-badge {
+  font-size: 0.64rem;
+  font-family: var(--font-mono, monospace);
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--cyan-glow);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  white-space: nowrap;
+}
+
+.mars-theme .layer-provenance-badge {
+  color: #fdba74;
+  border-color: rgba(249, 115, 22, 0.4);
+}
+
+.moon-theme .layer-provenance-badge {
+  color: #cbd5e1;
+  border-color: rgba(203, 213, 225, 0.35);
+}
+
+.layer-selector-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.8);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.layer-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 5px 12px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.layer-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.layer-btn.active {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: var(--cyan-glow);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.mars-theme .layer-btn.active {
+  background: rgba(249, 115, 22, 0.22);
+  border-color: var(--mars-accent);
+  color: #ffffff;
+  box-shadow: 0 0 10px var(--mars-glow);
+}
+
+.moon-theme .layer-btn.active {
+  background: rgba(203, 213, 225, 0.2);
+  border-color: #cbd5e1;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(203, 213, 225, 0.3);
+}
+
+.layer-selector-footer {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 440px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Indicador discreto de carga NASA Trek */
+.nasa-trek-loading-badge {
+  position: absolute;
+  top: 75px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  padding: 5px 12px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-family: var(--font-mono, monospace);
+  color: var(--cyan-glow);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  z-index: 50;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.nasa-trek-loading-badge.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-6px);
+  pointer-events: none;
+}
+
+.trek-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(56, 189, 248, 0.25);
+  border-top-color: var(--cyan-glow);
+  border-radius: 50%;
+  animation: trekSpin 0.7s linear infinite;
+}
+
+@keyframes trekSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Resaltado dinámico en el dock inferior para el planeta activo */
+.val-item.active-planet-metric {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-radius: 6px;
+  padding: 1px 6px;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+}
+
+.val-item.active-planet-metric.mars-metric {
+  background: rgba(249, 115, 22, 0.18);
+  border-color: var(--mars-accent);
+  box-shadow: 0 0 10px var(--mars-glow);
+}
+
+.val-item.active-planet-metric.moon-metric {
+  background: rgba(203, 213, 225, 0.16);
+  border-color: #cbd5e1;
+  box-shadow: 0 0 10px rgba(203, 213, 225, 0.25);
+}
+
+
