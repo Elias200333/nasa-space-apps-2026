@@ -18,9 +18,12 @@ export class MiniPlanetViewer {
     this.scene = new BABYLON.Scene(this.engine);
     this.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
+    // Perspectiva girada 90º para Marte según solicitud del usuario para ver medio día y medio noche
+    const initialAlpha = type === 'Mars' ? 0 : -Math.PI / 2;
+
     const camera = new BABYLON.ArcRotateCamera(
       'miniCam',
-      -Math.PI / 2,
+      initialAlpha,
       Math.PI / 2.2,
       2.5,
       BABYLON.Vector3.Zero(),
@@ -30,22 +33,26 @@ export class MiniPlanetViewer {
     camera.lowerRadiusLimit = 2.0;
     camera.upperRadiusLimit = 4.0;
 
-    // Iluminación solar angular para resaltar sombras de cráteres lunares y cañones marcianos
+    // Iluminación solar lateral calculada para crear un terminador exacto (medio día, medio noche)
+    const sunDir = type === 'Mars'
+      ? new BABYLON.Vector3(0.25, -0.15, -1.4).normalize()
+      : new BABYLON.Vector3(-1.4, -0.15, 0.25).normalize();
+
     const sun = new BABYLON.DirectionalLight(
       'miniSun',
-      new BABYLON.Vector3(-1.4, -0.2, 0.8).normalize(),
+      sunDir,
       this.scene
     );
-    sun.intensity = 1.9;
-    sun.diffuse = new BABYLON.Color3(1.0, 0.98, 0.92);
+    sun.intensity = 2.2;
+    sun.diffuse = new BABYLON.Color3(1.0, 0.96, 0.90);
 
     const fillLight = new BABYLON.HemisphericLight(
       'miniFill',
       new BABYLON.Vector3(0, 1, 0),
       this.scene
     );
-    fillLight.intensity = 0.22;
-    fillLight.diffuse = new BABYLON.Color3(0.3, 0.4, 0.55);
+    fillLight.intensity = 0.25;
+    fillLight.diffuse = new BABYLON.Color3(0.35, 0.42, 0.55);
 
     this.mesh = BABYLON.MeshBuilder.CreateSphere(`mini_${type}`, {
       diameter: 1.55,

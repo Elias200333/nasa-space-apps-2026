@@ -3,6 +3,28 @@ import 'leaflet/dist/leaflet.css';
 import { AnalogSite } from '../types';
 import { sound } from '../audio';
 
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Radio medio de la Tierra en kilómetros
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
+function getBearingDirection(lat1: number, lon1: number, lat2: number, lon2: number): string {
+  const y = Math.sin((lon2 - lon1) * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180);
+  const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+            Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos((lon2 - lon1) * Math.PI / 180);
+  let brng = Math.atan2(y, x) * 180 / Math.PI;
+  brng = (brng + 360) % 360;
+  const directions = ['Norte', 'Noreste', 'Este', 'Sureste', 'Sur', 'Suroeste', 'Oeste', 'Noroeste'];
+  return directions[Math.round(brng / 45) % 8];
+}
+
 export class AnalogMap2DManager {
   private mapContainer: HTMLElement;
   private map: L.Map | null = null;
@@ -11,6 +33,10 @@ export class AnalogMap2DManager {
   private onReturnToOrbitCallback?: () => void;
   private isReturning = false;
   private isTransitioning = false;
+
+  // Estado de exploración libre
+  private activeTargetSite: AnalogSite | null = null;
+  private isTargetReached = false;
 
   constructor(mapContainerId: string) {
     this.mapContainer = document.getElementById(mapContainerId) as HTMLElement;
@@ -21,84 +47,71 @@ export class AnalogMap2DManager {
   }
 
   /**
-   * Transición de zoom óptico sin cortes entre el planeta 3D y el mapa 2D:
-   * 1. El mapa satelital aparece sutilmente fundido desde la vista 3D a escala regional (zoom 6).
-   * 2. Continúa la inercia del zoom de forma suave hacia la resolución local (zoom 12).
-   * 3. Sin pantallas de carga, sin líneas de escaneo ni efectos de videojuego.
+   * Transición de zoom a Exploración Libre:
+   * 1. El mapa satelital se funde a escala regional (zoom 5 o 6).
+   * 2. NO bloquea la vista ni abre ventanas invasivas de información.
+   * 3. Deja al usuario explorar libremente hasta alcanzar las coordenadas sugeridas.
    */
   public triggerSeamlessZoomDive(site: AnalogSite) {
     if (this.isTransitioning) return;
     this.isTransitioning = true;
     this.isReturning = false;
 
+    this.activeTargetSite = site;
+    this.isTargetReached = false;
+
     const lat = site.coordinates.latitude;
     const lon = site.coordinates.longitude;
 
-    // Mostrar contenedor listo para el crossfade
+    // Mostrar contenedor con crossfade suave
     this.mapContainer.classList.remove('hidden');
     this.mapContainer.style.opacity = '0';
     this.mapContainer.style.transform = 'scale(0.97)';
     this.mapContainer.style.transition = 'opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1)';
 
-    this.ensureMapInitialized(lat, lon, 5);
+    this.ensureMapInitialized(lat, lon, 6);
 
-    // Ajustar vista inicial en zoom continental (nivel 5) que empata con la cota orbital 4.1
-    this.map!.setView([lat, lon], 5, { animate: false });
+    // Abrir a escala regional (zoom 6) para permitir exploración libre del área circundante
+    this.map!.setView([lat, lon], 6, { animate: false });
     this.map!.invalidateSize();
 
-    // Dibujar marcadores y actualizar datos HUD
+    // Dibujar la baliza de objetivo en el mapa
     this.renderSiteMarkers(site);
-    this.updateMapHUD(site);
+    this.updateExplorationTracker();
 
-    // Crossfade suave e inicio del vuelo de cámara
+    // Crossfade de entrada
     requestAnimationFrame(() => {
       this.mapContainer.classList.add('active');
       this.mapContainer.style.opacity = '1';
       this.mapContainer.style.transform = 'scale(1)';
-
-      // Vuelo continuo y fluido hacia el terreno a nivel 12
-      setTimeout(() => {
-        if (this.map && !this.isReturning) {
-          this.map.flyTo([lat, lon], 12, {
-            animate: true,
-            duration: 1.5,
-            easeLinearity: 0.22
-          });
-        }
-        this.isTransitioning = false;
-      }, 80);
-
-      // Abrir tarjeta informativa una vez aterrizada la cámara
-      setTimeout(() => {
-        if (this.currentMarker && !this.isReturning) {
-          this.currentMarker.openPopup();
-        }
-      }, 1600);
+      this.isTransitioning = false;
     });
   }
 
   /**
-   * Transición de zoom manual cuando el usuario acerca la rueda del ratón
+   * Transición cuando el usuario hace zoom in manual con la rueda del ratón
    */
   public triggerManualCoordinatesDive(lat: number, lon: number, defaultBody: 'Moon' | 'Mars' = 'Moon') {
-    const exploratorySite: AnalogSite = {
-      id: `manual-${lat.toFixed(2)}-${lon.toFixed(2)}`,
-      name: 'Observación de Terreno Satelital',
-      target_body: defaultBody,
-      region: `${Math.abs(lat).toFixed(2)}° ${lat >= 0 ? 'N' : 'S'}`,
-      country: `${Math.abs(lon).toFixed(2)}° ${lon >= 0 ? 'E' : 'W'}`,
-      coordinates: {
-        latitude: lat,
-        longitude: lon,
-        label: `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`
-      },
-      similarity_score: 88,
-      scientific_justification: 'Inspección de alta resolución mediante satélites de observación de la Tierra.',
-      sources: ['NASA Worldview', 'Esri High-Resolution World Imagery'],
-      status: 'candidate'
-    };
+    if (!this.activeTargetSite) {
+      this.activeTargetSite = {
+        id: `manual-${lat.toFixed(2)}-${lon.toFixed(2)}`,
+        name: 'Zona Análoga Terrestre',
+        target_body: defaultBody,
+        region: `${Math.abs(lat).toFixed(2)}° ${lat >= 0 ? 'N' : 'S'}`,
+        country: `${Math.abs(lon).toFixed(2)}° ${lon >= 0 ? 'E' : 'W'}`,
+        coordinates: {
+          latitude: lat,
+          longitude: lon,
+          label: `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`
+        },
+        similarity_score: 87,
+        scientific_justification: 'Inspección de alta resolución mediante satélites de observación de la Tierra.',
+        sources: ['NASA Worldview', 'Esri High-Resolution World Imagery'],
+        status: 'candidate'
+      };
+    }
 
-    this.triggerSeamlessZoomDive(exploratorySite);
+    this.triggerSeamlessZoomDive(this.activeTargetSite);
   }
 
   private ensureMapInitialized(lat: number, lon: number, initialZoom = 6) {
@@ -120,6 +133,11 @@ export class AnalogMap2DManager {
     }).addTo(this.map);
 
     L.control.zoom({ position: 'bottomright' }).addTo(this.map);
+
+    // Rastreo en tiempo real mientras el usuario se desplaza por el mapa
+    this.map.on('move', () => {
+      this.updateExplorationTracker();
+    });
 
     // Detección de alejamiento con rueda del ratón: volver a la esfera 3D al llegar a vista global
     this.map.on('zoomend', () => {
@@ -182,21 +200,95 @@ export class AnalogMap2DManager {
         </div>
       </div>
     `);
+
+    // Al hacer clic en el marcador, se considera objetivo alcanzado y se abre su tarjeta
+    this.currentMarker.on('click', () => {
+      this.isTargetReached = true;
+      this.updateExplorationTracker();
+    });
   }
 
-  private updateMapHUD(site: AnalogSite) {
+  /**
+   * Actualiza el rastreador de distancia y rumbo hacia el objetivo en tiempo real
+   */
+  private updateExplorationTracker() {
+    if (!this.map || !this.activeTargetSite) return;
+
+    const center = this.map.getCenter();
+    const targetLat = this.activeTargetSite.coordinates.latitude;
+    const targetLon = this.activeTargetSite.coordinates.longitude;
+
+    const dist = getDistanceKm(center.lat, center.lng, targetLat, targetLon);
+    const dir = getBearingDirection(center.lat, center.lng, targetLat, targetLon);
+
     const titleEl = document.getElementById('mapSiteTitle');
     const coordsEl = document.getElementById('mapSiteCoords');
     const badgeEl = document.getElementById('mapTargetBadge');
     const scoreEl = document.getElementById('mapSiteScore');
 
-    if (titleEl) titleEl.textContent = site.name;
-    if (coordsEl) coordsEl.textContent = `${site.region}, ${site.country} | ${site.coordinates.label}`;
-    if (badgeEl) {
-      badgeEl.textContent = `${site.target_body.toUpperCase()} ANALOG`;
-      badgeEl.className = `map-hud-badge ${site.target_body.toLowerCase()}-badge`;
+    // Umbral de llegada: cuando el usuario sitúa la vista a menos de 50 km del análogo
+    if (dist <= 50 && !this.isTargetReached) {
+      this.isTargetReached = true;
+      sound.playClick(880);
+
+      if (badgeEl) {
+        badgeEl.textContent = `🎯 ANÁLOGO ALCANZADO [${this.activeTargetSite.target_body.toUpperCase()}]`;
+        badgeEl.className = 'map-hud-badge target-reached-badge';
+      }
+      if (titleEl) {
+        titleEl.textContent = this.activeTargetSite.name;
+      }
+      if (coordsEl) {
+        coordsEl.textContent = `📍 ${this.activeTargetSite.region}, ${this.activeTargetSite.country} — ${this.activeTargetSite.coordinates.label}`;
+      }
+      if (scoreEl) {
+        scoreEl.textContent = `${this.activeTargetSite.similarity_score}%`;
+      }
+
+      // Abrir la información detallada una vez que el usuario ha llegado al lugar
+      if (this.currentMarker && !this.currentMarker.isPopupOpen()) {
+        this.currentMarker.openPopup();
+      }
+    } else if (!this.isTargetReached) {
+      if (badgeEl) {
+        badgeEl.textContent = `EXPLORACIÓN LIBRE [${this.activeTargetSite.target_body.toUpperCase()}]`;
+        badgeEl.className = `map-hud-badge ${this.activeTargetSite.target_body.toLowerCase()}-badge`;
+      }
+      if (titleEl) {
+        titleEl.textContent = `Explorando terreno: busca el análogo sugerido`;
+      }
+      if (coordsEl) {
+        coordsEl.textContent = `🎯 Objetivo: ${this.activeTargetSite.name} (${this.activeTargetSite.coordinates.label}) • A ${dist.toLocaleString()} km hacia el ${dir}`;
+      }
+      if (scoreEl) {
+        scoreEl.textContent = `--%`;
+      }
     }
-    if (scoreEl) scoreEl.textContent = `${site.similarity_score}%`;
+  }
+
+  /**
+   * Vuela suavemente hacia el objetivo sugerido si el usuario pulsa "Centrar en objetivo"
+   */
+  public centerOnTarget() {
+    if (!this.map || !this.activeTargetSite) return;
+    sound.playClick(650);
+
+    const lat = this.activeTargetSite.coordinates.latitude;
+    const lon = this.activeTargetSite.coordinates.longitude;
+
+    this.map.flyTo([lat, lon], 12, {
+      animate: true,
+      duration: 1.4,
+      easeLinearity: 0.22
+    });
+
+    setTimeout(() => {
+      this.isTargetReached = true;
+      this.updateExplorationTracker();
+      if (this.currentMarker) {
+        this.currentMarker.openPopup();
+      }
+    }, 1500);
   }
 
   /**

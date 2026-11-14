@@ -85,6 +85,13 @@ function init2DMapManager() {
       map2DManager.returnToSpaceOrbit();
     });
   }
+
+  const btnCenterTarget = document.getElementById('btnCenterTarget');
+  if (btnCenterTarget) {
+    btnCenterTarget.addEventListener('click', () => {
+      map2DManager.centerOnTarget();
+    });
+  }
 }
 
 /**
