@@ -70,13 +70,136 @@ async function refresh() {
   // Control / límites
   const lim = s.speed_limits || {};
   $("limits").textContent = `Topes: avance ${lim.vx_ms} m/s · lateral ${lim.vy_ms} m/s · giro ${lim.yaw_rps} rad/s`;
-  const canControl = connected;
+  const replay = !!(s.source && s.source.kind === "replay");
+  const canControl = connected && !replay;            // en replay no hay robot que conducir
+  renderExtras(s, replay);
   $("btn-arm").disabled = !canControl || armed;
   $("btn-cap-start").disabled = !connected || s.capture_state === "capturing";
   $("btn-cap-stop").disabled = s.capture_state !== "capturing";
   $("ctrl-badge").textContent = s.control_enabled ? "CONTROL ACTIVO" : "solo lectura";
   $("ctrl-badge").className = "badge " + (s.control_enabled ? "warn" : "");
 }
+
+// ---------------------------------------------------------------- estado del robot, replay, acumulado
+const esc = (x) => String(x).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const num = (v, d = 1, unit = "") => (v === null || v === undefined ? "no disponible" : Number(v).toFixed(d) + unit);
+const STATE_TXT = { ok: "ok", stale: "parado", no_data: "sin datos" };
+const EVIDENCE_TXT = { robot_measured: "medido por el robot", synthetic_test: "SINTÉTICO (demo)",
+  derived: "derivado", orbital_nasa: "orbital NASA" };
+
+function renderExtras(s, replay) {
+  window.terrainxStatus = s;          // el visor LiDAR (lidarView.js) lo lee para etiquetar el origen
+  const d = s.robot_details || {};
+  const b = d.battery || {}, l = d.lidar || {}, st = d.settings || {};
+
+  // Origen de los datos (arriba): robot en vivo, replay o nada
+  const src = s.source || { kind: "none" };
+  const sb = $("src-badge");
+  if (src.kind === "replay") {
+    sb.textContent = `REPLAY · ${EVIDENCE_TXT[src.evidence_class] || src.evidence_class}`;
+    sb.className = "badge " + (src.demo ? "demo" : "replay");
+  } else if (src.kind === "live") { sb.textContent = "ROBOT EN VIVO"; sb.className = "badge live"; }
+  else { sb.textContent = "sin fuente"; sb.className = "badge"; }
+  $("btn-connect").disabled = replay;
+  if (replay) $("cam-overlay").textContent = "Replay: las sesiones grabadas no incluyen vídeo";
+  else $("cam-overlay").textContent = "Sin señal — conecta el robot";
+
+  // Batería: aviso arriba si está baja (solo con datos)
+  const alert = $("batt-alert");
+  if (b.level === "low" || b.level === "critical") {
+    alert.hidden = false;
+    alert.className = "alert" + (b.level === "critical" ? " critical" : "");
+    alert.textContent = replay
+      ? `Replay: la grabación marca batería ${b.level === "critical" ? "crítica" : "baja"} (${num(b.soc_pct, 0, " %")})`
+      : (b.level === "critical" ? "⚠ BATERÍA CRÍTICA " : "⚠ Batería baja ") + num(b.soc_pct, 0, " %") +
+        (b.level === "critical" ? " — no hagas pruebas de movimiento" : " — termina la prueba y carga");
+  } else alert.hidden = true;
+  const lvl = { ok: "lvl-ok", low: "lvl-low", critical: "lvl-critical" }[b.level] || "";
+  $("t-batt").className = lvl;
+  $("h-soc").textContent = num(b.soc_pct, 0, " %"); $("h-soc").className = lvl;
+  $("h-volt").textContent = num(b.power_v, 2, " V");
+  $("h-cur").textContent = num(b.current_raw, 0);
+  $("h-cyc").textContent = num(b.cycles, 0);
+  $("h-temp").textContent = (b.bms_temp_raw || b.mcu_temp_raw)
+    ? `${(b.bms_temp_raw || ["—"]).join(" / ")} · ${(b.mcu_temp_raw || ["—"]).join(" / ")}` : "no disponible";
+  $("health-badge").textContent = src.kind === "replay" ? "replay" : (s.connected ? "en vivo" : "—");
+  $("health-badge").className = "badge " + (src.kind === "replay" ? "replay" : (s.connected ? "live" : ""));
+
+  // LiDAR y ajustes del robot
+  $("h-dirty").textContent = num(l.dirty_pct, 0, " %");
+  $("h-loss").textContent = (l.cloud_packet_loss_pct == null && l.imu_packet_loss_pct == null) ? "no disponible"
+    : `${num(l.cloud_packet_loss_pct, 0, " %")} · ${num(l.imu_packet_loss_pct, 0, " %")}`;
+  $("h-lerr").textContent = l.error_state_raw == null ? "no disponible" : String(l.error_state_raw);
+  $("h-lfw").textContent = l.firmware_version || "no disponible";
+  $("h-avoid").textContent = st.obstacle_avoidance == null ? "no disponible"
+    : (st.obstacle_avoidance ? "activada" : "desactivada");
+
+  // Flujos de datos
+  const tb = $("h-topics").querySelector("tbody"); tb.innerHTML = "";
+  (d.topics || []).forEach((t) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${esc(t.topic)}</td><td>${t.rate_hz == null ? "—" : Number(t.rate_hz).toFixed(1)}</td>` +
+      `<td>${t.age_s == null ? "—" : Number(t.age_s).toFixed(1) + " s"}</td>` +
+      `<td class="st-${t.state}">${STATE_TXT[t.state] || t.state}</td>`;
+    tb.appendChild(tr);
+  });
+
+  // Mapa acumulado
+  const sl = s.slam || {};
+  $("slam-info").textContent = `Acumulado — ${EVIDENCE_TXT[sl.evidence_class] || sl.evidence_class}: ` +
+    `${num(sl.area, 1, " m²")} · ${sl.frames || 0} mapas sumados · ${(sl.voxels || 0).toLocaleString("es-ES")} vóxeles` +
+    (sl.errors ? ` · ${sl.errors} descartados` : "");
+  $("btn-slam-save").disabled = !s.connected || !sl.voxels;
+
+  // Replay
+  $("btn-replay-stop").disabled = !replay;
+  $("replay-badge").textContent = replay ? "reproduciendo" : "—";
+  $("replay-badge").className = "badge " + (replay ? "replay" : "");
+  $("replay-status").textContent = replay
+    ? `Reproduciendo ${src.session_id} · pasadas completas: ${src.passes}${src.loop ? " (en bucle)" : ""}`
+    : (s.connected ? "Robot conectado: desconéctalo para reproducir una sesión." : "Elige una sesión para reproducirla.");
+  document.querySelectorAll(".rbtn").forEach((btn) => (btn.disabled = s.connected && !replay));
+}
+
+$("btn-slam-save").onclick = async () => {
+  $("slam-save-status").textContent = "guardando…";
+  try {
+    const m = await api("/api/slam/save", { method: "POST" });
+    $("slam-save-status").textContent = `guardado ${m.id} · ${m.point_count} puntos · ${m.evidence_class}${m.demo ? " (demo)" : ""}`;
+  } catch (e) { $("slam-save-status").textContent = "error: " + e.message; }
+  loadScans();
+};
+
+async function loadSessions() {
+  let list; try { list = await api("/api/sessions"); } catch (e) { $("replay-status").textContent = "error: " + e.message; return; }
+  const tb = $("sessions").querySelector("tbody"); tb.innerHTML = "";
+  if (!list.length) {
+    tb.innerHTML = `<tr><td colspan="4" class="note">No hay sesiones grabadas. Graba una con el robot: Capturas → marca
+      «grabar sesión cruda» → Iniciar captura → muévelo → Detener y guardar.</td></tr>`;
+    return;
+  }
+  list.forEach((x) => {
+    const tr = document.createElement("tr");
+    const kind = x.demo ? `<span class="badge demo">DEMO sintética</span>` : esc(EVIDENCE_TXT[x.evidence_class] || x.evidence_class);
+    tr.innerHTML = `<td>${esc(x.session_id)}</td><td>${kind}</td>` +
+      `<td>${x.duration_s == null ? "" : x.duration_s + " s · "}${x.lidar_records} mapas${x.size_mb == null ? "" : " · " + x.size_mb + " MB"}</td>` +
+      `<td><button class="rbtn small" data-id="${esc(x.session_id)}">▶ Reproducir</button></td>`;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll(".rbtn").forEach((btn) => btn.onclick = async () => {
+    $("replay-status").textContent = "verificando la sesión (SHA-256) y arrancando…";
+    try {
+      await api("/api/replay/start", { method: "POST", body: JSON.stringify({ session_id: btn.dataset.id, loop: $("replay-loop").checked }) });
+    } catch (e) { $("replay-status").textContent = "error: " + e.message; }
+    refresh();
+  });
+  refresh();
+}
+$("btn-sessions").onclick = loadSessions;
+$("btn-replay-stop").onclick = async () => {
+  try { await api("/api/replay/stop", { method: "POST" }); } catch (e) { $("replay-status").textContent = "error: " + e.message; }
+  refresh();
+};
 
 // ---------------------------------------------------------------- capturas
 $("btn-cap-start").onclick = async () => {
@@ -95,7 +218,8 @@ async function loadScans() {
   const tb = $("scans").querySelector("tbody"); tb.innerHTML = "";
   scans.slice().reverse().forEach((m) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${m.id}</td><td>${m.point_count}</td><td>${m.evidence_class}${m.demo ? " (demo)" : ""}</td>` +
+    tr.innerHTML = `<td>${m.id}</td><td>${m.point_count}</td><td>${m.evidence_class}${m.demo ? " (demo)" : ""}` +
+      `${m.delivery_mode === "replay" ? " · replay" : ""}</td>` +
       `<td><a href="/api/scans/${m.id}/download">PLY</a></td>`;
     tb.appendChild(tr);
   });
@@ -217,5 +341,5 @@ window.addEventListener("blur", () => { if (armed) { pressed.clear(); highlight(
 
 // ---------------------------------------------------------------- arranque
 setSpeedLevel("normal");
-refresh(); loadScans();
+refresh(); loadScans(); loadSessions();
 setInterval(refresh, 1000);

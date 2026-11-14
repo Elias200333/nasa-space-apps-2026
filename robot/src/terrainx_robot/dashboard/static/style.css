@@ -41,6 +41,9 @@ button.small { padding: 4px 9px; font-size: 12px; }
 button.danger { background: var(--danger); color: #fff; }
 button.danger:hover { background: #dc2626; }
 button.stop { background: var(--warn); color: #231300; }
+/* desactivado SIEMPRE se ve desactivado (antes .danger/.stop ganaban y parecían pulsables) */
+button.danger:disabled, button.stop:disabled, button.secondary:disabled {
+  background: #24303f; color: #5b6b7d; cursor: not-allowed; }
 
 .grid {
   display: grid; gap: 14px; padding: 14px;
@@ -50,7 +53,8 @@ button.stop { background: var(--warn); color: #231300; }
     "cam cam control"
     "lidar lidar control"
     "lidar lidar captures"
-    "auth diag captures";
+    "health health replay"
+    "auth diag replay";
 }
 .panel {
   background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
@@ -59,6 +63,23 @@ button.stop { background: var(--warn); color: #231300; }
 .panel h2 { margin: 0 0 10px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
 .cam { grid-area: cam; } .telemetry { grid-area: telemetry; } .control { grid-area: control; }
 .lidar { grid-area: lidar; } .captures { grid-area: captures; } .auth { grid-area: auth; } .diag { grid-area: diag; }
+.health { grid-area: health; } .replay { grid-area: replay; }
+.panel h3 { margin: 12px 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .4px; }
+.health-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.health-grid h3:first-child { margin-top: 0; }
+#h-topics th, #sessions th { color: var(--muted); font-weight: 500; font-size: 12px; }
+#h-topics td:first-child { width: auto; font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--text); }
+#sessions td:first-child { width: auto; font-family: ui-monospace, Consolas, monospace; font-size: 11px; word-break: break-all; }
+.st-ok { color: var(--ok); } .st-stale { color: var(--warn); } .st-no_data { color: var(--muted); }
+.lvl-ok { color: var(--ok); } .lvl-low { color: var(--warn); font-weight: 700; } .lvl-critical { color: var(--danger); font-weight: 700; }
+.alert { padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 13px; background: #2a1c05; color: var(--warn);
+  border: 1px solid var(--warn); }
+.alert.critical { background: #3b0a0a; color: #fca5a5; border-color: var(--danger); }
+.badge.replay { background: #2e1065; color: #c4b5fd; }
+.badge.demo { background: #3b0a0a; color: #fca5a5; }
+.slam-row { margin: 8px 0 0; justify-content: space-between; }
+.slam-row .note { margin: 0; }
 
 .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #1e293b; color: var(--muted); }
 .badge.ok { background: #052e22; color: var(--ok); }
@@ -129,9 +150,10 @@ table td:first-child { color: var(--muted); width: 42%; }
 
 @media (max-width: 1100px) {
   .grid { grid-template-columns: 1fr 1fr; grid-template-areas:
-    "cam cam" "telemetry control" "lidar lidar" "captures diag" "auth auth"; }
+    "cam cam" "telemetry control" "lidar lidar" "captures replay" "health health" "auth diag"; }
 }
 @media (max-width: 720px) {
   .grid { grid-template-columns: 1fr; grid-template-areas:
-    "cam" "telemetry" "control" "lidar" "captures" "auth" "diag"; }
+    "cam" "telemetry" "control" "lidar" "health" "captures" "replay" "auth" "diag"; }
+  .health-grid { grid-template-columns: 1fr; }
 }

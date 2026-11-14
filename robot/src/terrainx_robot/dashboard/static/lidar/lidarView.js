@@ -337,13 +337,33 @@ if (host) {
     slam: 'Acumulado: unión filtrada de los mapas del robot (un vóxel cuenta si sale en varios mapas). '
       + 'Dato DERIVADO, sin cierre de bucles: la deriva de la odometría puede desplazar paredes.',
   }
+  // El origen de los datos lo pone app.js (window.terrainxStatus, de /api/status): el visor no
+  // debe llamar «medido» a una sesión SINTÉTICA reproducida.
+  const EVIDENCE = { robot_measured: 'medido', synthetic_test: 'SINTÉTICO (demo)', derived: 'derivado' }
   mountLidarView(host, {
     onStats: ({ mode, voxels, fps, receiving }) => {
+      const st = window.terrainxStatus || {}
+      const src = st.source || {}
+      const replay = src.kind === 'replay'
+      const slamEv = st.slam?.evidence_class
       $('lidar-count').textContent = receiving
         ? `${voxels.toLocaleString('es-ES')} vóxeles · ${fps} fps` : 'sin datos'
-      $('lidar-badge').textContent = mode === 'slam' ? 'acumulado · derivado' : 'en vivo · medido'
-      $('lidar-badge').className = 'badge ' + (mode === 'slam' ? 'warn' : 'live')
-      $('lidar-note').textContent = NOTE[mode]
+      let badge, cls
+      if (mode === 'slam') {
+        badge = `acumulado · ${EVIDENCE[slamEv] || 'derivado'}${replay ? ' · replay' : ''}`
+        cls = slamEv === 'synthetic_test' ? 'demo' : 'warn'
+      } else if (replay) {
+        badge = `replay · ${EVIDENCE[src.evidence_class] || src.evidence_class}`
+        cls = src.demo ? 'demo' : 'replay'
+      } else {
+        badge = 'en vivo · medido'
+        cls = 'live'
+      }
+      $('lidar-badge').textContent = badge
+      $('lidar-badge').className = 'badge ' + cls
+      $('lidar-note').textContent = replay
+        ? `REPLAY de la sesión ${src.session_id}: los mapas se reproducen tal como se grabaron. ` + NOTE[mode]
+        : NOTE[mode]
     },
   })
 }
