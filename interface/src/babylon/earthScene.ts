@@ -52,19 +52,20 @@ export class EarthSceneManager {
       BABYLON.Vector3.Zero(),
       this.scene
     );
-    this.camera.lowerRadiusLimit = 2.89; // Permite descender hasta baja órbita (radio Tierra = 2.8)
+    this.camera.minZ = 0.05; // Evita cualquier corte del plano cercano
+    this.camera.lowerRadiusLimit = 3.85; // Cota segura: nunca atraviesa la superficie de la Tierra (radio 2.8)
     this.camera.upperRadiusLimit = 16.0;
-    this.camera.wheelPrecision = 35;
+    this.camera.wheelPrecision = 30;
     this.camera.inertia = 0.88;
 
     // Desactivamos la rotación de cámara por puntero para que el ratón rote el planeta
     this.camera.inputs.remove(this.camera.inputs.attached.pointers);
     this.camera.attachControl(canvas, false, false); // Mantiene el zoom con la rueda del ratón
 
-    // Detección de zoom in cercano para transición fluida al mapa 2D
+    // Detección de zoom in anticipado: al aproximarse a escala continental (radius <= 4.6), transiciona
     canvas.addEventListener('wheel', (e) => {
       if (this.isTransitioning) return;
-      if (e.deltaY < 0 && this.camera.radius <= 3.12) {
+      if (e.deltaY < 0 && this.camera.radius <= 4.6) {
         this.triggerManualZoomDive();
       }
     }, { passive: true });
@@ -363,23 +364,23 @@ export class EarthSceneManager {
 
     const coords = this.getCurrentCenterCoordinates();
 
-    // Zoom continuo final hacia la superficie terrestre
+    // Zoom continuo anticipado hacia la órbita continental (cota 4.1 sin atravesar la Tierra)
     const animRadius = new BABYLON.Animation('wheelDive', 'radius', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
     animRadius.setKeys([
       { frame: 0, value: this.camera.radius },
-      { frame: 25, value: 2.89 }
+      { frame: 18, value: 4.1 }
     ]);
     const easing = new BABYLON.CubicEase();
     easing.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEOUT);
     animRadius.setEasingFunction(easing);
 
-    this.scene.beginDirectAnimation(this.camera, [animRadius], 0, 25, false);
+    this.scene.beginDirectAnimation(this.camera, [animRadius], 0, 18, false);
 
     setTimeout(() => {
       if (this.onZoomDiveTrigger) {
         this.onZoomDiveTrigger(coords.lat, coords.lon);
       }
-    }, 180);
+    }, 100);
   }
 
   /**
@@ -422,7 +423,7 @@ export class EarthSceneManager {
     const shortestX = currentX + (((diffX + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
 
     const fps = 60;
-    const totalFrames = 85; // 1.4s de trayectoria continua y fluida
+    const totalFrames = 75; // 1.25s de trayectoria continua y fluida
 
     // Animación de rotación de la Tierra
     const animRotY = new BABYLON.Animation('earthRotY', 'rotation.y', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
@@ -431,12 +432,12 @@ export class EarthSceneManager {
     const animRotX = new BABYLON.Animation('earthRotX', 'rotation.x', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
     animRotX.setKeys([{ frame: 0, value: this.earthRoot.rotation.x }, { frame: totalFrames, value: shortestX }]);
 
-    // Descenso continuo de la cámara hacia la superficie
+    // Descenso de cámara que se detiene a cota orbital continental (radius = 4.1, sin atravesar la Tierra de radio 2.8)
     const animRadius = new BABYLON.Animation('camZoomRadius', 'radius', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
     animRadius.setKeys([
       { frame: 0, value: this.camera.radius },
-      { frame: totalFrames * 0.45, value: 5.2 },
-      { frame: totalFrames, value: 2.92 }
+      { frame: totalFrames * 0.45, value: 5.6 },
+      { frame: totalFrames, value: 4.1 }
     ]);
 
     // Re-alineación suave de la cámara a vista frontal
@@ -460,11 +461,11 @@ export class EarthSceneManager {
     this.scene.beginDirectAnimation(this.earthRoot, [animRotY, animRotX], 0, totalFrames, false);
     this.scene.beginDirectAnimation(this.camera, [animRadius, animAlpha, animBeta], 0, totalFrames, false);
 
-    // Disparar el fundido del mapa 2D en el momento en que la Tierra ocupa todo el visor
+    // Disparar el fundido del mapa 2D con anticipación (a los 680ms)
     setTimeout(() => {
       if (onAtmosphereReached) onAtmosphereReached();
       if (this.onAtmosphericEntry) this.onAtmosphericEntry(lat, lon);
-    }, 950);
+    }, 680);
   }
 
   public ascendToOrbit(durationMs = 1200) {
@@ -493,10 +494,10 @@ export class EarthSceneManager {
   }
 
   public zoomIn() {
-    if (this.camera.radius <= 3.25) {
+    if (this.camera.radius <= 4.8) {
       this.triggerManualZoomDive();
     } else {
-      const newRad = Math.max(2.92, this.camera.radius - 1.2);
+      const newRad = Math.max(4.0, this.camera.radius - 1.2);
       this.animateRadius(newRad);
     }
   }

@@ -40,10 +40,10 @@ export class AnalogMap2DManager {
     this.mapContainer.style.transform = 'scale(0.97)';
     this.mapContainer.style.transition = 'opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1)';
 
-    this.ensureMapInitialized(lat, lon, 6);
+    this.ensureMapInitialized(lat, lon, 5);
 
-    // Ajustar vista inicial en zoom regional (sin animación brusca)
-    this.map!.setView([lat, lon], 6, { animate: false });
+    // Ajustar vista inicial en zoom continental (nivel 5) que empata con la cota orbital 4.1
+    this.map!.setView([lat, lon], 5, { animate: false });
     this.map!.invalidateSize();
 
     // Dibujar marcadores y actualizar datos HUD
