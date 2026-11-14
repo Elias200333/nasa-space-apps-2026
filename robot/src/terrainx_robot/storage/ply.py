@@ -5,8 +5,12 @@ Qué hace
     binary_little_endian (compacto) o ascii (legible). Los metadatos esenciales
     se repiten como comentarios de cabecera para que el PLY no pierda contexto
     si se separa de su JSON.
+    write_mesh_ply / mesh_ply_bytes: malla de triángulos con color por vértice
+    (binary_little_endian: x, y, z float32 + red, green, blue uchar; caras como
+    'list uchar int'). Es lo que leen CloudCompare, MeshLab y Blender.
     read_ply: lee PLY ascii / binary_little_endian / binary_big_endian cuyo
-    primer elemento sea 'vertex' con propiedades x, y, z (ignora el resto).
+    primer elemento sea 'vertex' con propiedades x, y, z (ignora el resto, también
+    las caras de una malla).
 Unidades: las de la nube (metros en TERRAIN-X).
 Errores: PlyError para cabeceras inválidas, archivos truncados o tamaños excesivos.
 """
@@ -84,6 +88,68 @@ def write_ply(
             np.savetxt(buf, pts, fmt="%.9g" if precision == "float32" else "%.17g", delimiter=" ")
             fh.write(buf.getvalue().encode("ascii"))
     os.replace(tmp, path)
+
+
+_MESH_VERTEX = np.dtype([("x", "<f4"), ("y", "<f4"), ("z", "<f4"),
+                         ("red", "u1"), ("green", "u1"), ("blue", "u1")])      # 15 bytes
+_MESH_FACE = np.dtype([("n", "u1"), ("v", "<i4", (3,))])                      # 13 bytes
+
+
+def _mesh_ply_parts(
+    vertices: np.ndarray, colors: np.ndarray, triangles: np.ndarray, comments: Iterable[str]
+) -> tuple[bytes, bytes, bytes]:
+    v = np.asarray(vertices, dtype=np.float64)
+    c = np.asarray(colors)
+    t = np.asarray(triangles, dtype=np.int64)
+    if v.ndim != 2 or v.shape[1] != 3:
+        raise PlyError(f"vértices: se esperaba (N,3), llegó {v.shape}")
+    if not np.all(np.isfinite(v)):
+        raise PlyError("la malla contiene NaN/inf")
+    if c.shape != v.shape or c.dtype != np.uint8:
+        raise PlyError(f"colores: se esperaba (N,3) uint8, llegó {c.shape} {c.dtype}")
+    if t.ndim != 2 or t.shape[1] != 3:
+        raise PlyError(f"triángulos: se esperaba (M,3), llegó {t.shape}")
+    if t.size and (t.min() < 0 or t.max() >= v.shape[0]):
+        raise PlyError("hay triángulos con índices de vértice fuera de rango")
+    lines = ["ply", "format binary_little_endian 1.0"]
+    lines += [f"comment {_sanitize_comment(x)}" for x in comments]
+    lines += [
+        f"element vertex {v.shape[0]}",
+        "property float x", "property float y", "property float z",
+        "property uchar red", "property uchar green", "property uchar blue",
+        f"element face {t.shape[0]}",
+        "property list uchar int vertex_indices",
+        "end_header",
+    ]
+    vb = np.empty(v.shape[0], dtype=_MESH_VERTEX)
+    vb["x"], vb["y"], vb["z"] = v[:, 0], v[:, 1], v[:, 2]
+    vb["red"], vb["green"], vb["blue"] = c[:, 0], c[:, 1], c[:, 2]
+    fb = np.empty(t.shape[0], dtype=_MESH_FACE)
+    fb["n"] = 3
+    fb["v"] = t
+    return ("\n".join(lines) + "\n").encode("ascii"), vb.tobytes(), fb.tobytes()
+
+
+def write_mesh_ply(
+    path: Path, vertices: np.ndarray, colors: np.ndarray, triangles: np.ndarray,
+    *, comments: Iterable[str] = (),
+) -> None:
+    """Malla de triángulos con color por vértice, en binary_little_endian (escritura atómica)."""
+    parts = _mesh_ply_parts(vertices, colors, triangles, comments)
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp, "wb") as fh:
+        for part in parts:
+            fh.write(part)
+    os.replace(tmp, path)
+
+
+def mesh_ply_bytes(
+    vertices: np.ndarray, colors: np.ndarray, triangles: np.ndarray, *, comments: Iterable[str] = ()
+) -> bytes:
+    """Lo mismo que write_mesh_ply, en memoria (para descargarlo sin guardarlo)."""
+    return b"".join(_mesh_ply_parts(vertices, colors, triangles, comments))
 
 
 def read_ply(path: Path, *, max_vertices: int = DEFAULT_MAX_VERTICES) -> PlyData:

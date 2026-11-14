@@ -5,10 +5,9 @@ Qué hace
     get_status, start_capture, stop_capture, list_scans, export_scan; y añade
     observe() (escuchar sin capturar, para el sondeo de capacidades) y capture()
     (atajo: start + ventana + stop).
-    La lógica de captura, grabación de sesión, monitor de topics y telemetría
-    vive aquí, de modo que el robot real y el replay producen EXACTAMENTE el
-    mismo tipo de salida. Cada adaptador solo implementa _open, _close y
-    _run_window, y entrega datos con _ingest_lidar_message / _ingest_json.
+    La lógica de captura, monitor de topics y telemetría vive aquí. Cada
+    adaptador solo implementa _open, _close y _run_window, y entrega datos con
+    _ingest_lidar_message / _ingest_json.
 
     Fase 1 = SOLO LECTURA: esta interfaz no tiene ningún método de movimiento.
     El control de movimiento será una interfaz separada y opcional (Fase 4).
@@ -41,13 +40,11 @@ from ..models import (
     RobotStatus,
     ScanContext,
     ScanMetadata,
-    SessionInfo,
     TelemetrySnapshot,
     TopicObservation,
 )
 from ..storage.scan_store import ScanStore
-from ..storage.session_log import SessionRecorder
-from ..util import new_id, software_versions, utc_now
+from ..util import utc_now
 
 log = logging.getLogger(__name__)
 
@@ -214,14 +211,12 @@ class RobotAdapter(ABC):
         self.evidence_class = evidence_class
         self.scan_context = scan_context
         self.max_points = max_points
-        self.sessions_dir: Path = store.data_dir / "sessions"
         self._connection_state = ConnectionState.DISCONNECTED
         self._capture_state = CaptureState.IDLE
         self._last_error: str | None = None
         self.monitor = TopicMonitor()
         self.telemetry = TelemetryTracker()
         self._accumulator: CaptureAccumulator | None = None
-        self._recorder: SessionRecorder | None = None
         self._capture_start: datetime | None = None
         self._seq = 0
         self._lidar_frames = 0
@@ -237,7 +232,7 @@ class RobotAdapter(ABC):
         self.last_pose: dict | None = None
         self.pose_seq = 0
         # Panel «Estado del robot»: último mensaje JSON de cada topic y cuándo llegó AQUÍ
-        # (reloj monotónico del PC: en replay, host_utc es la hora original de la grabación)
+        # (reloj monotónico del PC)
         self.latest_json: dict[str, Any] = {}
         self.topic_last_mono: dict[str, float] = {}
 
@@ -280,70 +275,31 @@ class RobotAdapter(ABC):
     async def disconnect(self) -> None:
         if self._capture_state is CaptureState.CAPTURING:
             await self.abort_capture()
-        self._stop_recorder()
         try:
             await self._close()
         finally:
             self._set_connection_state(ConnectionState.DISCONNECTED)
 
-    # --------------------------------------------------------- grabación de sesión
-    def _start_recorder(self, notes: str | None) -> None:
-        if self._recorder is not None:
-            raise CaptureError("ya hay una sesión grabándose")
-        info = SessionInfo(
-            session_id=new_id("session"),
-            created_utc=utc_now(),
-            robot=self.descriptor,
-            evidence_class=self.evidence_class,
-            scan_context=self.scan_context,
-            demo=self.evidence_class is EvidenceClass.SYNTHETIC_TEST,
-            generator=f"terrainx_robot.adapters.{self.adapter_name}",
-            software=software_versions(),
-            notes=notes,
-        )
-        self._recorder = SessionRecorder(self.sessions_dir, info)
-
-    def _stop_recorder(self) -> SessionInfo | None:
-        if self._recorder is None:
-            return None
-        info = self._recorder.close()
-        self._recorder = None
-        log.info("Sesión grabada: %s (%d mensajes)", info.session_id, info.record_count)
-        return info
-
     # ------------------------------------------------------------------- captura
-    async def observe(
-        self, duration_s: float | None, *, record_session: bool = False, notes: str | None = None
-    ) -> SessionInfo | None:
-        """Deja fluir datos durante la ventana sin generar escaneo (sondeo, grabación)."""
+    async def observe(self, duration_s: float | None) -> None:
+        """Deja fluir datos durante la ventana sin generar escaneo (sondeo de capacidades)."""
         self._require_connected()
-        if record_session:
-            self._start_recorder(notes)
-        try:
-            await self._run_window(duration_s)
-        finally:
-            info = self._stop_recorder() if record_session else None
-        return info
+        await self._run_window(duration_s)
 
     async def start_capture(
         self,
         *,
         mode: CaptureMode = "accumulate",
-        record_session: bool = False,
-        notes: str | None = None,
     ) -> None:
         self._require_connected()
         if self._capture_state in (CaptureState.CAPTURING, CaptureState.PROCESSING):
             raise CaptureError("ya hay una captura en curso")
         self._accumulator = CaptureAccumulator(mode, max_points=self.max_points)
-        if record_session:
-            self._start_recorder(notes)
         self._capture_start = utc_now()
         self._capture_state = CaptureState.CAPTURING
 
     async def abort_capture(self) -> None:
         self._accumulator = None
-        self._stop_recorder()
         self._capture_state = CaptureState.IDLE
 
     async def stop_capture(self, *, binary_ply: bool = True) -> ScanMetadata:
@@ -351,10 +307,9 @@ class RobotAdapter(ABC):
             raise CaptureError("no hay ninguna captura en curso")
         self._capture_state = CaptureState.PROCESSING   # desde aquí no entran más frames
         end = utc_now()
-        # Se sueltan aquí, en el bucle: a partir de ahora ningún mensaje toca ni la nube
-        # ni el archivo de sesión, y el hilo de abajo puede trabajar con ellos a solas.
+        # Se suelta aquí, en el bucle: a partir de ahora ningún mensaje toca la nube y el
+        # hilo de abajo puede trabajar con ella a solas.
         accumulator, self._accumulator = self._accumulator, None
-        recorder, self._recorder = self._recorder, None
         save_kwargs = dict(
             robot=self.descriptor,
             evidence_class=self.evidence_class,
@@ -367,14 +322,12 @@ class RobotAdapter(ABC):
             extra_caveats=tuple(self._extra_caveats()),
             extra_provenance=self._extra_provenance(),
         )
-        source_session = self._source_session_id()
         t0 = time.monotonic()
         try:
-            # Cerrar la sesión (SHA-256), juntar la nube y escribir el PLY va en OTRO hilo:
+            # Juntar la nube y escribir el PLY va en OTRO hilo:
             # en este bucle vive la conexión WebRTC. Con Pluffy, bloquearlo 8–14 s al guardar
             # hizo que el perro dejara de recibir respuestas y cortara (cámara y datos fuera).
-            meta = await asyncio.to_thread(
-                self._finish_capture, accumulator, recorder, source_session, save_kwargs)
+            meta = await asyncio.to_thread(self._finish_capture, accumulator, save_kwargs)
         except BaseException as exc:
             self._capture_state = CaptureState.FAILED
             self._last_error = str(exc)
@@ -384,37 +337,24 @@ class RobotAdapter(ABC):
         self._capture_state = CaptureState.COMPLETE
         return meta
 
-    def _finish_capture(
-        self,
-        accumulator: CaptureAccumulator,
-        recorder: SessionRecorder | None,
-        source_session: str | None,
-        save_kwargs: dict[str, Any],
-    ) -> ScanMetadata:
+    def _finish_capture(self, accumulator: CaptureAccumulator, save_kwargs: dict[str, Any]) -> ScanMetadata:
         """Parte pesada de stop_capture. Corre en un hilo: no toca el estado del adaptador."""
-        recorded = None
-        if recorder is not None:
-            recorded = recorder.close()
-            log.info("Sesión grabada: %s (%d mensajes)", recorded.session_id, recorded.record_count)
         cloud = accumulator.result()
         if cloud.points.shape[0] == 0:
             raise CaptureError(
                 "no se recibió ningún punto LiDAR válido durante la captura "
                 f"(frames recibidos: {cloud.frames_received}, rechazos: {cloud.rejection_reasons or 'ninguno'})"
             )
-        return self.store.save(
-            cloud, session_id=recorded.session_id if recorded else source_session, **save_kwargs)
+        return self.store.save(cloud, **save_kwargs)
 
     async def capture(
         self,
         duration_s: float | None,
         *,
         mode: CaptureMode = "accumulate",
-        record_session: bool = False,
         binary_ply: bool = True,
-        notes: str | None = None,
     ) -> ScanMetadata:
-        await self.start_capture(mode=mode, record_session=record_session, notes=notes)
+        await self.start_capture(mode=mode)
         try:
             await self._run_window(duration_s)
         except BaseException:
@@ -469,8 +409,6 @@ class RobotAdapter(ABC):
         if raw is not None:
             self.last_lidar_raw = (meta, raw)   # una tupla nueva: la lectura desde otro hilo es atómica
             self.lidar_raw_seq += 1
-        if self._recorder is not None and raw is not None:
-            self._recorder.record_lidar(topic=topic, host_utc=host_utc, meta=meta, raw=raw)
         frame = frame_from_message(
             seq=self._seq, topic=topic, meta=meta, compressed=raw, host_received_utc=host_utc
         )
@@ -489,17 +427,12 @@ class RobotAdapter(ABC):
             if pose is not None:
                 self.last_pose = pose
                 self.pose_seq += 1
-        if self._recorder is not None:
-            self._recorder.record_json(topic=topic, host_utc=host_utc, data=data)
 
     # ------------------------------------------------------- ganchos opcionales
     def _guard_counters(self) -> dict[str, int]:
         return {}
 
     def _pose_source(self) -> str | None:
-        return None
-
-    def _source_session_id(self) -> str | None:
         return None
 
     def _extra_caveats(self) -> list[str]:

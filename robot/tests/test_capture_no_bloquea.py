@@ -12,8 +12,7 @@ import time
 
 import numpy as np
 
-from conftest import run
-from terrainx_robot.adapters.replay import ReplayAdapter
+from conftest import SyntheticAdapter, run
 from terrainx_robot.cli import _LibraryNoiseFilter
 from terrainx_robot.fixtures.synthetic import generate_frames
 from terrainx_robot.lidar.accumulator import CaptureAccumulator
@@ -82,8 +81,8 @@ def test_captura_del_tamano_de_pluffy_se_cierra_al_instante():
         [base + np.array([k * 0.05, 0, 0]) for k in range(7)]) / 0.05).astype(np.int64), axis=0).shape[0]
 
 
-def test_detener_y_guardar_no_congela_el_bucle(store, synthetic_session, monkeypatch):
-    adapter = ReplayAdapter(synthetic_session, store)
+def test_detener_y_guardar_no_congela_el_bucle(store, monkeypatch):
+    adapter = SyntheticAdapter(store)
     real_save = store.save
 
     def slow_save(*a, **kw):          # guardado lento (disco lento, nube grande…)
@@ -94,7 +93,7 @@ def test_detener_y_guardar_no_congela_el_bucle(store, synthetic_session, monkeyp
 
     async def go():
         await adapter.connect()
-        await adapter.start_capture(record_session=False)
+        await adapter.start_capture()
         await adapter._run_window(None)
         gaps = []
 
@@ -118,44 +117,45 @@ def test_detener_y_guardar_no_congela_el_bucle(store, synthetic_session, monkeyp
     assert adapter.capture_state.value == "complete"
 
 
-def test_flujo_del_dashboard_capturar_guardar_y_descargar_ply(tmp_path):
-    """Lo que hace el operador: Conectar → Iniciar captura (con sesión cruda) → mapas →
-    Detener y guardar → descargar el PLY. Robot FALSO, mapas SINTÉTICOS."""
-    from fastapi.testclient import TestClient
-
-    from terrainx_robot.adapters.go2_topics import LIDAR_VOXEL_COMPRESSED
-    from terrainx_robot.adapters.go2_webrtc import PassthroughLidarDecoder
-    from terrainx_robot.storage.ply import read_ply
-    from terrainx_robot.storage.session_log import SessionReader
-    from test_dashboard_replay_health import build
+def test_guardar_el_mapa_del_dashboard_no_congela_el_bucle(tmp_path, monkeypatch):
+    """Lo mismo para la descarga del visor (mapa SLAM → PLY malla + GLB): la malla, el GLB y los
+    archivos se hacen en otro hilo. Robot FALSO, mapas SINTÉTICOS."""
+    from test_dashboard_estado import build
 
     app, service, lib, settings = build(tmp_path)
-    frames = generate_frames(4, seed=5)
-    with TestClient(app) as client:
-        assert client.post("/api/connect").status_code == 200
-        r = client.post("/api/capture/start", json={"record_session": True})
-        assert r.status_code == 200, r.text
-        lidar = lib.instances[0].datachannel.pub_sub.subscriptions[LIDAR_VOXEL_COMPRESSED]
-        for sf in frames:     # misma forma que entrega la librería con nuestro decoder
-            lidar({"type": "msg", "topic": LIDAR_VOXEL_COMPRESSED,
-                   "data": {**sf.meta, "data": PassthroughLidarDecoder().decode(sf.payload, sf.meta)}})
-        r = client.post("/api/capture/stop")
-        assert r.status_code == 200, r.text
-        meta = r.json()
-        union = {tuple(x) for f in frames for x in f.indices.tolist()}
-        assert meta["point_count"] == len(union) and meta["capture"]["frames_used"] == 4
-        assert meta["evidence_class"] == "robot_measured" and meta["capture"]["session_id"]
-        assert client.get("/api/status").json()["capture_state"] == "complete"
+    real_save = service.store.save
 
-        r = client.get(f"/api/scans/{meta['id']}/download")
-        assert r.status_code == 200
-        ply = tmp_path / "descargado.ply"
-        ply.write_bytes(r.content)
-        assert r.content.startswith(b"ply\nformat binary_little_endian 1.0\n")
-        assert read_ply(ply).points.shape == (len(union), 3)
-        client.post("/api/disconnect")
-    session = SessionReader(settings.data_dir / "sessions" / meta["capture"]["session_id"])
-    assert session.verify() and session.info.lidar_records == 4      # sesión cerrada con su SHA-256
+    def slow_save(*a, **kw):          # guardado lento (disco lento, mapa grande…)
+        time.sleep(0.8)
+        return real_save(*a, **kw)
+
+    monkeypatch.setattr(service.store, "save", slow_save)
+    f = generate_frames(1, seed=9)[0]
+    f.meta["origin"] = [-64.5 * 0.05, -64.5 * 0.05, -12.5 * 0.05]
+
+    async def go():
+        await service.connect()
+        for _ in range(3):
+            service.slam_step(f.meta, f.payload)
+        gaps = []
+
+        async def ticker():          # hace de conexión WebRTC: necesita el bucle cada 20 ms
+            last = time.monotonic()
+            while True:
+                await asyncio.sleep(0.02)
+                now = time.monotonic()
+                gaps.append(now - last)
+                last = now
+
+        t = asyncio.create_task(ticker())
+        meta = await service.save_slam_map()
+        t.cancel()
+        await service.disconnect()
+        return meta, max(gaps)
+
+    meta, worst_gap = run(go())
+    assert meta["geometry"]["point_type"] == "voxel_mesh" and set(meta["files"]) == {"ply", "glb", "coords"}
+    assert worst_gap < 0.3, f"el bucle se quedó parado {worst_gap:.2f} s mientras se guardaba"
 
 
 def test_filtro_de_log_quita_solo_el_ruido_de_la_libreria():

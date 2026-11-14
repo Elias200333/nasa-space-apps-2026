@@ -1,6 +1,6 @@
-"""Panel «Estado del robot», guardar el mapa acumulado, RecoveryStand y modo replay.
+"""Panel «Estado del robot», guardar el mapa acumulado (descarga del visor) y RecoveryStand.
 
-Todo con el robot FALSO y sesiones SINTÉTICAS (no hay robot aquí).
+Todo con el robot FALSO y mapas SINTÉTICOS (no hay robot aquí).
 """
 
 import json
@@ -15,7 +15,7 @@ from terrainx_robot.config import Go2Settings, Settings
 from terrainx_robot.dashboard import robot_details as rd
 from terrainx_robot.dashboard.server import create_app
 from terrainx_robot.dashboard.service import DashboardService
-from terrainx_robot.fixtures.synthetic import generate_frames, write_synthetic_session
+from terrainx_robot.fixtures.synthetic import generate_frames
 from terrainx_robot.lidar.voxel_codec import decode_voxel_map
 from terrainx_robot.storage.scan_store import ScanStore
 
@@ -98,8 +98,7 @@ def test_estado_del_robot_en_status_y_recuperarse(tmp_path):
     states = {t["topic"]: t["state"] for t in d["topics"]}
     assert states["rt/lf/lowstate"] == "ok" and states["rt/utlidar/voxel_map_compressed"] == "no_data"
 
-    client.post("/api/control/arm")
-    with client.websocket_connect("/ws/control") as wsc:
+    with client.websocket_connect("/ws/control") as wsc:      # WASD activo por defecto
         wsc.send_json({"type": "posture", "command": "RecoveryStand"})
         assert wsc.receive_json()["ok"] is True
     sent = [json.loads(m) for m in lib.instances[0].datachannel.channel.sent]
@@ -107,24 +106,28 @@ def test_estado_del_robot_en_status_y_recuperarse(tmp_path):
     client.post("/api/disconnect")
 
 
-def test_conexion_perdida_desarma_el_control(tmp_path):
-    """Visto con Pluffy (batería 11 %): WebRTC «closed» y el dashboard seguía diciendo «armado»."""
+def test_conexion_perdida_no_deja_conducir(tmp_path):
+    """Visto con Pluffy (batería 11 %): WebRTC «closed» y el dashboard seguía ofreciendo el control."""
     from terrainx_robot.models import ConnectionState
     app, service, lib, _ = build(tmp_path)
     client = TestClient(app)
     client.post("/api/connect")
-    client.post("/api/control/arm")
-    assert client.get("/api/status").json()["control_armed"] is True
+    assert client.get("/api/status").json()["control_available"] is True
     service.adapter._set_connection_state(ConnectionState.DISCONNECTED, "conexión WebRTC perdida (estado: closed)")
     s = client.get("/api/status").json()
-    assert s["control_armed"] is False and s["control_enabled"] is False and s["connected"] is False
+    assert s["control_available"] is False and s["control_enabled"] is False and s["connected"] is False
+    with client.websocket_connect("/ws/control") as wsc:
+        wsc.send_json({"type": "drive", "vx": 0.3, "vy": 0.0, "yaw": 0.0})
+        assert wsc.receive_json()["ok"] is False
+    sent = [json.loads(m) for m in lib.instances[0].datachannel.channel.sent]
+    assert 1008 not in [m["data"]["header"]["identity"]["api_id"] for m in sent if m.get("type") == "req"]
 
 
 # ----------------------------------------------------- guardar el acumulado
-def test_guardar_mapa_acumulado_como_escaneo_derivado(tmp_path):
+def test_guardar_el_mapa_acumulado_como_malla_derivada(tmp_path):
     app, service, lib, _ = build(tmp_path)
     client = TestClient(app)
-    assert client.post("/api/slam/save").status_code == 409            # sin robot
+    assert client.post("/api/slam/save").status_code == 409            # sin robot: no hay mapa
     client.post("/api/connect")
     f = generate_frames(1, seed=9)[0]
     # Origen como lo manda el Go2 real: (k − ½)·res (medido con Pluffy: [-3.325, -3.025, -0.575])
@@ -135,10 +138,13 @@ def test_guardar_mapa_acumulado_como_escaneo_derivado(tmp_path):
     assert r.status_code == 200, r.text
     m = r.json()
     assert m["evidence_class"] == "derived" and m["demo"] is False and m["delivery_mode"] == "live"
-    assert m["frame_id"] == f.meta["frame_id"] and m["point_count"] > 0
-    assert any("ACUMULADO" in c for c in m["caveats"]) and m["provenance"]["slam"]["frames"] == 3
+    assert m["geometry"]["point_type"] == "voxel_mesh" and set(m["files"]) == {"ply", "glb", "coords"}
+    assert m["frame_id"] == f.meta["frame_id"] and m["point_count"] == m["provenance"]["mesh"]["vertices"] > 0
+    assert any("ACUMULADO" in c for c in m["caveats"]) and any("MALLA" in c for c in m["caveats"])
+    assert m["provenance"]["slam"]["frames"] == 3
     assert m["id"] in [x["id"] for x in client.get("/api/scans").json()]
-    # misma convención que las capturas en vivo: cada punto exportado es un punto del mapa del robot
+    # la malla tiene un cubo por vóxel del mapa, y esos vóxeles son los del mapa del robot
+    assert m["provenance"]["mesh"]["voxels"] == service.slam.export_points().shape[0]
     live = {tuple(p) for p in np.round(decode_voxel_map(f.payload, f.meta["src_size"], f.meta["origin"],
                                                           f.meta["resolution"]).points, 4).tolist()}
     exported = {tuple(p) for p in np.round(service.slam.export_points(), 4).tolist()}
@@ -160,53 +166,21 @@ def test_origen_fuera_de_la_rejilla_se_ajusta_como_mucho_medio_voxel():
     assert np.all(np.abs(shift) <= 0.025 + 1e-9)
 
 
-# ------------------------------------------------------------------ replay
-def test_replay_de_sesion_sintetica_sin_control(tmp_path):
-    app, service, lib, settings = build(tmp_path)
-    info = write_synthetic_session(settings.data_dir / "sessions", n_frames=6, seed=11)
-    with TestClient(app) as client:                     # un único bucle: el replay corre entre peticiones
-        sessions = client.get("/api/sessions").json()
-        assert [x["session_id"] for x in sessions] == [info.session_id]
-        assert sessions[0]["demo"] is True and sessions[0]["evidence_class"] == "synthetic_test"
-
-        assert client.post("/api/replay/start", json={"session_id": "../../etc"}).status_code == 409
-        r = client.post("/api/replay/start", json={"session_id": info.session_id, "loop": True})
-        assert r.status_code == 200, r.text
-        s = r.json()
-        assert s["source"]["kind"] == "replay" and s["source"]["demo"] is True
-        assert s["connected"] is True and s["control_enabled"] is False
-
-        assert wait_for(lambda: client.get("/api/status").json().get("lidar_frames", 0) > 0)
-        assert wait_for(lambda: client.get("/api/status").json()["slam"]["frames"] >= 2)
-        s = client.get("/api/status").json()
-        assert s["robot_details"]["battery"]["soc_pct"] is not None     # lowstate sintético
-        assert s["slam"]["evidence_class"] == "synthetic_test"
-
-        assert client.post("/api/control/arm").status_code == 409           # en replay no se conduce
-        assert client.post("/api/connect").status_code == 409               # ni se conecta el robot
-        m = client.post("/api/slam/save").json()
-        assert m["evidence_class"] == "synthetic_test" and m["demo"] is True and m["delivery_mode"] == "replay"
-
-        s = client.post("/api/replay/stop").json()
-        assert s["source"]["kind"] == "none" and s["connected"] is False
-    assert lib.instances == []                          # nunca se abrió una conexión al robot
-
-
-def test_replay_no_arranca_con_el_robot_conectado(tmp_path):
-    app, service, lib, settings = build(tmp_path)
-    info = write_synthetic_session(settings.data_dir / "sessions", n_frames=2, seed=1)
-    client = TestClient(app)
-    client.post("/api/connect")
-    r = client.post("/api/replay/start", json={"session_id": info.session_id})
-    assert r.status_code == 409 and r.json()["detail"]["code"] == "robot_connected"
-    client.post("/api/disconnect")
-
-
-def test_sesion_alterada_no_se_reproduce(tmp_path):
-    app, service, lib, settings = build(tmp_path)
-    info = write_synthetic_session(settings.data_dir / "sessions", n_frames=2, seed=1)
-    msgs = settings.data_dir / "sessions" / info.session_id / "messages.jsonl"
-    msgs.write_text(msgs.read_text(encoding="utf-8") + "\n", encoding="utf-8")   # cambia el SHA-256
+# ---------------------------------------------- paneles quitados (2026-11-14)
+def test_sin_replay_ni_telemetria(tmp_path):
+    """Replay (y «● Grabar sesión») y la tabla «Telemetría» se quitaron del dashboard."""
+    app, _, lib, _ = build(tmp_path)
     with TestClient(app) as client:
-        r = client.post("/api/replay/start", json={"session_id": info.session_id})
-        assert r.status_code == 409 and r.json()["detail"]["code"] == "session_integrity"
+        html = client.get("/").text
+        assert "Replay" not in html and "Telemetría" not in html and "btn-record" not in html
+        for path in ("/api/replay/start", "/api/replay/stop", "/api/record/start", "/api/record/stop"):
+            assert client.post(path).status_code in (404, 405), path
+        assert client.get("/api/sessions").status_code in (404, 405)
+        st = client.get("/api/status").json()
+        assert "recording" not in st and st["source"] == {"kind": "none"}
+        client.post("/api/connect")
+        st = client.get("/api/status").json()
+        assert st["source"] == {"kind": "live"} and "telemetry" not in st
+        inject(lib, "rt/lf/lowstate", LOWSTATE)                  # el panel «Estado del robot» sigue
+        assert client.get("/api/status").json()["robot_details"]["battery"]["soc_pct"] == 18.0
+        client.post("/api/disconnect")

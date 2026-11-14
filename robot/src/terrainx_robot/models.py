@@ -4,7 +4,6 @@ Qué hace: define con Pydantic v2 los registros que produce el módulo:
   - ScanMetadata      -> escaneo LiDAR exportado (amplía RobotScan 1.0 del dossier §6.1)
   - CapabilityReport  -> qué puede hacer REALMENTE el robot conectado
   - RobotStatus       -> estado de conexión/captura + telemetría resumida
-  - SessionInfo       -> sesión de datos crudos grabada para replay
 Los campos del contrato 1.0 conservan nombre y significado. Los añadidos están
 marcados como "1.1-draft" y deben aprobarlos Ciencia y Plataforma
 (ver contracts/README.md).
@@ -105,6 +104,9 @@ class PointType(str, Enum):
     """Qué representa cada punto de la nube."""
 
     VOXEL_OCCUPANCY = "voxel_occupancy"  # vóxel ocupado de un mapa (Go2 vía WebRTC)
+    # Malla de cubos de vóxeles ocupados: los vértices son ESQUINAS de los cubos, no
+    # puntos medidos (mapa SLAM acumulado del dashboard, ver lidar/voxel_mesh.py).
+    VOXEL_MESH = "voxel_mesh"
     RAW_RETURNS = "raw_returns"  # retorno crudo del sensor
     UNKNOWN = "unknown"
 
@@ -207,7 +209,7 @@ class CapabilityReport(_Model):
     robot: RobotDescriptor
     evidence_class: EvidenceClass
     overall_status: Literal["ok", "degraded", "failed"]
-    observation_window_s: float | None  # None = se reprodujo la fuente completa (replay)
+    observation_window_s: float | None  # None = la conexión falló antes de observar
     connection: dict[str, Any]
     network_preflight: dict[str, Any] | None = None
     capabilities: list[CapabilityItem]
@@ -227,11 +229,11 @@ class FileRef(_Model):
 
 
 class CaptureInfo(_Model):
-    # Ventana de la operación de captura (en replay: cuándo se reprodujo).
+    # Ventana de la operación de captura.
     start_utc: datetime
     end_utc: datetime
     duration_s: float
-    # Momento de llegada al PC de los datos usados (en replay: la hora ORIGINAL).
+    # Momento de llegada al PC de los datos usados.
     acquisition_first_utc: datetime | None = None
     acquisition_last_utc: datetime | None = None
     mode: Literal["accumulate", "last", "single_file"]
@@ -317,34 +319,4 @@ class ScanMetadata(_Model):
             )
         if self.point_count < 0:
             raise ValueError("point_count negativo")
-        return self
-
-
-# --------------------------------------------------------------------- sesiones
-
-
-class SessionInfo(_Model):
-    schema_version: str = f"terrainx.robot.session/{CONTRACT_VERSION}"
-    session_id: str
-    created_utc: datetime
-    closed_utc: datetime | None = None
-    robot: RobotDescriptor
-    evidence_class: EvidenceClass
-    scan_context: ScanContext
-    demo: bool
-    generator: str
-    software: dict[str, str | None]
-    record_count: int = 0
-    lidar_records: int = 0
-    json_records: int = 0
-    messages_file: str = "messages.jsonl"
-    messages_sha256: str | None = None
-    notes: str | None = None
-
-    @model_validator(mode="after")
-    def _demo_rule(self) -> "SessionInfo":
-        if self.evidence_class is EvidenceClass.SYNTHETIC_TEST and not self.demo:
-            raise ValueError("una sesión synthetic_test exige demo=true")
-        if self.evidence_class is EvidenceClass.ROBOT_MEASURED and self.demo:
-            raise ValueError("una sesión con datos reales no puede marcarse demo=true")
         return self

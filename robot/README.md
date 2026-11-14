@@ -2,9 +2,9 @@
 
 Software del especialista de robótica de TERRAIN-X (NASA Space Apps Challenge 2026).
 
-**Base (solo lectura):** comunicación con el Unitree Go2 físico — adquisición LiDAR y telemetría, exportación PLY + metadatos JSON con SHA-256 y un modo replay para trabajar sin robot.
+**Base (solo lectura):** comunicación con el Unitree Go2 físico — adquisición LiDAR y telemetría, exportación PLY + metadatos JSON con SHA-256.
 
-**Dashboard web local:** autenticación AES-128, conexión compartida al Go2, **cámara en directo**, visor LiDAR 3D, telemetría, capturas y, de forma separada y opcional, **teleoperación WASD** con hombre muerto. Ver [sección 11](#11-dashboard-web-del-go2-air).
+**Dashboard web local:** autenticación AES-128, conexión compartida al Go2, **cámara en directo**, visor LiDAR 3D con el mapa SLAM acumulado (se guarda como PLY + GLB + coordenadas JSON), estado del robot (batería, LiDAR, flujos de datos) y **teleoperación WASD** con hombre muerto (activa con el robot conectado). Ver [sección 11](#11-dashboard-web-del-go2-air).
 
 > Por defecto el módulo es de **solo lectura**: un guardián bloquea en el propio PC cualquier orden que no esté en una lista blanca. La conducción WASD es un **modo aparte** que hay que habilitar explícitamente; usa un guardián acotado (solo Move/Stop/levantar/sentar/amortiguar) y se detiene al soltar la tecla, perder el foco o cortarse la conexión. Nada de esto sustituye a la parada de emergencia física del robot, que siempre debe manejar un operador presente.
 
@@ -17,11 +17,10 @@ Software del especialista de robótica de TERRAIN-X (NASA Space Apps Challenge 2
 | `RobotAdapter` (interfaz común) | ✅ | ✅ | — |
 | `Go2WebRTCAdapter` (LocalAP / LocalSTA) | ✅ | ✅ con librería simulada y con el parser binario real de la librería | Conexión real, comportamiento en Windows con el robot |
 | Guardián de solo lectura | ✅ | ✅ (todas las órdenes `SPORT_CMD` de la librería se bloquean) | — |
-| `CapabilityProbe` | ✅ | ✅ en replay | Qué topics publica realmente vuestro Go2 y a qué frecuencia |
+| `CapabilityProbe` | ✅ | ✅ con un adaptador sintético | Qué topics publica realmente vuestro Go2 y a qué frecuencia |
 | Decodificación LiDAR (`voxel_codec`) | ✅ | ✅ idéntica bit a bit al decodificador `native` de la librería | **Unidades, ejes y origen del frame** (ver [docs/VERIFICACION_FISICA.md](docs/VERIFICACION_FISICA.md)) |
 | Exportación PLY + JSON + SHA-256 | ✅ | ✅ | — |
-| Sesiones crudas + replay | ✅ | ✅ | Grabar la primera sesión real |
-| Telemetría (batería, IMU, posición) | ✅ campos de los ejemplos oficiales | ✅ con datos sintéticos | Que los campos existan en vuestro firmware y sus unidades |
+| Telemetría (batería, IMU, posición) | ✅ campos de los ejemplos oficiales | ✅ con librería simulada | Que los campos existan en vuestro firmware y sus unidades |
 | Modelo y firmware | Solo si el operador los declara | ✅ | Leerlos en la app oficial y anotarlos en `.env` |
 
 **Lo que no existe todavía, por diseño:** movimiento, Meta Quest 3, misiones, comunicación planetaria, métricas geométricas (pendiente, suelo, obstáculos) y registro a ENU. Corresponden a las fases 2 a 5.
@@ -53,19 +52,16 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[go2,dev]"
 ```
 
-El núcleo (replay, PLY, tests offline) solo necesita `numpy`, `lz4`, `pydantic` y `python-dotenv`. El extra `[go2]` instala `unitree_webrtc_connect==2.2.0`, la versión cuyo código fuente se ha revisado.
+El núcleo (PLY, tests offline) solo necesita `numpy`, `lz4`, `pydantic` y `python-dotenv`. El extra `[go2]` instala `unitree_webrtc_connect==2.2.0`, la versión cuyo código fuente se ha revisado.
 
 ## 4. Prueba rápida SIN robot
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest
-.\.venv\Scripts\python.exe -m terrainx_robot demo-session
-.\.venv\Scripts\python.exe -m terrainx_robot capture --source replay --input latest
-.\.venv\Scripts\python.exe -m terrainx_robot probe --source replay --input latest
 .\.venv\Scripts\python.exe -m terrainx_robot list-scans
 ```
 
-`demo-session` genera una escena **sintética** (suelo, caja de 0,50 m y pared) con el mismo formato binario que publica el robot. Todo lo que sale de ella queda marcado como `evidence_class=synthetic_test` y `demo=true`.
+Los tests usan una escena **sintética** (suelo, caja de 0,50 m y pared) con el mismo formato binario que publica el robot y un robot simulado: no necesitan robot ni Internet. Lo que sale de ella queda marcado como `evidence_class=synthetic_test` y `demo=true`. No hay modo replay: los datos reales solo salen del robot conectado.
 
 ## 5. Uso CON el robot
 
@@ -80,8 +76,8 @@ El núcleo (replay, PLY, tests offline) solo necesita `numpy`, `lz4`, `pydantic`
 
 ```powershell
 .\.venv\Scripts\python.exe -m terrainx_robot check-library
-.\.venv\Scripts\python.exe -m terrainx_robot probe --source go2 --window 15 --record-session
-.\.venv\Scripts\python.exe -m terrainx_robot capture --source go2 --duration 5 --record-session
+.\.venv\Scripts\python.exe -m terrainx_robot probe --window 15
+.\.venv\Scripts\python.exe -m terrainx_robot capture --duration 5
 ```
 
 Siga el protocolo de [docs/VERIFICACION_FISICA.md](docs/VERIFICACION_FISICA.md) en la primera sesión con el robot.
@@ -92,17 +88,15 @@ Siga el protocolo de [docs/VERIFICACION_FISICA.md](docs/VERIFICACION_FISICA.md) 
 |---|---|
 | `info` | Configuración efectiva (la clave solo como "configurada" o "no configurada") y versiones |
 | `check-library` | Verifica la API real de la librería instalada: versión, topics, gancho del decodificador y equivalencia con `native` |
-| `demo-session [--frames N] [--seed S]` | Genera una sesión sintética |
-| `probe --source go2\|replay [--window s] [--record-session]` | Sondeo de capacidades. Guarda el JSON en `runtime/probes/` |
-| `record --source go2 --duration s [--notes ...]` | Graba datos crudos del robot para reproducirlos después |
-| `capture --source go2\|replay [--duration s] [--mode accumulate\|last] [--record-session] [--ascii]` | Genera PLY + metadatos + SHA256SUMS |
+| `probe [--window s]` | Sondeo de capacidades del robot. Guarda el JSON en `runtime/probes/` |
+| `capture --duration s [--mode accumulate\|last] [--ascii]` | Genera PLY + metadatos + SHA256SUMS |
 | `list-scans [--json]` | Lista los escaneos |
 | `verify-scan <id>` | Recalcula los SHA-256 |
 | `export-scan <id> --dest <carpeta>` | Copia un escaneo tras verificar su integridad |
 | `inspect <id \| archivo.ply>` | Estadística descriptiva para la verificación física |
 | `export-schemas [--out carpeta]` | JSON Schema de la propuesta de contrato |
 
-En replay, `--input` acepta una carpeta de sesión, un `.ply` o `latest`. Un PLY sin metadatos exige declarar `--evidence-class`: su origen no se adivina.
+`--source go2` se sigue aceptando (es el valor por defecto y la única fuente).
 
 Códigos de salida: `0` correcto · `1` error · `2` resultado degradado.
 
@@ -127,18 +121,16 @@ robot/
 │   ├── adapters/
 │   │   ├── base.py           # RobotAdapter + monitor de topics + telemetría
 │   │   ├── go2_webrtc.py     # Go2WebRTCAdapter (solo lectura)
-│   │   ├── replay.py         # ReplayAdapter (sesiones y PLY)
 │   │   ├── readonly_guard.py # lista blanca de mensajes salientes
 │   │   ├── go2_topics.py     # topics verificados en la librería 2.2.0
 │   │   └── library_check.py  # verificación de la API instalada
 │   ├── lidar/                # voxel_codec, frames, validación, acumulación, describe
-│   ├── storage/              # PLY, almacén de escaneos, sesiones
+│   ├── storage/              # PLY y almacén de escaneos
 │   ├── probe/                # CapabilityProbe y comprobación de red
-│   └── fixtures/synthetic.py # generador de escenas sintéticas
+│   └── fixtures/synthetic.py # escena sintética para los tests
 ├── tests/                    # pytest: ninguno necesita robot ni Internet
 └── runtime/                  # datos generados (en .gitignore)
     ├── scans/<id>/           #   <id>.ply · <id>.metadata.json · SHA256SUMS
-    ├── sessions/<id>/        #   session.json · messages.jsonl (payload LiDAR original)
     ├── probes/               #   informes de capacidades
     └── logs/
 ```
@@ -149,7 +141,7 @@ robot/
   - `robot_measured`: medido físicamente por un robot.
   - `synthetic_test`: generado por software para pruebas.
   - Reservados para otros módulos: `orbital_nasa` y `derived`.
-- **`delivery_mode`**: la **vía** por la que llegó el dato: `live` o `replay`. Un PLY real reproducido sigue siendo `robot_measured`.
+- **`delivery_mode`**: la **vía** por la que llegó el dato. Hoy el módulo solo produce `live`; el contrato compartido reserva `replay` y `emulated_link`.
 - **`point_type = voxel_occupancy`**: por WebRTC el Go2 no entrega retornos crudos del LiDAR. Entrega un **mapa de vóxeles ocupados**, una rejilla 128 × 128 × N con la resolución que indica el propio mensaje (0,05 en los ejemplos). Cada punto es `origin + índice × resolution`.
 - **`units_verification` / `axes_verification = unverified`**: ni el robot ni la librería declaran unidades ni ejes. Se asumen metros hasta completar la verificación física.
 - **`registration.status = local_only`**: la nube está en el frame del robot. No se georreferencia sin puntos de control (Fase 2).
@@ -210,13 +202,15 @@ La clave es propia de cada robot y está en tu cuenta de Unitree. Se recupera co
 
 Después apunta `TERRAINX_GO2_AES_KEY_FILE` en `robot\.env` a esa ruta (por defecto `%USERPROFILE%\.terrainx\go2_aes_key.txt`). También puedes hacer todo esto desde el panel **«Unitree — Conexión y autenticación»** del propio dashboard.
 
+**Solo hace falta una vez.** Para conectar, el programa usa la IP del `.env` y esa clave: nunca el correo ni la contraseña. Con la clave guardada, el panel lo dice con su huella y deja el formulario plegado tras «Cambiar o renovar la clave…». Solo hay que volver a pedirla si el perro la rechaza (error `aes_key_rejected`); después, reinicia el dashboard, porque la clave se lee al arrancar. No se guarda la contraseña ni ningún token de la cuenta.
+
 ### Lanzar el dashboard
 
 ```powershell
 .\.venv\Scripts\python.exe -m terrainx_robot dashboard
 ```
 
-Abre **http://127.0.0.1:8777** en el navegador. Paneles: cámara en directo (MJPEG), telemetría, LiDAR 3D, conducción WASD, capturas y diagnóstico.
+Abre **http://127.0.0.1:8777** en el navegador. Paneles: cámara en directo (MJPEG), conducción WASD, LiDAR 3D (con guardar y descargar el mapa), estado del robot, autenticación Unitree y diagnóstico.
 
 ### Conectar al perro y comprobar que funciona
 
@@ -225,26 +219,39 @@ Abre **http://127.0.0.1:8777** en el navegador. Paneles: cámara en directo (MJP
 3. En el dashboard pulsa **Conectar**. Si todo va bien verás:
    - el indicador en verde y el estado `ready_readonly`;
    - la **cámara en directo** en unos segundos (FPS en la esquina);
-   - telemetría (batería, IMU…) a medida que el robot la publica;
+   - el panel **Estado del robot** (batería, LiDAR, flujos de datos) a medida que el robot lo publica;
    - la nube **LiDAR 3D** actualizándose (vóxeles ocupados, en metros asumidos).
-4. Prueba una **captura**: «Iniciar captura» → mueve el robot con su mando unos segundos → «Detener y guardar». Aparece en la lista y puedes descargar el PLY.
+4. **Escanea el entorno** con los botones de arriba a la derecha del visor LiDAR 3D:
+   - **papelera** (en «Acumulado»): empieza un mapa SLAM nuevo;
+   - lleva el perro por todo el entorno;
+   - **pausa**: el mapa acumulado deja de sumar mapas, así lo que ves es lo que se guarda (si cierras la pestaña, se reanuda solo);
+   - **descarga**: abre un menú con **«Modelo 3D (.glb)»** y **«Coordenadas (.json)»**. Cualquiera de las dos guarda el **mapa SLAM acumulado** en `runtime/scans/<id>/` y el navegador baja el archivo elegido. Se guardan estos archivos:
+     - **`.glb`**: se ve como el visor. Tiene los mismos cubos y colores, las aristas grises y no lleva luz. Lo abren Blender (en «Vista previa del material»; para los colores exactos, Gestión de color → «Estándar»), Babylon y los visores glTF del navegador.
+     - **`.coords.json`**: el array `[[x, y, z], …]` en metros con el **centro de cada cubo** (cada cubo va de punto − 0,025 a punto + 0,025 m), uno por vóxel, también los interiores que la malla no dibuja. Usa los ejes del robot, como el `.ply`. Delante lleva el `scan_id`, la clase de evidencia, el marco y el tamaño del cubo.
+     - **`.ply`**: malla de cubos con las coordenadas del robot, para CloudCompare y MeshLab. Cada programa le pone su propia luz, así que no se ve igual que el visor.
+     - **metadatos y SHA-256**: `point_type = voxel_mesh`, clase `derived`.
+
+   Si el mapa no ha cambiado desde el último guardado (por ejemplo, en pausa), la segunda descarga sale del **mismo escaneo**: no se duplica. Si la conexión se corta, lo acumulado se puede guardar igual.
+
+> Para una nube de puntos **medida** (`robot_measured`, sin el filtro del SLAM) sigue existiendo el comando `capture` del CLI (con el dashboard desconectado del robot: el Go2 admite un solo cliente).
 
 ### Conducir con WASD (teleoperación supervisada)
 
-> **Solo con espacio libre y un operador junto al paro de emergencia físico.**
+> **Solo con espacio libre y un operador junto al paro de emergencia físico.** El control está **activo por defecto**: en cuanto el robot está conectado, WASD lo mueve (no hay botón «Habilitar»).
 
-1. En el panel **Conducción (WASD)** pulsa **«Habilitar control»** y confirma. El guardián pasa a modo control (acotado).
-2. Conduce manteniendo pulsado:
+1. Conduce manteniendo pulsado:
    - **W / S** — avanzar / retroceder
    - **A / D** — girar izquierda / derecha
    - **Q / E** — desplazamiento lateral
    - **Espacio** — parar
-   - Botones de postura: **Levantar / Sentar / Equilibrio / Amortiguar**
-3. El robot **solo se mueve mientras mantienes la tecla**. Al soltarla, cambiar de ventana, cerrar la pestaña o perder la conexión, se detiene solo (hombre muerto, 0,4 s). Botones **PARAR** y **Deshabilitar** siempre disponibles.
-4. Límites de velocidad (recortados en el servidor): avance 0,6 m/s · lateral 0,4 m/s · giro 0,8 rad/s; el mando WASD usa valores aún más suaves. Saltos y volteretas están **bloqueados**.
+   - Botones de postura: **Levantar / Sentar / Equilibrio / Amortiguar / Recuperarse**
+2. El robot **solo se mueve mientras mantienes la tecla**; mientras no pulses nada, no se le envía ninguna orden. Al soltarla, pasar a escribir en un campo de texto, cambiar de ventana, cerrar la pestaña o perder la conexión, se detiene solo (hombre muerto, 0,4 s). Las teclas no cuentan mientras escribes en un campo de texto. El botón **PARAR** está siempre disponible.
+3. Límites de velocidad (recortados en el servidor): avance 1,0 m/s · lateral 0,5 m/s · giro 1,5 rad/s; el selector Lento / Normal / Rápido elige dentro de esos topes. Saltos y volteretas están **bloqueados**.
 
 ### Qué está probado y qué no
 
-- **Probado sin robot** (159 tests, incluidos los del dashboard con un robot simulado): los endpoints, el modo control acotado, el hombre muerto, el recorte de velocidad y que la clave/credenciales no se filtran.
+- **Probado sin robot** (206 tests, incluidos los del dashboard con un robot simulado): los endpoints, el modo control acotado y activo por defecto, el hombre muerto, el recorte de velocidad, el mapa guardado como PLY + GLB + coordenadas, la pausa y que la clave/credenciales no se filtran.
+- **Probado con Pluffy (2026-11-14, 22:18):** el guardado del mapa como malla PLY (40 275 vóxeles, 0,38 s fuera del bucle de la conexión).
+- **Pendiente de probar con Pluffy:** el `.glb`, las coordenadas, la pausa del acumulado y el WASD activo por defecto. El `.glb` sí está comprobado, sin robot, con el mapa real de las 22:18: se ve como el visor en three.js y en Blender 4.5.
 - **Pendiente de comprobar con el Go2 físico:** que lleguen vídeo y LiDAR reales y a qué frecuencia, y el comportamiento real de la locomoción. Nada de esto está verificado hasta probarlo con el robot.
 - Three.js se incluye vendorizado en `dashboard/static/vendor/` (MIT) para que el visor 3D funcione **sin internet** en la red del robot.

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "terrainx-robot"
 version = "0.1.0"
-description = "TERRAIN-X - modulo de robotica. Fase 1: adquisicion de solo lectura del Unitree Go2 (LiDAR + telemetria), PLY + metadatos y modo replay offline."
+description = "TERRAIN-X - modulo de robotica. Fase 1: adquisicion de solo lectura del Unitree Go2 (LiDAR + telemetria), PLY + metadatos."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
@@ -21,7 +21,7 @@ dependencies = [
 # Conexion real con el Go2. Version fijada: el codigo se ha verificado contra
 # el codigo fuente de esta version concreta (ver docs/NOTAS_LIBRERIA_GO2.md).
 go2 = ["unitree_webrtc_connect==2.2.0"]
-# Dashboard web local (camara, LiDAR 3D, telemetria, WASD). Requiere tambien [go2].
+# Dashboard web local (camara, LiDAR 3D, estado del robot, WASD). Requiere tambien [go2].
 dashboard = ["fastapi>=0.110", "uvicorn[standard]>=0.27"]
 dev = ["pytest>=8", "httpx>=0.27"]
 
