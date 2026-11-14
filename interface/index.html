@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IEF Comparation | NASA Space Apps Challenge 2026 • Planetary Terrain & Cavity Comparison</title>
   <link rel="icon" type="image/jpeg" href="/ief_comparation_logo.jpg">
+  <link rel="stylesheet" href="/src/styles.css">
   <style>
-    /* Estilos críticos inline para evitar pantalla blanca (FOUC) y desbordamiento de SVG */
+    /* Estilos críticos inline para evitar pantalla blanca (FOUC) y desbordamiento de imágenes */
     html, body {
       background-color: #060913 !important;
       color: #e2e8f0;
@@ -23,6 +24,138 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
+    }
+    .splash-hero-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 10;
+      max-width: 90vw;
+    }
+    .splash-logo-circle {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+      margin-bottom: 8px;
+    }
+    .splash-team-logo {
+      width: 128px !important;
+      height: 128px !important;
+      max-width: 128px !important;
+      max-height: 128px !important;
+      border-radius: 50% !important;
+      object-fit: cover !important;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), 0 0 30px rgba(56, 189, 248, 0.55), 0 0 60px rgba(249, 115, 22, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      display: block;
+      transition: all 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .splash-energy-ring {
+      position: absolute;
+      inset: -10px;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, #38bdf8, #f97316, #22d3ee, #e11d48, #38bdf8);
+      filter: blur(7px);
+      opacity: 0.9;
+      animation: splashRingRotate 6s linear infinite;
+    }
+    @keyframes splashRingRotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .splash-expandable-details {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      opacity: 1 !important;
+      max-height: none !important;
+      overflow: visible !important;
+      transform: translateY(0) scale(1) !important;
+      pointer-events: auto !important;
+      margin-top: 6px;
+      transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .intro-splash-screen.shrink-active .splash-logo-circle {
+      width: 108px !important;
+      height: 108px !important;
+      margin-bottom: 4px;
+    }
+    .intro-splash-screen.shrink-active .splash-team-logo {
+      width: 98px !important;
+      height: 98px !important;
+      max-width: 98px !important;
+      max-height: 98px !important;
+      box-shadow: 0 0 25px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.45);
+    }
+    .intro-splash-screen.shrink-active .splash-energy-ring {
+      inset: -6px;
+      filter: blur(5px);
+    }
+    .splash-loader-wrapper {
+      width: 380px !important;
+      max-width: 88vw !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 8px !important;
+      margin-top: 10px !important;
+    }
+    .splash-progress-track {
+      width: 100% !important;
+      height: 8px !important;
+      background: rgba(15, 23, 42, 0.9) !important;
+      border: 1.5px solid rgba(56, 189, 248, 0.5) !important;
+      border-radius: 9999px !important;
+      overflow: hidden !important;
+      position: relative !important;
+      box-shadow: 0 0 16px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(0, 0, 0, 0.6) !important;
+    }
+    .splash-progress-fill {
+      height: 100% !important;
+      width: 0% !important;
+      background: linear-gradient(90deg, #38bdf8 0%, #22d3ee 50%, #f97316 100%) !important;
+      border-radius: 9999px !important;
+      box-shadow: 0 0 14px #38bdf8, 0 0 24px rgba(56, 189, 248, 0.6) !important;
+      transition: width 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .splash-status-row {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      font-size: 0.74rem !important;
+      font-family: var(--font-mono, monospace) !important;
+      width: 100% !important;
+    }
+    .splash-status-text {
+      color: #38bdf8 !important;
+      font-weight: 600 !important;
+      text-shadow: 0 0 8px rgba(56, 189, 248, 0.5) !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      max-width: 78% !important;
+    }
+    .splash-progress-pct {
+      color: #ffffff !important;
+      font-weight: 800 !important;
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.7) !important;
+    }
+    .brand-team-logo {
+      width: 36px !important;
+      height: 36px !important;
+      border-radius: 50% !important;
+      object-fit: cover !important;
+    }
+    .brand-nasa-logo {
+      height: 22px !important;
+      width: auto !important;
+      object-fit: contain !important;
     }
     svg {
       max-width: 100%;
@@ -31,46 +164,45 @@
   </style>
 </head>
 <body>
-  <!-- Pantalla de Inicio / Splash Screen Cinemática con el Logo de IEF Comparation y NASA Space Apps -->
+  <!-- Pantalla de Inicio / Splash Screen Cinemática (IEF Comparation & NASA Space Apps) -->
   <div id="introSplashScreen" class="intro-splash-screen">
     <div class="splash-cosmic-bg">
       <div class="splash-stars"></div>
       <div class="splash-nebula"></div>
     </div>
 
-    <div class="splash-content">
-      <!-- NASA Space Apps Challenge Badge Superior -->
-      <div class="splash-nasa-header">
-        <img src="/nasa_space_apps_logo.png" alt="NASA Space Apps Challenge" class="splash-nasa-logo" />
-        <span class="splash-edition-tag">NASA SPACE APPS CHALLENGE 2026</span>
-      </div>
-
-      <!-- Logotipo Central IEF Comparation con Anillo de Energía -->
-      <div class="splash-logo-container">
+    <div class="splash-hero-stage">
+      <!-- El Círculo Principal con el Logo IEF Comparation (Aparece primero como banner principal y luego se encoge) -->
+      <div id="splashLogoCircle" class="splash-logo-circle">
         <div class="splash-energy-ring"></div>
         <div class="splash-pulse-glow"></div>
-        <img src="/ief_comparation_logo.jpg" alt="IEF Comparation" class="splash-team-logo" />
+        <img src="/ief_comparation_logo.jpg" alt="IEF Comparation" class="splash-team-logo" width="128" height="128" style="border-radius: 50%; object-fit: cover;" />
       </div>
 
-      <!-- Títulos y Misión -->
-      <div class="splash-titles">
-        <h1 class="splash-title">IEF COMPARATION</h1>
-        <p class="splash-subtitle">Planetary Terrain & Cavity Comparison Engine • Earth / Moon / Mars</p>
-      </div>
-
-      <!-- Barra de Carga Dinámica y Mensajes de Subsistemas -->
-      <div class="splash-loader-wrapper">
-        <div class="splash-progress-track">
-          <div id="splashProgressBar" class="splash-progress-fill"></div>
+      <!-- Contenedor que se despliega suavemente cuando el círculo se encoge -->
+      <div id="splashExpandableDetails" class="splash-expandable-details">
+        <!-- Distintivo NASA Space Apps Challenge -->
+        <div class="splash-nasa-header">
+          <img src="/nasa_space_apps_logo.png" alt="NASA Space Apps Challenge" class="splash-nasa-logo" height="22" style="height: 22px; width: auto;" />
+          <span class="splash-edition-tag">NASA SPACE APPS CHALLENGE 2026</span>
         </div>
-        <div class="splash-status-row">
-          <span id="splashStatusText" class="splash-status-text">Inicializando subsistemas orbitales...</span>
-          <span id="splashProgressPct" class="splash-progress-pct">0%</span>
-        </div>
-      </div>
 
-      <div class="splash-skip-hint">
-        <span>Haz clic en cualquier parte o pulsa Espacio para omitir</span>
+        <!-- Títulos y Misión -->
+        <div class="splash-titles">
+          <h1 class="splash-title">IEF COMPARATION</h1>
+          <p class="splash-subtitle">Planetary Terrain & Cavity Comparison Engine • Earth / Moon / Mars</p>
+        </div>
+
+        <!-- Barra de Carga Proporcional en Tiempo Real -->
+        <div class="splash-loader-wrapper">
+          <div class="splash-progress-track">
+            <div id="splashProgressBar" class="splash-progress-fill"></div>
+          </div>
+          <div class="splash-status-row">
+            <span id="splashStatusText" class="splash-status-text">Inicializando subsistemas orbitales...</span>
+            <span id="splashProgressPct" class="splash-progress-pct">0%</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -79,12 +211,12 @@
   <header class="top-nav">
     <div class="nav-left">
       <div class="brand-logo" title="IEF Comparation - NASA Space Apps Challenge 2026">
-        <img src="/ief_comparation_logo.jpg" alt="IEF Comparation" class="brand-team-logo" />
+        <img src="/ief_comparation_logo.jpg" alt="IEF Comparation" class="brand-team-logo" width="36" height="36" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" />
         <div class="brand-text-group">
           <span class="brand-name">IEF Comparation</span>
           <span class="brand-badge">NASA SPACE APPS 2026</span>
         </div>
-        <img src="/nasa_space_apps_logo.png" alt="NASA Space Apps" class="brand-nasa-logo" />
+        <img src="/nasa_space_apps_logo.png" alt="NASA Space Apps" class="brand-nasa-logo" height="22" style="height: 22px; width: auto;" />
       </div>
 
       <nav class="nav-tabs">
