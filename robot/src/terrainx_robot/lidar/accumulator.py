@@ -9,6 +9,14 @@ Qué hace
     o con frame_id / resolución distintos del primero: mezclar marcos de
     referencia distintos produciría una nube geométricamente falsa.
 
+Rendimiento (importa: add() corre en el bucle asyncio de la conexión WebRTC)
+    Los duplicados se quitan frame a frame: cada celda se resume en un único
+    int64 y se busca en un array ordenado de celdas ya vistas. Antes se juntaban
+    todos los puntos y se deduplicaba al final con np.unique(axis=0): con Pluffy,
+    15 s de captura = 5,4 M puntos → 14 s con el bucle congelado al pulsar
+    «Detener y guardar», y el Go2 cortaba la conexión. Ahora result() solo
+    concatena lo ya deduplicado. El resultado es el mismo (primera aparición).
+
 Unidades: metros (asumidos, ver voxel_codec).
 Errores: PointCloudTooLarge si la nube final supera el máximo.
 """
@@ -32,6 +40,21 @@ from .validation import (
 )
 
 CaptureMode = Literal["accumulate", "last"]
+
+# Índice de celda (i, j, k) → un int64: 21 bits por eje con desplazamiento, |índice| < 2^20.
+# Con 0,05 m y coordenadas ≤ 1000 m (validation) el índice llega a 20 000: cabe de sobra.
+_KEY_BITS = 21
+_KEY_OFFSET = 1 << (_KEY_BITS - 1)
+
+
+def _cell_keys(points: np.ndarray, res: float) -> np.ndarray | None:
+    """Clave int64 de la celda de cada punto (round(p / res), la misma regla de siempre).
+    None si algún índice no cabe en 21 bits (entonces se usa el camino antiguo)."""
+    idx = np.rint(points / res).astype(np.int64)
+    if idx.size and int(np.abs(idx).max()) >= _KEY_OFFSET:
+        return None
+    u = idx + _KEY_OFFSET
+    return (u[:, 0] << (2 * _KEY_BITS)) | (u[:, 1] << _KEY_BITS) | u[:, 2]
 
 
 @dataclass
@@ -67,7 +90,13 @@ class CaptureAccumulator:
         self.max_points = max_points
         self.max_abs_coord_m = max_abs_coord_m
         self._chunks: list[np.ndarray] = []
-        self._raw_count = 0
+        self._raw_count = 0            # puntos guardados en _chunks
+        self._points_in = 0            # puntos válidos recibidos (antes de quitar duplicados)
+        # Deduplicación incremental (modo accumulate con resolución): claves ya vistas, ordenadas.
+        # Si una captura no la admite (sin resolución o índices enormes), se usa la deduplicación
+        # al final de siempre y _incremental pasa a False para el resto de la captura.
+        self._seen_keys = np.empty(0, dtype=np.int64)
+        self._incremental = True
         self.frames_received = 0
         self.frames_used = 0
         self._reasons: Counter[str] = Counter()
@@ -114,27 +143,59 @@ class CaptureAccumulator:
             self._first = frame.info
         self._last = frame.info
         self.frames_used += 1
+        self._points_in += clean.shape[0]
         if self.mode == "last":
             self._chunks = [clean]
             self._raw_count = clean.shape[0]
+            return True
+        if self._incremental and self._add_new_cells(clean):
+            return True
+        self._incremental = False
+        self._chunks.append(clean)
+        self._raw_count += clean.shape[0]
+        if self._raw_count > 2 * self.max_points:
+            self._compact()
+        return True
+
+    def _add_new_cells(self, clean: np.ndarray) -> bool:
+        """Guarda solo los puntos de celdas no vistas (primera aparición, en orden de llegada).
+        False si no se puede (sin resolución o índices fuera de rango)."""
+        res = self._first.resolution if self._first else None
+        keys = _cell_keys(clean, res) if res else None
+        if keys is None:
+            return False
+        uniq, first = np.unique(keys, return_index=True)   # 1-D: rápido (≈ 50 k claves por mapa)
+        seen = self._seen_keys
+        if seen.size:
+            pos = np.searchsorted(seen, uniq)
+            known = pos < seen.size
+            known[known] = seen[pos[known]] == uniq[known]
+            uniq, first, pos = uniq[~known], first[~known], pos[~known]
         else:
-            self._chunks.append(clean)
-            self._raw_count += clean.shape[0]
-            if self._raw_count > 2 * self.max_points:
-                self._compact()
+            pos = np.zeros(uniq.size, dtype=np.intp)
+        if uniq.size:
+            self._seen_keys = np.insert(seen, pos, uniq)    # sigue ordenado
+            new_points = clean[np.sort(first)]
+            self._chunks.append(new_points)
+            self._raw_count += new_points.shape[0]
         return True
 
     # ----------------------------------------------------------------- salida
+    def _rule(self) -> str:
+        res = self._first.resolution if self._first else None
+        if res:
+            return f"un punto por celda de {res} m (round(p / resolution)); se conserva la primera aparición"
+        return "eliminación de coordenadas idénticas"
+
     def _dedupe(self, points: np.ndarray) -> tuple[np.ndarray, dict]:
         res = self._first.resolution if self._first else None
         if points.shape[0] == 0:
             return points, {"rule": "none", "removed": 0}
+        rule = self._rule()
         if res:
             keys = np.rint(points / res).astype(np.int64)
-            rule = f"un punto por celda de {res} m (round(p / resolution)); se conserva la primera aparición"
         else:
             keys = points
-            rule = "eliminación de coordenadas idénticas"
         _, first_idx = np.unique(keys, axis=0, return_index=True)
         first_idx.sort()
         unique = points[first_idx]
@@ -151,11 +212,17 @@ class CaptureAccumulator:
             merged = np.concatenate(self._chunks, axis=0)
         else:
             merged = np.empty((0, 3), dtype=np.float64)
-        total_before = int(merged.shape[0])
-        if self.mode == "accumulate":
-            points, dedup = self._dedupe(merged)
-        else:
+        if self.mode == "last":
             points, dedup = merged, {"rule": "none (modo last)", "removed": 0}
+            total_before = int(merged.shape[0])
+        else:
+            if self._incremental:   # ya deduplicado frame a frame: solo se junta
+                points = merged
+            else:
+                points, _ = self._dedupe(merged)
+            total_before = self._points_in
+            dedup = {"rule": self._rule() if total_before else "none",
+                     "removed": int(total_before - points.shape[0])}
         if points.shape[0] > self.max_points:
             raise PointCloudTooLarge(
                 f"la nube acumulada tiene {points.shape[0]} puntos (máximo {self.max_points})"

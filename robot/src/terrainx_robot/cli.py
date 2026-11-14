@@ -57,20 +57,38 @@ def _setup_console() -> None:
             pass
 
 
+class _LibraryNoiseFilter(logging.Filter):
+    """unitree_webrtc_connect escribe CADA mensaje del canal (con su contenido) en el logger
+    raíz a nivel INFO: 1,8 GB de log en una tarde, escritos desde el bucle de la conexión.
+    Se descartan solo esas líneas; las de conexión (offer, canal abierto/cerrado,
+    validación) y todo lo que sea WARNING o más se conservan."""
+
+    NOISE = ("Received message on data channel", "> message sent", "Heartbeat response",
+             "Network status message")
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.name != "root" or record.levelno > logging.INFO:
+            return True
+        return not (isinstance(record.msg, str) and record.msg.startswith(self.NOISE))
+
+
 def _setup_logging(data_dir: Path, verbose: bool) -> None:
     root = logging.getLogger()
     root.setLevel(logging.INFO)
     for handler in list(root.handlers):
         root.removeHandler(handler)
+    noise = _LibraryNoiseFilter()
     console = logging.StreamHandler(sys.stderr)
     console.setLevel(logging.INFO if verbose else logging.WARNING)
     console.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
+    console.addFilter(noise)
     root.addHandler(console)
     try:
         (data_dir / "logs").mkdir(parents=True, exist_ok=True)
         file_handler = logging.FileHandler(data_dir / "logs" / "terrainx_robot.log", encoding="utf-8")
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        file_handler.addFilter(noise)
         root.addHandler(file_handler)
     except OSError as exc:
         print(f"Aviso: no se pudo abrir el log en {data_dir}: {exc}", file=sys.stderr)
