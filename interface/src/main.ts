@@ -14,12 +14,98 @@ let miniMoon: MiniPlanetViewer;
 let miniMars: MiniPlanetViewer;
 let map2DManager: AnalogMap2DManager;
 
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
+  setupIntroSplashScreen();
   initBabylonScenes();
   init2DMapManager();
   setupUIEventListeners();
   updateLiveTelemetry(0.0000, 0.0000);
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
+
+/**
+ * Pantalla de inicio / Splash Screen cinemática con el logo de IEF Comparation y NASA Space Apps
+ */
+function setupIntroSplashScreen() {
+  const splash = document.getElementById('introSplashScreen');
+  const progressBar = document.getElementById('splashProgressBar');
+  const statusText = document.getElementById('splashStatusText');
+  const progressPct = document.getElementById('splashProgressPct');
+  if (!splash) return;
+
+  let progress = 0;
+  let isClosed = false;
+
+  const messages = [
+    { at: 10, text: 'Iniciando subsistemas orbitales BabylonJS...' },
+    { at: 35, text: 'Conectando con NASA Earth & Space Data APIs...' },
+    { at: 65, text: 'Cargando catálogos de análogos lunares y marcianos...' },
+    { at: 88, text: 'Calibrando modelos geomorfométricos IEF Comparation...' },
+    { at: 100, text: 'Sistemas listos • Iniciando misión' }
+  ];
+
+  const updateProgress = (target: number, duration: number, callback?: () => void) => {
+    const start = progress;
+    const startTime = performance.now();
+
+    function step(currentTime: number) {
+      if (isClosed) return;
+      const elapsed = currentTime - startTime;
+      const fraction = Math.min(1, elapsed / duration);
+      progress = start + (target - start) * fraction;
+
+      if (progressBar) progressBar.style.width = `${progress}%`;
+      if (progressPct) progressPct.textContent = `${Math.round(progress)}%`;
+
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (progress >= messages[i].at) {
+          if (statusText) statusText.textContent = messages[i].text;
+          break;
+        }
+      }
+
+      if (fraction < 1) {
+        requestAnimationFrame(step);
+      } else {
+        if (callback) callback();
+      }
+    }
+
+    requestAnimationFrame(step);
+  };
+
+  const closeSplash = () => {
+    if (isClosed) return;
+    isClosed = true;
+    splash.classList.add('fade-out');
+    setTimeout(() => {
+      splash.style.display = 'none';
+      splash.remove();
+    }, 750);
+  };
+
+  // Animar avance fluido de la barra hasta 100% en aproximadamente 1.8 segundos
+  updateProgress(40, 550, () => {
+    updateProgress(80, 650, () => {
+      updateProgress(100, 450, () => {
+        setTimeout(closeSplash, 350);
+      });
+    });
+  });
+
+  // Omitir inmediatamente al hacer clic o pulsar tecla
+  splash.addEventListener('click', closeSplash);
+  window.addEventListener('keydown', (e) => {
+    if (!isClosed && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) {
+      closeSplash();
+    }
+  }, { once: true });
+}
 
 /**
  * Inicialización de las escenas 3D fotorrealistas en BabylonJS
