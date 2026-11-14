@@ -98,7 +98,7 @@
           <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
         </svg>
       </button>
-      <button class="tool-btn active" id="btnRandomTarget" title="Generar coordenadas aleatorias y enfocar Tierra">
+      <button class="tool-btn active" id="btnRandomTarget" title="Generar coordenadas aleatorias y sumergirse en la Tierra">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="22" y1="12" x2="18" y2="12"></line>
@@ -130,7 +130,7 @@
     </div>
 
     <!-- TARJETA IZQUIERDA: MOON -->
-    <aside class="planet-card" id="moonCard" style="cursor:pointer;" title="Haz clic para seleccionar la Luna y generar análogo en la Tierra">
+    <aside class="planet-card" id="moonCard" style="cursor:pointer;" title="Haz clic para seleccionar la Luna y descender a su análogo en la Tierra">
       <div class="card-header">
         <div class="card-title-group">
           <div class="card-badge-icon" style="background:rgba(203, 213, 225, 0.15);">
@@ -146,7 +146,7 @@
         <button class="card-more-btn" title="Opciones">•••</button>
       </div>
 
-      <!-- Visor 3D Miniatura de la Luna -->
+      <!-- Visor 3D Miniatura Fotorrealista de la Luna -->
       <div class="mini-planet-viewport">
         <button class="viewport-arrow arrow-left" title="Rotar izquierda">‹</button>
         <canvas id="miniMoonCanvas" class="miniCanvas"></canvas>
@@ -241,7 +241,7 @@
     </aside>
 
     <!-- TARJETA DERECHA: MARS -->
-    <aside class="planet-card" id="marsCard" style="cursor:pointer;" title="Haz clic para seleccionar Marte y generar análogo en la Tierra">
+    <aside class="planet-card" id="marsCard" style="cursor:pointer;" title="Haz clic para seleccionar Marte y descender a su análogo en la Tierra">
       <div class="card-header">
         <div class="card-title-group">
           <div class="card-badge-icon" style="background:rgba(249, 115, 22, 0.2);">
@@ -257,7 +257,7 @@
         <button class="card-more-btn" title="Opciones">•••</button>
       </div>
 
-      <!-- Visor 3D Miniatura de Marte -->
+      <!-- Visor 3D Miniatura Fotorrealista de Marte -->
       <div class="mini-planet-viewport">
         <button class="viewport-arrow arrow-left" title="Rotar izquierda">‹</button>
         <canvas id="miniMarsCanvas" class="miniCanvas"></canvas>
@@ -370,7 +370,52 @@
     </div>
   </main>
 
-  <!-- 4. Dock Inferior de Comparación Planetaria -->
+  <!-- 4. Capa de Transición Cinematográfica: Inmersión Atmosférica -->
+  <div id="atmosphericTransitionOverlay" class="atmospheric-overlay hidden">
+    <div class="reentry-vapor-layer"></div>
+    <div class="reentry-hud-status">
+      <div class="hud-scan-line"></div>
+      <span class="hud-tag">DESCENSO ATMOSFÉRICO EN CURSO</span>
+      <h3 class="hud-dive-title">PENETRANDO ESTRATOSFERA TERRESTRE</h3>
+      <p class="hud-altitude">ALTITUD: <span class="alt-counter">12,400 M</span> • PRECISIÓN SATELITAL ACTIVA</p>
+    </div>
+  </div>
+
+  <!-- 5. Contenedor de Cartografía 2D Satelital de Alta Resolución -->
+  <section id="map2dContainer" class="map2d-wrapper hidden">
+    <!-- Barra HUD superior del mapa 2D -->
+    <div class="map2d-hud-header">
+      <div class="map-hud-left">
+        <span id="mapTargetBadge" class="map-hud-badge">ANALOG SITE</span>
+        <div class="map-title-block">
+          <h2 id="mapSiteTitle">Cargando análogo...</h2>
+          <p id="mapSiteCoords">0.0000° N, 0.0000° E</p>
+        </div>
+      </div>
+
+      <div class="map-hud-center">
+        <div class="score-chip">
+          <span class="score-label">Fidelidad de Terreno</span>
+          <span class="score-value" id="mapSiteScore">94%</span>
+        </div>
+      </div>
+
+      <div class="map-hud-right">
+        <button id="btnReturnToOrbit" class="orbit-return-btn" title="Ascender a órbita espacial">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="19" x2="12" y2="5"></line>
+            <polyline points="5 12 12 5 19 12"></polyline>
+          </svg>
+          <span>Regresar a Órbita (3D)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Lienzo del mapa interactivo Leaflet -->
+    <div id="leafletMap" class="leaflet-map-view"></div>
+  </section>
+
+  <!-- 6. Dock Inferior de Comparación Planetaria -->
   <footer class="bottom-dock">
     <div class="dock-left">
       <div class="dock-badge-icon">
@@ -460,4 +505,3 @@
   <script type="module" src="./src/main.ts"></script>
 </body>
 </html>
-

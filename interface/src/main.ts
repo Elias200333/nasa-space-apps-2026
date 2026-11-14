@@ -1,7 +1,8 @@
 import './styles.css';
 import { EarthSceneManager } from './babylon/earthScene';
 import { MiniPlanetViewer } from './babylon/miniPlanets';
-import { generateRandomAnalogCoordinates, PLANET_METRICS, ANALOG_DATABASE } from './data/analogs';
+import { AnalogMap2DManager } from './map/analogMap2D';
+import { generateRandomAnalogCoordinates, PLANET_METRICS } from './data/analogs';
 import { sound } from './audio';
 import { CelestialBody, AnalogSite } from './types';
 
@@ -11,22 +12,23 @@ let currentSelectedSite: AnalogSite | null = null;
 let earthScene: EarthSceneManager;
 let miniMoon: MiniPlanetViewer;
 let miniMars: MiniPlanetViewer;
+let map2DManager: AnalogMap2DManager;
 
 document.addEventListener('DOMContentLoaded', () => {
   initBabylonScenes();
+  init2DMapManager();
   setupUIEventListeners();
   updateLiveTelemetry(0.0000, 0.0000);
 });
 
 /**
- * Inicialización de las escenas 3D en BabylonJS
+ * Inicialización de las escenas 3D fotorrealistas en BabylonJS
  */
 function initBabylonScenes() {
   const earthCanvas = document.getElementById('earthCanvas') as HTMLCanvasElement;
   if (earthCanvas) {
     earthScene = new EarthSceneManager(earthCanvas);
     earthScene.onCoordinatesChange = (lat, lon) => {
-      // Actualizar lectura de HUD en tiempo real
       const latDir = lat >= 0 ? 'N' : 'S';
       const lonDir = lon >= 0 ? 'E' : 'W';
       const coordsText = `${Math.abs(lat).toFixed(4)}° ${latDir}, ${Math.abs(lon).toFixed(4)}° ${lonDir}`;
@@ -37,7 +39,7 @@ function initBabylonScenes() {
     };
   }
 
-  // Miniaturas 3D en tarjetas
+  // Miniaturas 3D fotorrealistas en tarjetas laterales
   const miniMoonCanvas = document.getElementById('miniMoonCanvas') as HTMLCanvasElement;
   if (miniMoonCanvas) {
     miniMoon = new MiniPlanetViewer(miniMoonCanvas, 'Moon');
@@ -46,6 +48,37 @@ function initBabylonScenes() {
   const miniMarsCanvas = document.getElementById('miniMarsCanvas') as HTMLCanvasElement;
   if (miniMarsCanvas) {
     miniMars = new MiniPlanetViewer(miniMarsCanvas, 'Mars');
+  }
+}
+
+/**
+ * Inicialización del gestor de cartografía satelital 2D y transición
+ */
+function init2DMapManager() {
+  map2DManager = new AnalogMap2DManager('map2dContainer', 'atmosphericTransitionOverlay');
+
+  // Callback cuando el usuario pulsa "Regresar a Órbita Espacial" desde el mapa 2D
+  map2DManager.setOnReturnToOrbit(() => {
+    earthScene.ascendToOrbit(1400);
+    // Restablecer selector a Tierra
+    document.querySelectorAll('.selector-option').forEach(el => {
+      el.classList.remove('active', 'mars-active');
+      if (el.getAttribute('data-target') === 'Earth') {
+        el.classList.add('active');
+      }
+    });
+    const moonCard = document.getElementById('moonCard');
+    const marsCard = document.getElementById('marsCard');
+    moonCard?.classList.remove('card-selected');
+    marsCard?.classList.remove('card-selected', 'mars-selected');
+    hideTargetCard();
+  });
+
+  const btnReturnToOrbit = document.getElementById('btnReturnToOrbit');
+  if (btnReturnToOrbit) {
+    btnReturnToOrbit.addEventListener('click', () => {
+      map2DManager.returnToSpaceOrbit();
+    });
   }
 }
 
@@ -63,11 +96,10 @@ function setupUIEventListeners() {
     });
   });
 
-  // 2. Clic en las tarjetas laterales completas o botones de acción
+  // 2. Clic en las tarjetas laterales completas
   const moonCard = document.getElementById('moonCard');
   if (moonCard) {
     moonCard.addEventListener('click', (e) => {
-      // Evitar doble disparo si se hace clic en subpestañas
       if ((e.target as HTMLElement).closest('.card-subtabs')) return;
       selectCelestialTarget('Moon');
     });
@@ -81,7 +113,7 @@ function setupUIEventListeners() {
     });
   }
 
-  // 3. Botones de acción "Compare with Earth"
+  // 3. Botones "Compare with Earth"
   const moonActionBtn = document.getElementById('moonActionBtn');
   if (moonActionBtn) {
     moonActionBtn.addEventListener('click', (e) => {
@@ -111,9 +143,8 @@ function setupUIEventListeners() {
   const btnRandomTarget = document.getElementById('btnRandomTarget');
   if (btnRandomTarget) {
     btnRandomTarget.addEventListener('click', () => {
-      // Generar nuevas coordenadas aleatorias según el modo actual o alternar
       const target: 'Moon' | 'Mars' = activeBody === 'Mars' ? 'Mars' : 'Moon';
-      generateAndFocusCoordinates(target);
+      generateAndDiveToAnalog(target);
     });
   }
 
@@ -141,19 +172,17 @@ function setupUIEventListeners() {
     });
   }
 
-  // 5. Pestañas de subcategoría dentro de las tarjetas (Overview, Terrain, Geology, Data)
+  // 5. Pestañas de subcategoría en las tarjetas
   setupCardSubtabs('moonCard', 'Moon');
   setupCardSubtabs('marsCard', 'Mars');
 }
 
 /**
- * Selecciona un cuerpo celeste (Moon o Mars) o restablece a Earth:
- * Genera coordenadas aleatorias en el código y anima la Tierra hacia ellas
+ * Selecciona un cuerpo celeste: Moon, Earth o Mars
  */
 export function selectCelestialTarget(body: CelestialBody) {
   activeBody = body;
 
-  // Actualizar selector visual superior
   document.querySelectorAll('.selector-option').forEach(el => {
     el.classList.remove('active', 'mars-active');
     if (el.getAttribute('data-target') === body) {
@@ -162,7 +191,6 @@ export function selectCelestialTarget(body: CelestialBody) {
     }
   });
 
-  // Resaltar tarjeta lateral correspondiente
   const moonCard = document.getElementById('moonCard');
   const marsCard = document.getElementById('marsCard');
   moonCard?.classList.remove('card-selected');
@@ -171,24 +199,26 @@ export function selectCelestialTarget(body: CelestialBody) {
   if (body === 'Moon') {
     moonCard?.classList.add('card-selected');
     miniMoon?.spinFast();
-    generateAndFocusCoordinates('Moon');
+    generateAndDiveToAnalog('Moon');
   } else if (body === 'Mars') {
     marsCard?.classList.add('card-selected', 'mars-selected');
     miniMars?.spinFast();
-    generateAndFocusCoordinates('Mars');
+    generateAndDiveToAnalog('Mars');
   } else {
-    // Si selecciona Earth, restablece la vista global
+    // Si pulsa Earth, regresa a la vista de órbita global
     earthScene.resetToGlobalView();
     hideTargetCard();
   }
 }
 
 /**
- * LÓGICA CLAVE SOLICITADA:
- * 1. Genera coordenadas aleatorias en el código para análogos terrestres de Luna o Marte
- * 2. La Tierra 3D en BabylonJS rota y se acerca suavemente a esas coordenadas generadas
+ * FLUJO COMPLETO SOLICITADO:
+ * 1. Genera coordenadas aleatorias en el código para el análogo planetario
+ * 2. La Tierra 3D en BabylonJS rota y desciende en picado a la atmósfera
+ * 3. Transición cinematográfica inmersiva (niebla, vapor y reentrada)
+ * 4. Carga de mapa satelital 2D de alta resolución de la zona seleccionada
  */
-function generateAndFocusCoordinates(body: 'Moon' | 'Mars') {
+function generateAndDiveToAnalog(body: 'Moon' | 'Mars') {
   // Generar coordenadas aleatorias en el código
   const result = generateRandomAnalogCoordinates(body);
   currentSelectedSite = result.site;
@@ -196,23 +226,17 @@ function generateAndFocusCoordinates(body: 'Moon' | 'Mars') {
   const lat = result.coordinates.latitude;
   const lon = result.coordinates.longitude;
 
-  // Efectos de sonido procedurales de cabina espacial
-  sound.playTargetLock();
-  setTimeout(() => sound.playWhoosh(), 200);
-
-  // Animación de cámara y baliza 3D en BabylonJS hacia las coordenadas generadas
-  earthScene.animateToCoordinates(lat, lon, 4.6, 2000);
-
-  // Mostrar tarjeta HUD con datos científicos del análogo
+  // Mostrar tarjeta HUD y aviso de coordenadas
   showTargetCard(result.site, body);
-
-  // Mostrar notificación toast de telemetría de fijación
   showTelemetryToast(result.site);
+
+  // Iniciar animación en BabylonJS con inmersión hacia la atmósfera
+  earthScene.animateToCoordinatesAndDive(lat, lon, () => {
+    // Cuando la cámara penetra en la atmósfera, disparar la transición al mapa 2D
+    map2DManager.triggerAtmosphericDive(result.site);
+  });
 }
 
-/**
- * Muestra el panel flotante HUD con la información del análogo seleccionado
- */
 function showTargetCard(site: AnalogSite, body: 'Moon' | 'Mars') {
   let card = document.getElementById('targetSiteCard');
   if (!card) {
@@ -245,11 +269,7 @@ function hideTargetCard() {
   }
 }
 
-/**
- * Notificación emergente temporal de telemetría
- */
 function showTelemetryToast(site: AnalogSite) {
-  // Eliminar toast anterior si existiera
   const oldToast = document.querySelector('.telemetry-toast');
   oldToast?.remove();
 
@@ -265,8 +285,8 @@ function showTelemetryToast(site: AnalogSite) {
       <circle cx="12" cy="12" r="3"></circle>
     </svg>
     <div class="toast-text">
-      <h5>ANÁLOGO DETECTADO [${site.target_body.toUpperCase()}]</h5>
-      <p>Coordenadas fijadas: ${site.coordinates.label}</p>
+      <h5>DESCENSO ATMOSFÉRICO A ANÁLOGO [${site.target_body.toUpperCase()}]</h5>
+      <p>Coordenadas: ${site.coordinates.label}</p>
     </div>
   `;
   document.body.appendChild(toast);
@@ -293,7 +313,6 @@ function setupCardSubtabs(cardId: string, body: 'Moon' | 'Mars') {
       sound.playClick(700);
 
       const tab = btn.getAttribute('data-tab');
-      // Actualizar texto explicativo o métricas dinámicamente si se desea
       const dominantEl = card.querySelector('.metric-val.dominant');
       if (dominantEl && tab === 'Geology') {
         dominantEl.textContent = body === 'Moon' ? 'Anortosita, basalto' : 'Óxidos, jarosita, basalto';
@@ -320,4 +339,3 @@ function toggleFullscreen() {
     document.exitFullscreen().catch(() => {});
   }
 }
-

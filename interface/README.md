@@ -1,135 +1,77 @@
 # TERRAIN-X | Prototipo de Interfaz 3D Planetaria (BabylonJS)
 **NASA Space Apps Challenge 2026**
 
-Bienvenido a la guía de inicio de **TERRAIN-X**. Esta interfaz permite comparar las características científicas y la morfología del terreno entre la **Luna**, **Marte** y sus **análogos geológicos terrestres** mediante un globo 3D interactivo construido con **BabylonJS**.
+Plataforma de visualización científica y comparación de terrenos planetarios (**Luna** / **Marte**) con análogos terrestres reales, construida con **BabylonJS** para la escena 3D y **Leaflet / Esri World Imagery** para la cartografía satelital 2D de alta resolución.
 
 ---
 
-## 🚀 ¿Qué hace este prototipo?
+## 🌟 Novedades y Mejoras Implementadas
 
-1. **Diseño Visual de Misión Aeroespacial**: Réplica fiel con estética *glassmorphism*, temas oscuros de espacio profundo, lecturas telemétricas en tiempo real y tipografía de precisión.
-2. **Selector Planetario Dinámico**: Permite elegir entre **Luna** o **Marte** (desde las tarjetas laterales o el selector superior).
-3. **Generación Aleatoria de Coordenadas**: Al seleccionar un destino, el sistema genera coordenadas geográficas aleatorias en tiempo real correspondientes a zonas análogas científicas (p. ej. *Tubos de lava de Lanzarote*, *Desierto de Atacama*, *Craters of the Moon*, *Isla Devon*, etc.).
-4. **Cinemática de Cámara 3D y Baliza Holográfica**:
-   - La Tierra 3D rota y aproxima la cámara orbital suavemente (*CubicEase*) hacia el punto geográfico generado.
-   - Proyecta una baliza holográfica luminosa (*Target Pin*) con anillos de pulso sobre la superficie terrestre en esas coordenadas.
-   - Despliega una tarjeta flotante HUD con el nombre del análogo, país, coordenadas formateadas, porcentaje de similitud y justificación geológica.
-5. **Efectos de Sonido Procedurales (Web Audio API)**: Emite avisos de fijación de blanco de radar (*lock-on*) y efecto de aproximación atmosférica (*whoosh*) sin necesidad de descargar archivos de audio externos.
+### 1. Espacio Profundo Fotorrealista (Deep Space)
+- **Cúpula estelar cósmica de 360°**: Incluye la banda de la Vía Láctea, nebulosas de gas interestelar con sutiles gradientes de color (azul, cian, púrpura) y miles de estrellas de diversas magnitudes astronómicas.
+- **Sistema de partículas estelares 3D**: Estrellas tridimensionales independientes que proporcionan un auténtico efecto de **paralaje** al orbitar con la cámara.
+
+### 2. Planetas con Texturas Fotorrealistas de la NASA
+- **Tierra Fotorrealista**:
+  - Textura difusa en alta definición de **NASA Blue Marble**.
+  - **Mapa de normales (*Normal Bump Map*)**: Relieve real visible en cordilleras y montañas (Himalaya, Andes, Rocosas).
+  - **Mapa especular (*Specular Ocean Map*)**: Los océanos reflejan intensamente la luz solar directa mientras que los continentes permanecen mate.
+  - **Luces nocturnas de ciudades (*Earth Night Lights*)**: Visibles en el hemisferio nocturno en sombra.
+  - **Capa de nubes independiente**: Gira a velocidad orbital propia con canales de transparencia y sombra suave.
+  - **Atmósfera con dispersión de Rayleigh (*Fresnel Glow*)**: Brillo azul celeste concentrado en el borde del horizonte planetario.
+- **Luna**: Superficie fotorrealista basada en la sonda LRO (*Lunar Reconnaissance Orbiter*) con sombras profundas en cráteres y mares de basalto.
+- **Marte**: Textura global con relieve del cráter Olympus Mons, casquetes de hielo polar y la falla de Valles Marineris.
+
+### 3. Inmersión Atmosférica y Transición a Mapa 2D
+- **Zambullida Cinematográfica**: Al elegir Luna o Marte, el sistema genera coordenadas aleatorias de análogos geológicos y la cámara orbital acelera en picado penetrando la atmósfera.
+- **Efecto de Reentrada**: Fricción de aire, estelas de vapor nuboso a alta velocidad, telemetría de altitud en tiempo real y sonido de zambullida (*whoosh*).
+- **Cartografía Satelital 2D de Alta Definición**:
+  - Al cruzar las nubes, la vista se disuelve suavemente en un **mapa satelital interactivo 2D** centrado exactamente en las coordenadas generadas.
+  - Provisto por **Esri World Imagery** (imágenes satelitales reales de alta resolución para geología y terreno).
+  - Baliza de radar pulsante georreferenciada sobre el análogo terrestre con ficha técnica del terreno.
+  - Botón flotante **`🚀 Regresar a Órbita (3D)`**: Permite ascender de nuevo a través de las nubes y volver a la vista orbital en el espacio.
 
 ---
 
-## 🛠️ Requisitos Previos
+## 🚀 Arranque Rápido para Principiantes
 
-Solo necesitas tener instalado **Node.js** (versión 18 o superior):
-- Puedes comprobar si lo tienes abriendo tu terminal y escribiendo:
-  ```bash
-  node -v
-  npm -v
-  ```
-- Si no lo tienes instalado, descárgalo gratis desde [nodejs.org](https://nodejs.org/).
-
----
-
-## 📦 Instalación y Ejecución Paso a Paso
-
-Abre tu terminal (PowerShell en Windows o Bash en macOS/Linux) y sitúate dentro de esta carpeta:
-
+Sitúate en la terminal dentro de esta carpeta:
 ```bash
 cd "C:\Users\Elias Méndez\Desktop\github\nasa-space-apps-2026\interface"
 ```
 
-### 1. Instalar dependencias
-*(Solo la primera vez)*:
-```bash
-npm install
-```
-
-### 2. Iniciar el servidor de desarrollo
+### 1. Iniciar servidor de desarrollo
 ```bash
 npm run dev
 ```
 
-La consola te mostrará una dirección local similar a:
-```text
-  VITE v5.4.10  ready in 320 ms
-
-  ➜  Local:   http://localhost:3000/
-  ➜  Network: use --host to expose
-```
-
-Abre tu navegador (Chrome, Edge, Firefox, Brave) y entra en:
+Abre en tu navegador:  
 👉 **[http://localhost:3000](http://localhost:3000)**
 
 ---
 
-## 🧪 Ejecución de Tests Automatizados
+## 🧪 Tests y Validación
 
-Hemos incluido pruebas unitarias con **Vitest** que validan la matemática esférica de BabylonJS y el generador de coordenadas:
-
+Para ejecutar las pruebas unitarias automatizadas con **Vitest**:
 ```bash
 npm test
 ```
 
-Salida esperada:
-```text
- ✓ tests/coordinates.test.ts (8 tests)
- Test Files  1 passed (1)
-      Tests  8 passed (8)
-```
-
----
-
-## 🏗️ Construcción para Producción
-
-Para compilar la aplicación optimizada y minificada en la carpeta `dist/`:
+Para generar la compilación de producción optimizada:
 ```bash
 npm run build
 ```
 
-Para previsualizar el bundle de producción:
-```bash
-npm run preview
-```
-
 ---
 
-## 📂 Estructura de Archivos del Proyecto
+## 🎮 Controles y Navegación
 
-```text
-nasa-space-apps-2026/interface/
-├── index.html                 # Estructura visual del panel (HUD, tarjetas, canvas)
-├── package.json               # Configuración de dependencias y scripts
-├── tsconfig.json              # Configuración de TypeScript
-├── vite.config.ts             # Configuración del servidor de desarrollo Vite
-├── README.md                  # Esta documentación en español
-├── tests/
-│   └── coordinates.test.ts    # Tests unitarios (Vitest)
-└── src/
-    ├── main.ts                # Controlador principal y gestión de eventos de la UI
-    ├── styles.css             # Estilos glassmorphism, HUD y efectos de iluminación
-    ├── types.ts               # Contratos y tipos de datos TypeScript (v1.0)
-    ├── audio.ts               # Sintetizador de audio procedural (Web Audio API)
-    ├── data/
-    │   └── analogs.ts         # Catálogo de análogos terrestres NASA/ESA y generador
-    └── babylon/
-        ├── earthScene.ts      # Escena 3D de la Tierra, atmósfera, cámara y animación
-        ├── miniPlanets.ts     # Visores 3D interactivos de las tarjetas de Luna y Marte
-        ├── targetPin.ts       # Baliza holográfica y cálculo lat/lon a Vector3
-        └── textureGenerator.ts # Generador procedural de texturas de alta resolución
-```
-
----
-
-## 🎮 Controles de la Interfaz
-
-| Elemento | Acción |
+| Control | Descripción |
 | :--- | :--- |
-| **Tarjeta "Moon" o Selector "Moon"** | Genera coordenadas para análogo lunar y acerca la Tierra a esa posición. |
-| **Tarjeta "Mars" o Selector "Mars"** | Genera coordenadas para análogo marciano y acerca la Tierra a esa posición. |
-| **Arrastrar ratón sobre la Tierra** | Rota libremente la órbita de la cámara 3D alrededor del planeta. |
-| **Rueda del ratón** | Zoom dinámico continuo hacia o desde la superficie. |
-| **Botón de Mira Telescópica (HUD)** | Genera un nuevo conjunto de coordenadas aleatorias al instante. |
-| **Botón Flecha Superior (HUD)** | Restablece la vista orbital global de la Tierra. |
-| **Botones `+` / `-` (HUD)** | Zoom incremental rápido. |
-| **Botón Cuadrado (HUD)** | Alterna el modo Pantalla Completa (*Fullscreen*). |
-| **Subpestañas de tarjeta (Overview, Terrain, Geology, Data)** | Alterna entre los bloques de análisis geológico del cuerpo celeste. |
+| **Tarjeta "Moon" o Selector "Moon"** | Genera coordenadas para análogo lunar y realiza la inmersión al mapa 2D. |
+| **Tarjeta "Mars" o Selector "Mars"** | Genera coordenadas para análogo marciano e inicia el descenso al mapa 2D. |
+| **Arrastrar ratón sobre la Tierra 3D** | Rota libremente la órbita de la cámara alrededor del globo y el espacio exterior. |
+| **Rueda del ratón** | Control continuo de zoom orbital. |
+| **Botón "Regresar a Órbita (3D)"** | Asciende desde el mapa satelital 2D de vuelta a la vista 3D en el espacio profundo. |
+| **Botón de Mira Telescópica (HUD)** | Genera nuevas coordenadas aleatorias y vuelve a zambullirse en la Tierra. |
+| **Botón Flecha (HUD)** | Restablece la vista orbital global. |
