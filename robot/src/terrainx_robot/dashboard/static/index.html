@@ -59,6 +59,13 @@
         <div class="key" data-k="s">S<small>retrocede</small></div>
         <div class="key" data-k="d">D<small>gira der.</small></div>
       </div>
+      <div class="speed">
+        <span>Velocidad:</span>
+        <button class="sbtn" data-level="lento">Lento</button>
+        <button class="sbtn" data-level="normal">Normal</button>
+        <button class="sbtn" data-level="rapido">Rápido</button>
+      </div>
+      <p class="note" id="speed-now">—</p>
       <div class="ctrl-extra">
         <span>Lateral: <b>Q</b>/<b>E</b> · Parar: <b>Espacio</b></span>
         <div class="postures">
@@ -73,13 +80,9 @@
 
     <!-- LIDAR 3D -->
     <section class="panel lidar">
-      <h2>LiDAR 3D <span id="lidar-badge" class="badge">—</span></h2>
+      <h2>LiDAR 3D · mapa SLAM <span id="lidar-badge" class="badge">—</span></h2>
       <div id="lidar-canvas"></div>
-      <div class="cam-meta">
-        <span id="lidar-count">0 puntos</span> ·
-        <label><input type="checkbox" id="lidar-auto" checked /> actualizar auto</label>
-        <button id="lidar-refresh" class="secondary small">Actualizar</button>
-      </div>
+      <div class="cam-meta"><span id="lidar-count">sin datos</span> · arrastrar = girar · rueda = zoom</div>
       <p class="note" id="lidar-note">Vóxeles ocupados del mapa del robot (no retornos crudos). Ejes en metros (asumido).</p>
     </section>
 
@@ -127,8 +130,12 @@
     </section>
   </main>
 
-  <script src="/static/vendor/three.min.js"></script>
-  <script src="/static/vendor/OrbitControls.js"></script>
+  <!-- three.js r160 (MIT, vendor/THREE_LICENSE): el visor LiDAR usa API de r159+ -->
+  <script type="importmap">
+    { "imports": { "three": "/static/vendor/three.module.min.js",
+                   "three/addons/": "/static/vendor/addons/" } }
+  </script>
   <script src="/static/app.js"></script>
+  <script type="module" src="/static/lidar/lidarView.js"></script>
 </body>
 </html>

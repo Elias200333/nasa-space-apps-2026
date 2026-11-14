@@ -11,11 +11,14 @@ Seguridad
       que hay que habilitar explícitamente y que usa el guardián acotado.
     - La clave AES nunca se expone: el estado solo dice si está configurada.
     - Un único punto de conexión: no se abren conexiones paralelas al robot.
+    - El mapa SLAM acumulado solo LEE los mapas que ya llegan: no envía nada al robot.
 """
 
 from __future__ import annotations
 
 import logging
+import threading
+import time
 from typing import Any
 
 import numpy as np
@@ -24,12 +27,16 @@ from ..adapters.base import ConnectionFailed
 from ..adapters.go2_webrtc import MAX_VX_MS, MAX_VY_MS, MAX_YAW_RPS, Go2WebRTCAdapter
 from ..auth.aes_key_manager import DEFAULT_STORE, AesKeyManager
 from ..config import Settings
+from ..lidar.live_stream import raw_frame_fields
+from ..lidar.slam_map import SlamMap
 from ..models import CaptureState, ConnectionState, DeliveryMode, ScanContext
 from ..storage.scan_store import ScanStore
 
 log = logging.getLogger(__name__)
 
 LIVE_LIDAR_MAX_POINTS = 25_000  # tope para el visor en vivo (submuestreo)
+SLAM_INTERVAL_S = 0.5           # como mucho 2 mapas/s se suman al mapa acumulado
+SLAM_PACK_INTERVAL_S = 1.0      # como mucho 1 vez/s se reempaquetan los trozos cambiados
 
 
 class DashboardService:
@@ -48,6 +55,13 @@ class DashboardService:
         self._adapter: Go2WebRTCAdapter | None = None
         self.control_armed = False  # el operador confirmó el modo control
         self.last_error: str | None = None
+        # Mapa SLAM acumulado (DERIVADO). Sobrevive a reconexiones: el marco odom del
+        # perro sigue siendo el mismo mientras no se reinicie; «Borrar» empieza otro.
+        self.slam = SlamMap()
+        self.slam_errors = 0
+        self._slam_thread: threading.Thread | None = None
+        self._slam_stop = threading.Event()
+        self._slam_last_pack = 0.0
 
     # --------------------------------------------------------------- conexión
     @property
@@ -74,10 +88,12 @@ class DashboardService:
             self._adapter = None
             raise
         self._adapter = adapter
+        self._start_slam()
         return self.status()
 
     async def disconnect(self) -> dict[str, Any]:
         self.control_armed = False
+        self._stop_slam()
         if self._adapter is not None:
             try:
                 await self._adapter.disconnect()
@@ -122,6 +138,7 @@ class DashboardService:
                 topics=[t.model_dump(mode="json") for t in st.topics],
                 connection_info=self._adapter.connection_info,
             )
+        base["slam"] = dict(self.slam.meta(), errors=self.slam_errors, evidence_class="derived")
         return base
 
     # ------------------------------------------------------------------- vídeo
@@ -149,6 +166,61 @@ class DashboardService:
             "evidence_class": "robot_measured",
             "points": pts.reshape(-1).tolist(),  # x0,y0,z0,x1,y1,z1,...
         }
+
+    # ------------------------------------------------------- mapa SLAM acumulado
+    def slam_step(self, meta: dict, raw: bytes, *, pack: bool = True) -> bool:
+        """Suma un mapa del perro al acumulado (y, si ``pack``, reempaqueta lo cambiado)."""
+        fields = raw_frame_fields(meta)
+        if fields is None:
+            self.slam_errors += 1
+            return False
+        origin, resolution, src_size = fields
+        try:
+            self.slam.update_raw(raw, src_size, origin, resolution)
+            if pack:
+                self.slam.changed_frames()
+        except Exception as exc:  # un mapa raro no debe parar la acumulación
+            self.slam_errors += 1
+            log.warning("Mapa SLAM: mapa del robot descartado (%s)", exc)
+            return False
+        return True
+
+    def slam_reset(self) -> None:
+        self.slam.reset()
+
+    def _start_slam(self) -> None:
+        if self._slam_thread is not None and self._slam_thread.is_alive():
+            return
+        self._slam_stop = threading.Event()
+        self._slam_thread = threading.Thread(
+            target=self._slam_worker, args=(self._slam_stop,), name="terrainx-slam", daemon=True)
+        self._slam_thread.start()
+
+    def _stop_slam(self) -> None:
+        self._slam_stop.set()
+        thread, self._slam_thread = self._slam_thread, None
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=2)
+
+    def _slam_worker(self, stop: threading.Event) -> None:
+        """Hilo aparte: lee el último mapa que llegó (sin colas) y lo suma."""
+        last_seq = 0
+        while not stop.wait(SLAM_INTERVAL_S):
+            adapter = self._adapter
+            now = time.monotonic()
+            pack = now - self._slam_last_pack >= SLAM_PACK_INTERVAL_S
+            if pack:
+                self._slam_last_pack = now
+            seq, frame = (adapter.lidar_raw_seq, adapter.last_lidar_raw) if adapter else (last_seq, None)
+            if frame is None or seq == last_seq:
+                if pack:  # lo que quedara sin empaquetar del último mapa
+                    try:
+                        self.slam.changed_frames()
+                    except Exception as exc:
+                        log.warning("Mapa SLAM: no se pudo empaquetar (%s)", exc)
+                continue
+            last_seq = seq
+            self.slam_step(frame[0], frame[1], pack=pack)
 
     # ----------------------------------------------------------------- captura
     async def start_capture(self, mode: str = "accumulate", record_session: bool = False) -> dict[str, Any]:

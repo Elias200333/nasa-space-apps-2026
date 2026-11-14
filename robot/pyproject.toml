@@ -32,7 +32,7 @@ terrainx-robot = "terrainx_robot.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"terrainx_robot.dashboard" = ["static/*", "static/vendor/*"]
+"terrainx_robot.dashboard" = ["static/*", "static/lidar/*", "static/vendor/*", "static/vendor/addons/controls/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

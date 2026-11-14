@@ -48,8 +48,9 @@ button.stop { background: var(--warn); color: #231300; }
   grid-template-areas:
     "cam cam telemetry"
     "cam cam control"
-    "lidar captures control"
-    "auth captures diag";
+    "lidar lidar control"
+    "lidar lidar captures"
+    "auth diag captures";
 }
 .panel {
   background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
@@ -92,8 +93,32 @@ table td:first-child { color: var(--muted); width: 42%; }
 .ctrl-extra { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 8px; }
 .postures { display: flex; gap: 6px; flex-wrap: wrap; }
 .pbtn { background: #24303f; color: var(--text); padding: 5px 9px; font-size: 12px; }
+.speed { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.sbtn { background: #24303f; color: var(--text); padding: 5px 10px; font-size: 12px; }
+.sbtn:hover { background: #30425a; }
+.sbtn.active, .sbtn.active:hover { background: var(--accent); color: #04121c; }
 
-#lidar-canvas { width: 100%; aspect-ratio: 16/10; background: #060a10; border-radius: 8px; overflow: hidden; }
+/* Visor LiDAR 3D (static/lidar/lidarView.js): fondo y controles como la app de Unitree */
+#lidar-canvas { position: relative; width: 100%; aspect-ratio: 16/10; background: #26272b;
+  border-radius: 8px; overflow: hidden; }
+.lv-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
+.lv-canvas:active { cursor: grabbing; }
+.lv-seg { position: absolute; left: 11px; top: 11px; display: flex; padding: 2px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.25); background: rgba(0,0,0,.75); }
+.lv-seg-btn { background: transparent; color: rgba(255,255,255,.8); height: 28px; padding: 0 10px;
+  font-size: 12px; border-radius: 4px; }
+.lv-seg-btn:hover { background: transparent; color: #fff; }
+.lv-seg-btn.active, .lv-seg-btn.active:hover { background: #fff; color: #000; }
+.lv-top { position: absolute; right: 11px; top: 11px; display: flex; gap: 3px; }
+.lv-zoom { position: absolute; right: 11px; bottom: 11px; display: flex; flex-direction: column; gap: 3px; }
+.lv-btn { display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 6px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.25); background: rgba(0,0,0,.75); color: rgba(255,255,255,.9); }
+.lv-btn:hover { background: rgba(0,0,0,.9); color: #fff; }
+.lv-btn.active, .lv-btn.active:hover { background: #fff; color: #000; border-color: #fff; }
+.lv-btn.danger, .lv-btn.danger:hover { background: var(--danger); border-color: var(--danger); color: #fff;
+  font-size: 12px; padding: 0 10px; }
+.lv-status { position: absolute; left: 11px; bottom: 11px; max-width: calc(100% - 70px); border-radius: 6px;
+  background: rgba(0,0,0,.6); padding: 4px 8px; font-size: 11px; color: rgba(255,255,255,.85); pointer-events: none; }
 .auth-form { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
 .auth-form input { flex: 1 1 140px; padding: 8px; background: var(--panel-2); border: 1px solid var(--border);
   border-radius: 7px; color: var(--text); }
@@ -104,7 +129,7 @@ table td:first-child { color: var(--muted); width: 42%; }
 
 @media (max-width: 1100px) {
   .grid { grid-template-columns: 1fr 1fr; grid-template-areas:
-    "cam cam" "telemetry control" "lidar captures" "auth diag"; }
+    "cam cam" "telemetry control" "lidar lidar" "captures diag" "auth auth"; }
 }
 @media (max-width: 720px) {
   .grid { grid-template-columns: 1fr; grid-template-areas:

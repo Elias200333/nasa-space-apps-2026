@@ -52,12 +52,13 @@ log = logging.getLogger(__name__)
 
 PASSTHROUGH_KEY = "terrainx_raw_payload"
 
-# Topes de velocidad para la teleoperación (defensa en profundidad; el servicio
-# aplica además sus propios límites). Valores conservadores para un ensayo
-# supervisado en interior.
-MAX_VX_MS = 0.6   # avance/retroceso (m/s)
-MAX_VY_MS = 0.4   # lateral (m/s)
-MAX_YAW_RPS = 0.8  # giro (rad/s)
+# Topes de velocidad para la teleoperación (defensa en profundidad: el navegador
+# elige Lento/Normal/Rápido, pero NADA por encima de esto llega al robot). Ensayo
+# supervisado en interior con operador junto al paro. Subidos el 2026-11-14 a
+# petición del operador (antes 0.6 / 0.4 / 0.8: «WASD va muy lento»).
+MAX_VX_MS = 1.0   # avance/retroceso (m/s)
+MAX_VY_MS = 0.5   # lateral (m/s)
+MAX_YAW_RPS = 1.5  # giro (rad/s)
 
 
 def _clamp(value: float, limit: float) -> float:
