@@ -15,15 +15,13 @@ from terrainx_robot.models import (
     RobotDescriptor,
     ScanContext,
     ScanMetadata,
-    SessionInfo,
 )
 from terrainx_robot.storage.ply import read_ply
 from terrainx_robot.storage.scan_store import ScanStoreError
-from terrainx_robot.storage.session_log import SessionError, SessionReader, SessionRecorder
 from terrainx_robot.util import sha256_file
 
 T0 = datetime(2026, 11, 14, 12, 0, tzinfo=timezone.utc)
-ROBOT = RobotDescriptor(robot_id="test", adapter="test", delivery_mode=DeliveryMode.REPLAY)
+ROBOT = RobotDescriptor(robot_id="test", adapter="test", delivery_mode=DeliveryMode.LIVE)
 
 
 def _cloud(n_frames=3):
@@ -35,7 +33,7 @@ def _cloud(n_frames=3):
 
 
 def _save(store, evidence=EvidenceClass.SYNTHETIC_TEST, context=ScanContext.SYNTHETIC):
-    return store.save(_cloud(), robot=ROBOT, evidence_class=evidence, delivery_mode=DeliveryMode.REPLAY,
+    return store.save(_cloud(), robot=ROBOT, evidence_class=evidence, delivery_mode=DeliveryMode.LIVE,
                       scan_context=context, capture_start=T0, capture_end=T0)
 
 
@@ -43,7 +41,7 @@ def _save(store, evidence=EvidenceClass.SYNTHETIC_TEST, context=ScanContext.SYNT
 def test_guardar_escaneo_completo(store):
     cloud = _cloud()
     meta = store.save(cloud, robot=ROBOT, evidence_class=EvidenceClass.SYNTHETIC_TEST,
-                      delivery_mode=DeliveryMode.REPLAY, scan_context=ScanContext.SYNTHETIC,
+                      delivery_mode=DeliveryMode.LIVE, scan_context=ScanContext.SYNTHETIC,
                       capture_start=T0, capture_end=T0)
     folder = store.scans_dir / meta.id
     ply = folder / meta.files["ply"].path
@@ -90,7 +88,7 @@ def test_ids_maliciosos_y_nube_vacia(store):
     empty.points = np.empty((0, 3))
     with pytest.raises(ScanStoreError):
         store.save(empty, robot=ROBOT, evidence_class=EvidenceClass.SYNTHETIC_TEST,
-                   delivery_mode=DeliveryMode.REPLAY, scan_context=ScanContext.SYNTHETIC,
+                   delivery_mode=DeliveryMode.LIVE, scan_context=ScanContext.SYNTHETIC,
                    capture_start=T0, capture_end=T0)
 
 
@@ -113,46 +111,6 @@ def test_reglas_de_procedencia_en_el_modelo(store):
     data.update(demo=True, evidence_class="robot_measured")  # real marcado como demo
     with pytest.raises(ValidationError):
         ScanMetadata.model_validate(data)
-
-
-# ----------------------------------------------------------------- sesiones
-def _session_info(evidence=EvidenceClass.SYNTHETIC_TEST):
-    return SessionInfo(session_id="s1", created_utc=T0, robot=ROBOT, evidence_class=evidence,
-                       scan_context=ScanContext.SYNTHETIC, demo=evidence is EvidenceClass.SYNTHETIC_TEST,
-                       generator="test", software={})
-
-
-def test_sesion_ida_y_vuelta(tmp_path):
-    rec = SessionRecorder(tmp_path, _session_info())
-    rec.record_lidar(topic="lidar", host_utc=T0, meta={"origin": [0, 0, 0], "data": "ignorado"}, raw=b"\x00\x01\xff")
-    rec.record_json(topic="rt/lf/lowstate", host_utc=T0, data={"bms_state": {"soc": 50}, "blob": b"\x10"})
-    info = rec.close()
-    assert info.record_count == 2 and info.messages_sha256
-    reader = SessionReader(tmp_path / "s1")
-    assert reader.verify()
-    recs = list(reader.records())
-    assert recs[0]["raw"] == b"\x00\x01\xff" and "data" not in recs[0]["meta"]
-    assert recs[1]["data"] == {"bms_state": {"soc": 50}, "blob": b"\x10"}
-
-
-def test_sesion_alterada_o_corrupta(tmp_path):
-    rec = SessionRecorder(tmp_path, _session_info())
-    rec.record_json(topic="t", host_utc=T0, data={"a": 1})
-    rec.close()
-    reader = SessionReader(tmp_path / "s1")
-    with open(reader.messages_path, "a", encoding="utf-8") as fh:
-        fh.write("{esto no es json\n")
-    assert not reader.verify()
-    with pytest.raises(SessionError):
-        list(reader.records())
-    with pytest.raises(SessionError):
-        SessionReader(tmp_path / "no-existe")
-
-
-def test_sesion_real_no_puede_ser_demo():
-    with pytest.raises(ValidationError):
-        SessionInfo(session_id="x", created_utc=T0, robot=ROBOT, evidence_class=EvidenceClass.ROBOT_MEASURED,
-                    scan_context=ScanContext.CONTROLLED_TEST, demo=True, generator="t", software={})
 
 
 def test_metadatos_json_sin_bytes_crudos(store):

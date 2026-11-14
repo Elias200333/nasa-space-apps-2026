@@ -248,7 +248,7 @@ class ScanStore:
             id=scan_id,
             scan_context=scan_context,
             frame_id=frame_id,
-            # Hora de adquisición del primer frame usado (en replay, la original).
+            # Hora de adquisición del primer frame usado.
             timestamp_utc=first.host_received_utc if first else capture_start,
             point_count=int(pts.shape[0]),
             file_url=f"scans/{scan_id}/{ply_name}",

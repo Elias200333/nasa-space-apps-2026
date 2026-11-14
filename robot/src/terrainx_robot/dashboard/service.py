@@ -2,7 +2,7 @@
 
 Qué hace
     Mantiene como mucho una conexión WebRTC (vía Go2WebRTCAdapter) y la comparte
-    entre todos los paneles (cámara, LiDAR, telemetría, replay, diagnóstico).
+    entre todos los paneles (cámara, LiDAR, estado del robot, diagnóstico).
     Expone operaciones de alto nivel para la capa FastAPI. Es asíncrono y vive en
     el mismo bucle de eventos que el servidor.
 
@@ -19,18 +19,12 @@ Seguridad
       que se guarda), descarga = se guarda (PLY malla + GLB igual que el visor + coordenadas
       JSON + metadatos + SHA-256, clase DERIVED) y se baja el GLB o las coordenadas. Si el mapa
       no ha cambiado desde el último guardado, se reutiliza ese escaneo (sin duplicados).
-    - «● Grabar sesión» (panel Replay) graba la sesión cruda del robot para el replay.
-    - Modo REPLAY (demo sin robot): reproduce una sesión grabada por el mismo camino
-      que el robot real. Es excluyente con la conexión en vivo y NO admite control.
-      La clase de evidencia la fija la sesión (una sesión sintética sigue siendo
-      synthetic_test); todo lo que sale lleva delivery_mode = replay.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-import re
 import threading
 import time
 from typing import Any
@@ -40,7 +34,6 @@ import numpy as np
 from ..adapters.base import CaptureError, ConnectionFailed
 from ..adapters.go2_topics import DEFAULT_READONLY_TOPICS
 from ..adapters.go2_webrtc import MAX_VX_MS, MAX_VY_MS, MAX_YAW_RPS, Go2WebRTCAdapter
-from ..adapters.replay import ReplayAdapter
 from ..auth.aes_key_manager import DEFAULT_STORE, AesKeyManager
 from ..config import Settings
 from ..lidar.accumulator import AccumulatedCloud
@@ -52,12 +45,9 @@ from ..lidar.voxel_mesh import build_voxel_mesh
 from ..models import (
     CaptureState,
     ConnectionState,
-    DeliveryMode,
     EvidenceClass,
     PointType,
-    ScanContext,
     ScanMetadata,
-    SessionInfo,
 )
 from ..storage.scan_store import ScanStore, ScanStoreError
 from ..util import new_id, utc_now
@@ -68,8 +58,6 @@ log = logging.getLogger(__name__)
 LIVE_LIDAR_MAX_POINTS = 25_000  # tope para el visor en vivo (submuestreo)
 SLAM_INTERVAL_S = 0.5           # como mucho 2 mapas/s se suman al mapa acumulado
 SLAM_PACK_INTERVAL_S = 1.0      # como mucho 1 vez/s se reempaquetan los trozos cambiados
-REPLAY_SPEED = 1.0              # replay a tiempo real (como se grabó)
-_SESSION_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]{0,127}$")   # sin rutas: solo un nombre
 GLB_FORMAT = ("glTF 2.0 binario (GLB) · malla de cubos como el visor: paleta de la app, aristas grises, "
               "sin luz (KHR_materials_unlit), Y arriba = Z del robot")
 
@@ -87,11 +75,11 @@ class DashboardService:
         self._adapter_factory = adapter_factory or (
             lambda: Go2WebRTCAdapter(self.settings, self.store, enable_video=True)
         )
-        self._adapter: Go2WebRTCAdapter | ReplayAdapter | None = None
+        self._adapter: Go2WebRTCAdapter | None = None
         self.last_error: str | None = None
         # Mapa SLAM acumulado (DERIVADO). Sobrevive a reconexiones con el MISMO origen (el
         # marco odom del perro sigue siendo el mismo mientras no se reinicie); al cambiar de
-        # origen (robot ↔ sesión grabada) se empieza otro: sus marcos no tienen nada que ver.
+        # robot (otra IP / SN) se empieza otro: sus marcos no tienen nada que ver.
         self.slam = SlamMap()
         self.slam_errors = 0
         self.slam_paused = False          # «Congelar» del visor: no se suman mapas nuevos
@@ -100,21 +88,14 @@ class DashboardService:
         self._slam_last_pack = 0.0
         self._slam_source: str | None = None
         self._slam_evidence = EvidenceClass.DERIVED
-        self._slam_adapter: Go2WebRTCAdapter | ReplayAdapter | None = None   # de dónde sale el mapa
+        self._slam_adapter: Go2WebRTCAdapter | None = None   # de dónde sale el mapa
         self._saving = False
         self._last_save: tuple | None = None   # (origen, epoch, versión del mapa, scan_id) del último guardado
-        # Modo replay
-        self._replay_task: asyncio.Task | None = None
-        self.replay_info: dict[str, Any] | None = None
 
     # --------------------------------------------------------------- conexión
     @property
-    def adapter(self) -> Go2WebRTCAdapter | ReplayAdapter | None:
+    def adapter(self) -> Go2WebRTCAdapter | None:
         return self._adapter
-
-    @property
-    def replaying(self) -> bool:
-        return isinstance(self._adapter, ReplayAdapter)
 
     @property
     def connected(self) -> bool:
@@ -125,13 +106,10 @@ class DashboardService:
         )
 
     def _live_adapter(self) -> Go2WebRTCAdapter | None:
-        """El adaptador del robot físico, o None (desconectado o en replay)."""
-        return self._adapter if isinstance(self._adapter, Go2WebRTCAdapter) else None
+        """El adaptador del robot físico, o None (desconectado)."""
+        return self._adapter
 
     async def connect(self) -> dict[str, Any]:
-        if self.replaying:
-            raise ConnectionFailed("replay_active", "Hay un replay en marcha.",
-                                   "Pulsa «Parar replay» antes de conectar el robot.")
         if self.connected:
             return self.status()
         self.last_error = None
@@ -150,18 +128,9 @@ class DashboardService:
 
     async def disconnect(self) -> dict[str, Any]:
         # Parar y volver a solo lectura ANTES de cerrar. El mapa acumulado no se pierde: sigue
-        # en memoria y se puede guardar (descarga del visor) aún sin conexión. Una sesión que
-        # se estuviera grabando la cierra el adaptador al desconectar.
+        # en memoria y se puede guardar (descarga del visor) aún sin conexión.
         self.release_control()
         self._stop_slam()
-        task, self._replay_task = self._replay_task, None
-        if task is not None:
-            task.cancel()
-            try:
-                await task
-            except (asyncio.CancelledError, Exception):
-                pass
-        self.replay_info = None
         if self._adapter is not None:
             try:
                 await self._adapter.disconnect()
@@ -178,90 +147,6 @@ class DashboardService:
         self._slam_evidence = evidence
         self._slam_adapter = adapter
 
-    # ----------------------------------------------------------------- replay
-    def list_sessions(self) -> list[dict[str, Any]]:
-        """Sesiones grabadas en <data_dir>/sessions (las más nuevas primero)."""
-        root = self.store.data_dir / "sessions"
-        out = []
-        if not root.is_dir():
-            return out
-        for folder in root.iterdir():
-            meta = folder / "session.json"
-            if not meta.is_file():
-                continue
-            try:
-                info = SessionInfo.model_validate_json(meta.read_text(encoding="utf-8"))
-            except Exception:
-                continue                       # sesión a medias o corrupta: no se ofrece
-            if info.messages_sha256 is None:
-                continue                       # sin cerrar (sin hash): no se puede verificar
-            msgs = folder / info.messages_file
-            duration = (info.closed_utc - info.created_utc).total_seconds() if info.closed_utc else None
-            out.append({
-                "session_id": info.session_id,
-                "created_utc": info.created_utc.isoformat(),
-                "duration_s": round(duration, 1) if duration is not None else None,
-                "evidence_class": info.evidence_class.value,
-                "demo": info.demo,
-                "scan_context": info.scan_context.value,
-                "robot_id": info.robot.robot_id,
-                "model_variant": info.robot.model_variant,
-                "records": info.record_count,
-                "lidar_records": info.lidar_records,
-                "size_mb": round(msgs.stat().st_size / 1e6, 1) if msgs.is_file() else None,
-                "notes": info.notes,
-            })
-        return sorted(out, key=lambda s: s["created_utc"], reverse=True)
-
-    async def start_replay(self, session_id: str, *, loop: bool = True) -> dict[str, Any]:
-        if self._live_adapter() is not None:
-            raise ConnectionFailed("robot_connected", "El robot está conectado.",
-                                   "Desconecta el robot antes de reproducir una sesión grabada.")
-        if not isinstance(session_id, str) or not _SESSION_ID.match(session_id):
-            raise ConnectionFailed("invalid_session", f"identificador de sesión no válido: {session_id!r}")
-        folder = self.store.data_dir / "sessions" / session_id
-        if not (folder / "session.json").is_file():
-            raise ConnectionFailed("invalid_session", f"no existe la sesión {session_id}")
-        if self.replaying:
-            await self.disconnect()
-        adapter = ReplayAdapter(folder, self.store, speed=REPLAY_SPEED)
-        await adapter.connect()             # verifica el SHA-256 de la sesión antes de reproducir
-        info = adapter._reader.info if adapter._reader else None
-        adapter.connection_info = {"method": "replay", "address": f"sesión {session_id}",
-                                   "session_id": session_id, "library_version": None}
-        self._adapter = adapter
-        self.last_error = None
-        self.replay_info = {
-            "session_id": session_id,
-            "evidence_class": adapter.evidence_class.value,
-            "demo": bool(info.demo) if info else None,
-            "loop": loop,
-            "passes": 0,
-        }
-        derived = (EvidenceClass.SYNTHETIC_TEST if adapter.evidence_class is EvidenceClass.SYNTHETIC_TEST
-                   else EvidenceClass.DERIVED)
-        self._use_slam_source(f"replay:{session_id}", derived, adapter)
-        self._replay_task = asyncio.create_task(self._replay_loop(adapter))
-        self._start_slam()
-        return self.status()
-
-    async def _replay_loop(self, adapter: ReplayAdapter) -> None:
-        """Reproduce la sesión a tiempo real; con «loop», vuelve a empezar al acabar."""
-        try:
-            while self._adapter is adapter:
-                await adapter._run_window(None)          # una pasada completa
-                if self.replay_info is None:
-                    return
-                self.replay_info["passes"] += 1
-                if not self.replay_info.get("loop"):
-                    return
-                await asyncio.sleep(0.5)
-        except asyncio.CancelledError:
-            raise
-        except Exception as exc:  # sesión que falla a mitad: se informa, no se cae el servidor
-            self.last_error = f"[replay] {type(exc).__name__}: {exc}"
-            log.exception("Replay detenido por un error")
-
     # ----------------------------------------------------------------- estado
     def status(self) -> dict[str, Any]:
         key = self.key_manager.status()
@@ -272,7 +157,6 @@ class DashboardService:
             # WASD activo por defecto: se puede conducir con el robot real conectado
             "control_available": self.connected and self._live_adapter() is not None,
             "control_enabled": False,
-            "recording": self.recording_status(),
             "last_error": self.last_error,
             "model_variant": self.settings.model_variant,
             "firmware_version": self.settings.firmware_version,
@@ -301,16 +185,10 @@ class DashboardService:
                 lidar_frames=st.lidar_frames_received,
                 lidar_decode_errors=adapter.lidar_decode_errors,
                 readonly_guard=st.readonly_guard,
-                telemetry=st.telemetry.model_dump(mode="json"),
-                topics=[t.model_dump(mode="json") for t in st.topics],
                 connection_info=info,
-                robot_details=robot_details.details(
-                    adapter, () if self.replaying else DEFAULT_READONLY_TOPICS),
+                robot_details=robot_details.details(adapter, DEFAULT_READONLY_TOPICS),
             )
-        base["source"] = (
-            dict(self.replay_info, kind="replay") if self.replaying and self.replay_info
-            else {"kind": "live" if self._live_adapter() is not None else "none"}
-        )
+        base["source"] = {"kind": "live" if self._live_adapter() is not None else "none"}
         base["slam"] = dict(self.slam.meta(), errors=self.slam_errors, paused=self.slam_paused,
                             saving=self._saving, evidence_class=self._slam_evidence.value)
         return base
@@ -425,8 +303,7 @@ class DashboardService:
 
     def _save_slam_map(self, snap: dict, *, adapter, evidence: EvidenceClass,
                        source: str | None) -> tuple[ScanMetadata, int]:
-        """Hilo aparte. Clase de evidencia: DERIVED si sale de datos del robot; SYNTHETIC_TEST
-        si sale de una sesión sintética (un cálculo sobre datos de prueba sigue siendo de prueba)."""
+        """Hilo aparte. Clase de evidencia: DERIVED (cálculo sobre los mapas del robot)."""
         idx, res, slam_meta = snap["voxels"], snap["res"], snap["meta"]
         mesh = build_voxel_mesh(idx, res)
         delivery = adapter.descriptor.delivery_mode
@@ -465,14 +342,13 @@ class DashboardService:
             "El .glb es el mismo mapa con el aspecto del visor (aristas grises, sin luz) y los ejes de "
             "glTF: (x, y, z) del robot → (x, z, −y). El .ply y el .coords.json (centro de cada cubo, "
             "uno por vóxel) guardan las coordenadas del robot.",
-            "Tiempos = primer y último mapa del robot sumados al acumulado (en replay, la hora de la "
-            "reproducción, no la original).",
+            "Tiempos = primer y último mapa del robot sumados al acumulado.",
         )
         meta = self.store.save(
             cloud, robot=adapter.descriptor, evidence_class=evidence,
             delivery_mode=delivery, scan_context=adapter.scan_context,
             capture_start=capture_start, capture_end=snap["last_utc"] or now,
-            session_id=adapter._source_session_id(), pose_source=None, binary=True, extra_caveats=caveats,
+            session_id=None, pose_source=None, binary=True, extra_caveats=caveats,
             extra_files={"glb": (".glb", glb.data, GLB_FORMAT),
                          "coords": (".coords.json", coords, COORDS_FORMAT)},
             scan_id=scan_id,
@@ -530,42 +406,10 @@ class DashboardService:
             last_seq = seq
             self.slam_step(frame[0], frame[1], pack=pack)
 
-    # ------------------------------------------------------- grabar sesión cruda
-    def recording_status(self) -> dict[str, Any]:
-        live = self._live_adapter()
-        info = live.recording_info if live is not None else None
-        if info is None:
-            return {"active": False}
-        return {"active": True, "session_id": info.session_id, "start_utc": info.created_utc.isoformat(),
-                "elapsed_s": round((utc_now() - info.created_utc).total_seconds(), 1)}
-
-    async def start_recording(self) -> dict[str, Any]:
-        """«● Grabar sesión» (panel Replay): graba lo que manda el robot (mapas, pose, telemetría)
-        para reproducirlo luego sin robot. No envía nada al robot ni toca el mapa acumulado."""
-        if self.replaying:
-            raise CaptureError("en replay no se graba: esa sesión ya está grabada")
-        live = self._live_adapter()
-        if live is None or not self.connected:
-            raise ConnectionFailed("not_connected", "No hay conexión con el robot.")
-        session_id = live.start_recording(notes="grabada desde el dashboard")   # CaptureError si ya graba
-        log.info("Grabando la sesión cruda %s", session_id)
-        return self.recording_status()
-
-    async def stop_recording(self) -> dict[str, Any]:
-        """Cierra la sesión que se está grabando (su SHA-256 se calcula en otro hilo)."""
-        live = self._live_adapter()
-        if live is None or live.recording_info is None:
-            raise CaptureError("no se está grabando ninguna sesión")
-        info = await live.stop_recording()
-        return {"session_id": info.session_id, "records": info.record_count,
-                "lidar_records": info.lidar_records}
-
     # ----------------------------------------------------------------- control
     # WASD activo por defecto: sin botón «Habilitar». Con el robot real conectado, la primera
-    # orden pasa el guardián a modo control (acotado). En replay no hay robot que conducir.
+    # orden pasa el guardián a modo control (acotado).
     def _control_adapter(self) -> Go2WebRTCAdapter:
-        if self.replaying:
-            raise ConnectionFailed("replay_no_control", "En replay no hay robot que conducir.")
         live = self._live_adapter()
         if live is None or not self.connected:
             raise ConnectionFailed("not_connected", "No hay conexión con el robot.")

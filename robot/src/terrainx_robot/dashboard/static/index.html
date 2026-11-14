@@ -30,21 +30,6 @@
       <div class="cam-meta"><span id="cam-fps">FPS: —</span> · <span id="cam-frames">fotogramas: 0</span></div>
     </section>
 
-    <!-- TELEMETRÍA -->
-    <section class="panel telemetry">
-      <h2>Telemetría</h2>
-      <table id="telemetry">
-        <tr><td>Conexión</td><td id="t-conn">—</td></tr>
-        <tr><td>Batería (SOC)</td><td id="t-batt">—</td></tr>
-        <tr><td>Voltaje</td><td id="t-volt">—</td></tr>
-        <tr><td>IMU (RPY)</td><td id="t-imu">—</td></tr>
-        <tr><td>Posición</td><td id="t-pos">—</td></tr>
-        <tr><td>LiDAR</td><td id="t-lidar">—</td></tr>
-        <tr><td>Vídeo</td><td id="t-video">—</td></tr>
-      </table>
-      <p class="note">Un valor "no disponible" significa que el robot no lo publica. No se muestran datos inventados.</p>
-    </section>
-
     <!-- CONTROL WASD -->
     <section class="panel control">
       <h2>Conducción (WASD) <span id="ctrl-badge" class="badge">sin robot</span></h2>
@@ -127,25 +112,6 @@
       <table id="h-topics"><thead><tr><th>Topic</th><th>Hz</th><th>Último</th><th>Estado</th></tr></thead><tbody></tbody></table>
       <p class="note">Solo lectura, tal como lo publica el robot. Los umbrales de batería (aviso &lt; 25 %, crítico &lt; 15 %)
         son nuestros, no de Unitree. "no disponible" = el robot no lo publica.</p>
-    </section>
-
-    <!-- REPLAY -->
-    <section class="panel replay">
-      <h2>Replay · demo sin robot <span id="replay-badge" class="badge">—</span></h2>
-      <p class="note">Reproduce una sesión grabada por el mismo camino que el robot real: mapa, posición y
-        telemetría. Sin control y sin cámara (las sesiones no graban vídeo). Una sesión sintética se muestra
-        siempre como DEMO.</p>
-      <div class="ctrl-row">
-        <button id="btn-record" class="small" disabled>● Grabar sesión</button>
-        <span id="record-status" class="note">Para grabar, conecta el robot.</span>
-      </div>
-      <div class="ctrl-row">
-        <button id="btn-sessions" class="secondary small">Actualizar lista</button>
-        <label class="chk"><input type="checkbox" id="replay-loop" checked /> en bucle</label>
-        <button id="btn-replay-stop" class="secondary small" disabled>■ Parar replay</button>
-      </div>
-      <table id="sessions"><thead><tr><th>Sesión</th><th>Origen</th><th>Datos</th><th></th></tr></thead><tbody></tbody></table>
-      <div id="replay-status" class="note">—</div>
     </section>
 
     <!-- AUTENTICACIÓN UNITREE -->

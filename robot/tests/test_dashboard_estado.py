@@ -1,6 +1,6 @@
-"""Panel «Estado del robot», guardar el mapa acumulado (descarga del visor), RecoveryStand y modo replay.
+"""Panel «Estado del robot», guardar el mapa acumulado (descarga del visor) y RecoveryStand.
 
-Todo con el robot FALSO y sesiones SINTÉTICAS (no hay robot aquí).
+Todo con el robot FALSO y mapas SINTÉTICOS (no hay robot aquí).
 """
 
 import json
@@ -15,7 +15,7 @@ from terrainx_robot.config import Go2Settings, Settings
 from terrainx_robot.dashboard import robot_details as rd
 from terrainx_robot.dashboard.server import create_app
 from terrainx_robot.dashboard.service import DashboardService
-from terrainx_robot.fixtures.synthetic import generate_frames, write_synthetic_session
+from terrainx_robot.fixtures.synthetic import generate_frames
 from terrainx_robot.lidar.voxel_codec import decode_voxel_map
 from terrainx_robot.storage.scan_store import ScanStore
 
@@ -166,67 +166,21 @@ def test_origen_fuera_de_la_rejilla_se_ajusta_como_mucho_medio_voxel():
     assert np.all(np.abs(shift) <= 0.025 + 1e-9)
 
 
-# ------------------------------------------------------------------ replay
-def test_replay_de_sesion_sintetica_sin_control(tmp_path):
-    app, service, lib, settings = build(tmp_path)
-    info = write_synthetic_session(settings.data_dir / "sessions", n_frames=6, seed=11)
-    with TestClient(app) as client:                     # un único bucle: el replay corre entre peticiones
-        sessions = client.get("/api/sessions").json()
-        assert [x["session_id"] for x in sessions] == [info.session_id]
-        assert sessions[0]["demo"] is True and sessions[0]["evidence_class"] == "synthetic_test"
-
-        assert client.post("/api/replay/start", json={"session_id": "../../etc"}).status_code == 409
-        r = client.post("/api/replay/start", json={"session_id": info.session_id, "loop": True})
-        assert r.status_code == 200, r.text
-        s = r.json()
-        assert s["source"]["kind"] == "replay" and s["source"]["demo"] is True
-        assert s["connected"] is True and s["control_enabled"] is False
-
-        assert wait_for(lambda: client.get("/api/status").json().get("lidar_frames", 0) > 0)
-        assert wait_for(lambda: client.get("/api/status").json()["slam"]["frames"] >= 2)
-        s = client.get("/api/status").json()
-        assert s["robot_details"]["battery"]["soc_pct"] is not None     # lowstate sintético
-        assert s["slam"]["evidence_class"] == "synthetic_test"
-
-        assert s["control_available"] is False                              # en replay no se conduce
-        with client.websocket_connect("/ws/control") as wsc:
-            wsc.send_json({"type": "drive", "vx": 0.3, "vy": 0.0, "yaw": 0.0})
-            assert wsc.receive_json()["ok"] is False
-        assert client.post("/api/connect").status_code == 409               # ni se conecta el robot
-        assert client.post("/api/record/start").status_code == 409          # ni se graba una sesión de otra
-        assert client.get("/api/status").json()["recording"] == {"active": False}
-        assert wait_for(lambda: client.get("/api/status").json()["slam"]["frames"] >= 2)
-        m = client.post("/api/slam/save").json()
-        assert m["evidence_class"] == "synthetic_test" and m["demo"] is True and m["delivery_mode"] == "replay"
-        assert m["geometry"]["point_type"] == "voxel_mesh" and m["capture"]["session_id"] == info.session_id
-        glb = client.get(f"/api/scans/{m['id']}/download", params={"format": "glb"}).content
-        from terrainx_robot.lidar.voxel_glb import read_glb
-        extras = read_glb(glb)[0]["asset"]["extras"]
-        assert extras["evidence_class"] == "synthetic_test" and extras["demo"] is True   # el GLB también lo dice
-        coords = client.get(f"/api/scans/{m['id']}/download", params={"format": "coords"}).json()
-        assert coords["evidence_class"] == "synthetic_test" and coords["demo"] is True   # y las coordenadas
-        assert coords["delivery_mode"] == "replay" and coords["scan_id"] == m["id"]
-
-        s = client.post("/api/replay/stop").json()
-        assert s["source"]["kind"] == "none" and s["connected"] is False
-    assert lib.instances == []                          # nunca se abrió una conexión al robot
-
-
-def test_replay_no_arranca_con_el_robot_conectado(tmp_path):
-    app, service, lib, settings = build(tmp_path)
-    info = write_synthetic_session(settings.data_dir / "sessions", n_frames=2, seed=1)
-    client = TestClient(app)
-    client.post("/api/connect")
-    r = client.post("/api/replay/start", json={"session_id": info.session_id})
-    assert r.status_code == 409 and r.json()["detail"]["code"] == "robot_connected"
-    client.post("/api/disconnect")
-
-
-def test_sesion_alterada_no_se_reproduce(tmp_path):
-    app, service, lib, settings = build(tmp_path)
-    info = write_synthetic_session(settings.data_dir / "sessions", n_frames=2, seed=1)
-    msgs = settings.data_dir / "sessions" / info.session_id / "messages.jsonl"
-    msgs.write_text(msgs.read_text(encoding="utf-8") + "\n", encoding="utf-8")   # cambia el SHA-256
+# ---------------------------------------------- paneles quitados (2026-11-14)
+def test_sin_replay_ni_telemetria(tmp_path):
+    """Replay (y «● Grabar sesión») y la tabla «Telemetría» se quitaron del dashboard."""
+    app, _, lib, _ = build(tmp_path)
     with TestClient(app) as client:
-        r = client.post("/api/replay/start", json={"session_id": info.session_id})
-        assert r.status_code == 409 and r.json()["detail"]["code"] == "session_integrity"
+        html = client.get("/").text
+        assert "Replay" not in html and "Telemetría" not in html and "btn-record" not in html
+        for path in ("/api/replay/start", "/api/replay/stop", "/api/record/start", "/api/record/stop"):
+            assert client.post(path).status_code in (404, 405), path
+        assert client.get("/api/sessions").status_code in (404, 405)
+        st = client.get("/api/status").json()
+        assert "recording" not in st and st["source"] == {"kind": "none"}
+        client.post("/api/connect")
+        st = client.get("/api/status").json()
+        assert st["source"] == {"kind": "live"} and "telemetry" not in st
+        inject(lib, "rt/lf/lowstate", LOWSTATE)                  # el panel «Estado del robot» sigue
+        assert client.get("/api/status").json()["robot_details"]["battery"]["soc_pct"] == 18.0
+        client.post("/api/disconnect")

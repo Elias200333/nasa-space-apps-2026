@@ -12,14 +12,11 @@ Endpoints
                                devuelve sus metadatos + «reused» (mapa sin cambios: el mismo escaneo)
     GET  /api/scans            lista de escaneos
     GET  /api/scans/{id}/download?format=ply|glb|coords   descarga un archivo del escaneo
-    POST /api/record/start|stop   «● Grabar sesión»: sesión cruda del robot para el replay
     POST /api/auth/devices     lista robots de la cuenta (pide credenciales; NO devuelve clave)
     POST /api/auth/fetch-key   recupera y guarda la clave (NO la devuelve)
     WS   /ws/control           teleoperación WASD con hombre muerto (activa por defecto)
     WS   /ws/lidar             visor LiDAR 3D: mapa en vivo / acumulado + pose (solo lectura);
                                borrar y congelar el acumulado
-    GET  /api/sessions         sesiones grabadas (para replay)
-    POST /api/replay/start|stop   demo SIN robot: reproduce una sesión grabada (sin control)
 
 Seguridad
     - host fijo 127.0.0.1 (no accesible desde la red).
@@ -93,27 +90,7 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
         try:
             return await service.connect()
         except ConnectionFailed as exc:
-            status = 409 if exc.code == "replay_active" else 502
-            raise HTTPException(status_code=status, detail={"code": exc.code, "message": str(exc), "hint": exc.hint})
-
-    # -------------------------------------------------------------- replay
-    @app.get("/api/sessions")
-    async def api_sessions() -> list[dict[str, Any]]:
-        return await run_in_threadpool(service.list_sessions)
-
-    @app.post("/api/replay/start")
-    async def api_replay_start(body: dict[str, Any] | None = None) -> dict[str, Any]:
-        body = body or {}
-        try:
-            return await service.start_replay(str(body.get("session_id", "")), loop=bool(body.get("loop", True)))
-        except ConnectionFailed as exc:
-            raise HTTPException(status_code=409, detail={"code": exc.code, "message": str(exc), "hint": exc.hint})
-
-    @app.post("/api/replay/stop")
-    async def api_replay_stop() -> dict[str, Any]:
-        if not service.replaying:
-            return service.status()
-        return await service.disconnect()
+            raise HTTPException(status_code=502, detail={"code": exc.code, "message": str(exc), "hint": exc.hint})
 
     # --------------------------------------------------- mapa SLAM acumulado
     @app.post("/api/slam/save")
@@ -121,21 +98,6 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
         try:
             return await service.save_slam_map()
         except (CaptureError, ScanStoreError) as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
-
-    # ------------------------------------------------- grabar sesión cruda
-    @app.post("/api/record/start")
-    async def api_record_start() -> dict[str, Any]:
-        try:
-            return await service.start_recording()
-        except (ConnectionFailed, CaptureError) as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
-
-    @app.post("/api/record/stop")
-    async def api_record_stop() -> dict[str, Any]:
-        try:
-            return await service.stop_recording()
-        except CaptureError as exc:
             raise HTTPException(status_code=409, detail=str(exc))
 
     @app.post("/api/disconnect")

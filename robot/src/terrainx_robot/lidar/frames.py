@@ -1,8 +1,7 @@
-"""Construcción de LidarFrame a partir de un mensaje del robot (vivo o grabado).
+"""Construcción de LidarFrame a partir de un mensaje del robot.
 
 Qué hace
-    Un único camino de código para el modo en vivo y el modo replay: recibe los
-    metadatos tal como llegaron en ``message["data"]`` y el payload comprimido,
+    Recibe los metadatos tal como llegaron en ``message["data"]`` y el payload comprimido,
     decodifica con voxel_codec y devuelve un LidarFrame. Si la decodificación
     falla, el frame se conserva con ``decode_error`` y 0 puntos (no se inventa nada).
 

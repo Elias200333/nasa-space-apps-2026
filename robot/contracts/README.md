@@ -58,7 +58,7 @@ scans/<id>/SHA256SUMS           formato sha256sum: verificable con herramientas 
 
 `file_url` es una ruta **relativa** a la carpeta de datos del módulo (`scans/<id>/<id>.ply`). Plataforma decide cómo exponerla por HTTP.
 
-Además: `CapabilityReport` (sondeo), `RobotStatus` (estado y telemetría resumida, apto para `GET /api/v1/robot/status`) y `SessionInfo` (sesiones grabadas).
+Además: `CapabilityReport` (sondeo), `RobotStatus` (estado y telemetría resumida, apto para `GET /api/v1/robot/status`). `SessionInfo` (sesiones grabadas para replay) se retiró el 2026-11-14 junto con el modo replay.
 
 ## 4. Qué necesitamos de cada especialista
 

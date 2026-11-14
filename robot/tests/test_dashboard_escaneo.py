@@ -1,5 +1,5 @@
 """Dashboard: guardar el mapa SLAM desde el visor (PLY malla + GLB como el visor + coordenadas
-JSON), congelarlo, grabar la sesión cruda desde el panel Replay, y WASD activo por defecto.
+JSON), congelarlo, y WASD activo por defecto.
 
 Robot FALSO y mapas SINTÉTICOS (aquí no hay robot).
 """
@@ -17,8 +17,7 @@ from terrainx_robot.lidar.voxel_glb import read_glb
 import numpy as np
 
 from terrainx_robot.storage.ply import read_ply
-from terrainx_robot.storage.session_log import SessionReader
-from test_dashboard_replay_health import build, wait_for
+from test_dashboard_estado import build, wait_for
 
 
 def _frame():
@@ -159,46 +158,6 @@ def test_pausa_congela_el_acumulado_y_se_reanuda_al_cerrar_el_visor(tmp_path):
 
 
 # ------------------------------------------------- grabar la sesión cruda
-def test_grabar_sesion_desde_el_panel_replay(tmp_path):
-    app, service, lib, settings = build(tmp_path)
-    with TestClient(app) as client:
-        assert client.post("/api/record/start").status_code == 409       # sin robot
-        assert client.post("/api/record/stop").status_code == 409
-        client.post("/api/connect")
-        assert client.get("/api/status").json()["recording"] == {"active": False}
-        r = client.post("/api/record/start")
-        assert r.status_code == 200, r.text
-        rec = r.json()
-        assert rec["active"] is True and rec["session_id"]
-        assert client.post("/api/record/start").status_code == 409       # ya se está grabando
-        assert client.get("/api/status").json()["recording"]["session_id"] == rec["session_id"]
-        for sf in generate_frames(4, seed=5):
-            _push(lib, sf)
-        r = client.post("/api/record/stop")
-        assert r.status_code == 200 and r.json()["session_id"] == rec["session_id"]
-        assert r.json()["lidar_records"] == 4
-        assert client.get("/api/status").json()["recording"] == {"active": False}
-        assert client.post("/api/record/stop").status_code == 409
-        assert rec["session_id"] in [x["session_id"] for x in client.get("/api/sessions").json()]
-        client.post("/api/disconnect")
-    session = SessionReader(settings.data_dir / "sessions" / rec["session_id"])
-    assert session.verify() and session.info.lidar_records == 4          # cerrada con su SHA-256
-
-
-def test_desconectar_cierra_la_grabacion(tmp_path):
-    app, service, lib, settings = build(tmp_path)
-    client = TestClient(app)
-    client.post("/api/connect")
-    sid = client.post("/api/record/start").json()["session_id"]
-    for sf in generate_frames(2, seed=5):
-        _push(lib, sf)
-    client.post("/api/disconnect")
-    assert client.get("/api/status").json()["recording"] == {"active": False}
-    session = SessionReader(settings.data_dir / "sessions" / sid)
-    assert session.verify() and session.info.lidar_records == 2
-
-
-# --------------------------------------------------------- WASD por defecto
 def test_wasd_activo_por_defecto_y_hombre_muerto_solo_en_marcha(tmp_path):
     app, service, lib, _ = build(tmp_path)
     client = TestClient(app)

@@ -44,16 +44,6 @@ async function refresh() {
   $("cam-badge").textContent = v.has_frame ? "en directo" : (connected ? "esperando vídeo…" : "—");
   $("cam-badge").className = "badge " + (v.has_frame ? "live" : "");
 
-  // Telemetría
-  const t = s.telemetry || {};
-  $("t-conn").textContent = connected ? (s.connection_state) : "desconectado";
-  $("t-batt").textContent = fmt(t.battery_soc_pct, " %");
-  $("t-volt").textContent = fmt(t.power_v, " V");
-  $("t-imu").textContent = t.imu_rpy_raw ? t.imu_rpy_raw.map((x) => x.toFixed(2)).join(", ") + "  (sin unidad verificada)" : "no disponible";
-  $("t-pos").textContent = t.position_raw ? t.position_raw.map((x) => x.toFixed(2)).join(", ") : "no disponible";
-  $("t-lidar").textContent = connected ? ((s.lidar_frames || 0) + " frames" + (s.lidar_decode_errors ? ", " + s.lidar_decode_errors + " con error" : "")) : "—";
-  $("t-video").textContent = v.has_frame ? "recibiendo" : (connected ? "sin señal" : "—");
-
   // Diagnóstico
   $("d-ip").textContent = (s.ip || "(sin IP)") + " / " + (s.method || "—");
   $("d-auth").textContent = s.aes_key_configured ? ("clave configurada (" + (s.aes_key_fingerprint || "") + ")") : "clave no configurada";
@@ -70,86 +60,44 @@ async function refresh() {
   // Control / límites
   const lim = s.speed_limits || {};
   $("limits").textContent = `Topes: avance ${lim.vx_ms} m/s · lateral ${lim.vy_ms} m/s · giro ${lim.yaw_rps} rad/s`;
-  const replay = !!(s.source && s.source.kind === "replay");
-  renderExtras(s, replay);
-  renderControl(!!s.control_available, replay);
-  renderRecord(s, replay);
+  renderExtras(s);
+  renderControl(!!s.control_available);
 }
 
-// «● Grabar sesión»: sesión cruda del robot (mapas, pose, telemetría) para el replay
-let recording = false, lastRecorded = null;
-function renderRecord(s, replay) {
-  const rec = s.recording || {};
-  recording = !!rec.active;
-  const btn = $("btn-record");
-  btn.disabled = !recording && (!s.control_available || replay);   // solo con el robot real conectado
-  btn.textContent = recording ? "■ Detener grabación" : "● Grabar sesión";
-  btn.classList.toggle("rec", recording);
-  $("record-status").textContent = recording
-    ? `grabando ${rec.session_id} · ${Math.round(rec.elapsed_s || 0)} s`
-    : (lastRecorded || (replay ? "En replay no se graba." : (s.connected ? "Lista para grabar." : "Para grabar, conecta el robot.")));
-}
-$("btn-record").onclick = async () => {
-  const btn = $("btn-record");
-  btn.disabled = true; btn.blur();   // sin foco: Espacio no lo vuelve a «pulsar»
-  try {
-    if (recording) {
-      $("record-status").textContent = "cerrando la sesión (SHA-256)…";
-      const r = await api("/api/record/stop", { method: "POST" });
-      lastRecorded = `grabada ${r.session_id} · ${r.lidar_records} mapas`;
-      loadSessions();
-    } else {
-      lastRecorded = null;
-      await api("/api/record/start", { method: "POST" });
-    }
-  } catch (e) { lastRecorded = "error: " + e.message; }
-  refresh();
-};
-
-// ---------------------------------------------------------------- estado del robot, replay, acumulado
+// ---------------------------------------------------------------- estado del robot, acumulado
 const esc = (x) => String(x).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const num = (v, d = 1, unit = "") => (v === null || v === undefined ? "no disponible" : Number(v).toFixed(d) + unit);
 const STATE_TXT = { ok: "ok", stale: "parado", no_data: "sin datos" };
 const EVIDENCE_TXT = { robot_measured: "medido por el robot", synthetic_test: "SINTÉTICO (demo)",
   derived: "derivado", orbital_nasa: "orbital NASA" };
 
-function renderExtras(s, replay) {
+function renderExtras(s) {
   window.terrainxStatus = s;          // el visor LiDAR (lidarView.js) lo lee para etiquetar el origen
   const d = s.robot_details || {};
   const b = d.battery || {}, l = d.lidar || {}, st = d.settings || {};
 
-  // Origen de los datos (arriba): robot en vivo, replay o nada
-  const src = s.source || { kind: "none" };
-  const sb = $("src-badge");
-  if (src.kind === "replay") {
-    sb.textContent = `REPLAY · ${EVIDENCE_TXT[src.evidence_class] || src.evidence_class}`;
-    sb.className = "badge " + (src.demo ? "demo" : "replay");
-  } else if (src.kind === "live") { sb.textContent = "ROBOT EN VIVO"; sb.className = "badge live"; }
-  else { sb.textContent = "sin fuente"; sb.className = "badge"; }
-  $("btn-connect").disabled = replay;
-  if (replay) $("cam-overlay").textContent = "Replay: las sesiones grabadas no incluyen vídeo";
-  else $("cam-overlay").textContent = "Sin señal — conecta el robot";
+  // Origen de los datos (arriba): robot en vivo o nada
+  const live = !!(s.source && s.source.kind === "live");
+  $("src-badge").textContent = live ? "ROBOT EN VIVO" : "sin robot";
+  $("src-badge").className = "badge" + (live ? " live" : "");
 
   // Batería: aviso arriba si está baja (solo con datos)
   const alert = $("batt-alert");
   if (b.level === "low" || b.level === "critical") {
     alert.hidden = false;
     alert.className = "alert" + (b.level === "critical" ? " critical" : "");
-    alert.textContent = replay
-      ? `Replay: la grabación marca batería ${b.level === "critical" ? "crítica" : "baja"} (${num(b.soc_pct, 0, " %")})`
-      : (b.level === "critical" ? "⚠ BATERÍA CRÍTICA " : "⚠ Batería baja ") + num(b.soc_pct, 0, " %") +
-        (b.level === "critical" ? " — no hagas pruebas de movimiento" : " — termina la prueba y carga");
+    alert.textContent = (b.level === "critical" ? "⚠ BATERÍA CRÍTICA " : "⚠ Batería baja ") + num(b.soc_pct, 0, " %") +
+      (b.level === "critical" ? " — no hagas pruebas de movimiento" : " — termina la prueba y carga");
   } else alert.hidden = true;
   const lvl = { ok: "lvl-ok", low: "lvl-low", critical: "lvl-critical" }[b.level] || "";
-  $("t-batt").className = lvl;
   $("h-soc").textContent = num(b.soc_pct, 0, " %"); $("h-soc").className = lvl;
   $("h-volt").textContent = num(b.power_v, 2, " V");
   $("h-cur").textContent = num(b.current_raw, 0);
   $("h-cyc").textContent = num(b.cycles, 0);
   $("h-temp").textContent = (b.bms_temp_raw || b.mcu_temp_raw)
     ? `${(b.bms_temp_raw || ["—"]).join(" / ")} · ${(b.mcu_temp_raw || ["—"]).join(" / ")}` : "no disponible";
-  $("health-badge").textContent = src.kind === "replay" ? "replay" : (s.connected ? "en vivo" : "—");
-  $("health-badge").className = "badge " + (src.kind === "replay" ? "replay" : (s.connected ? "live" : ""));
+  $("health-badge").textContent = s.connected ? "en vivo" : "—";
+  $("health-badge").className = "badge " + (s.connected ? "live" : "");
 
   // LiDAR y ajustes del robot
   $("h-dirty").textContent = num(l.dirty_pct, 0, " %");
@@ -177,46 +125,7 @@ function renderExtras(s, replay) {
     (sl.errors ? ` · ${sl.errors} descartados` : "") + (sl.paused ? " · EN PAUSA (no suma mapas)" : "") +
     (sl.saving ? " · guardando…" : "");
 
-  // Replay
-  $("btn-replay-stop").disabled = !replay;
-  $("replay-badge").textContent = replay ? "reproduciendo" : "—";
-  $("replay-badge").className = "badge " + (replay ? "replay" : "");
-  $("replay-status").textContent = replay
-    ? `Reproduciendo ${src.session_id} · pasadas completas: ${src.passes}${src.loop ? " (en bucle)" : ""}`
-    : (s.connected ? "Robot conectado: desconéctalo para reproducir una sesión." : "Elige una sesión para reproducirla.");
-  document.querySelectorAll(".rbtn").forEach((btn) => (btn.disabled = s.connected && !replay));
 }
-
-async function loadSessions() {
-  let list; try { list = await api("/api/sessions"); } catch (e) { $("replay-status").textContent = "error: " + e.message; return; }
-  const tb = $("sessions").querySelector("tbody"); tb.innerHTML = "";
-  if (!list.length) {
-    tb.innerHTML = `<tr><td colspan="4" class="note">No hay sesiones grabadas. Graba una con el robot conectado:
-      «● Grabar sesión» → muévelo → «■ Detener grabación».</td></tr>`;
-    return;
-  }
-  list.forEach((x) => {
-    const tr = document.createElement("tr");
-    const kind = x.demo ? `<span class="badge demo">DEMO sintética</span>` : esc(EVIDENCE_TXT[x.evidence_class] || x.evidence_class);
-    tr.innerHTML = `<td>${esc(x.session_id)}</td><td>${kind}</td>` +
-      `<td>${x.duration_s == null ? "" : x.duration_s + " s · "}${x.lidar_records} mapas${x.size_mb == null ? "" : " · " + x.size_mb + " MB"}</td>` +
-      `<td><button class="rbtn small" data-id="${esc(x.session_id)}">▶ Reproducir</button></td>`;
-    tb.appendChild(tr);
-  });
-  tb.querySelectorAll(".rbtn").forEach((btn) => btn.onclick = async () => {
-    $("replay-status").textContent = "verificando la sesión (SHA-256) y arrancando…";
-    try {
-      await api("/api/replay/start", { method: "POST", body: JSON.stringify({ session_id: btn.dataset.id, loop: $("replay-loop").checked }) });
-    } catch (e) { $("replay-status").textContent = "error: " + e.message; }
-    refresh();
-  });
-  refresh();
-}
-$("btn-sessions").onclick = loadSessions;
-$("btn-replay-stop").onclick = async () => {
-  try { await api("/api/replay/stop", { method: "POST" }); } catch (e) { $("replay-status").textContent = "error: " + e.message; }
-  refresh();
-};
 
 // ---------------------------------------------------------------- autenticación
 // Con la clave guardada, conectar no pide correo ni contraseña: el formulario queda plegado tras
@@ -340,12 +249,12 @@ function onKey(down) {
     pressed.add(k); highlight(); sendDrive();
   };
 }
-function renderControl(available, replay) {
+function renderControl(available) {
   driveOK = available;
   if (!driveOK && pressed.size) { pressed.clear(); highlight(); }
   $("btn-stop").disabled = !driveOK;
   document.querySelectorAll(".pbtn").forEach((b) => (b.disabled = !driveOK));
-  $("ctrl-badge").textContent = driveOK ? "CONTROL ACTIVO" : (replay ? "replay: sin control" : "sin robot");
+  $("ctrl-badge").textContent = driveOK ? "CONTROL ACTIVO" : "sin robot";
   $("ctrl-badge").className = "badge " + (driveOK ? "warn" : "");
 }
 // Canal de control: abierto siempre; si se cierra, se para y se vuelve a abrir solo.
@@ -375,5 +284,5 @@ setInterval(sendDrive, 100);   // mientras haya una tecla pulsada: también es l
 // ---------------------------------------------------------------- arranque
 setSpeedLevel("normal");
 openControl();
-refresh(); loadSessions();
+refresh();
 setInterval(refresh, 1000);
