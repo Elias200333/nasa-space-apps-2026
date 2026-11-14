@@ -4,7 +4,7 @@ Software del especialista de robótica de TERRAIN-X (NASA Space Apps Challenge 2
 
 **Base (solo lectura):** comunicación con el Unitree Go2 físico — adquisición LiDAR y telemetría, exportación PLY + metadatos JSON con SHA-256 y un modo replay para trabajar sin robot.
 
-**Dashboard web local:** autenticación AES-128, conexión compartida al Go2, **cámara en directo**, visor LiDAR 3D, telemetría, capturas y, de forma separada y opcional, **teleoperación WASD** con hombre muerto. Ver [sección 11](#11-dashboard-web-del-go2-air).
+**Dashboard web local:** autenticación AES-128, conexión compartida al Go2, **cámara en directo**, visor LiDAR 3D con el mapa SLAM acumulado (se guarda como PLY + GLB), telemetría, replay y **teleoperación WASD** con hombre muerto (activa con el robot conectado). Ver [sección 11](#11-dashboard-web-del-go2-air).
 
 > Por defecto el módulo es de **solo lectura**: un guardián bloquea en el propio PC cualquier orden que no esté en una lista blanca. La conducción WASD es un **modo aparte** que hay que habilitar explícitamente; usa un guardián acotado (solo Move/Stop/levantar/sentar/amortiguar) y se detiene al soltar la tecla, perder el foco o cortarse la conexión. Nada de esto sustituye a la parada de emergencia física del robot, que siempre debe manejar un operador presente.
 
@@ -216,7 +216,7 @@ Después apunta `TERRAINX_GO2_AES_KEY_FILE` en `robot\.env` a esa ruta (por defe
 .\.venv\Scripts\python.exe -m terrainx_robot dashboard
 ```
 
-Abre **http://127.0.0.1:8777** en el navegador. Paneles: cámara en directo (MJPEG), telemetría, LiDAR 3D, conducción WASD, capturas y diagnóstico.
+Abre **http://127.0.0.1:8777** en el navegador. Paneles: cámara en directo (MJPEG), telemetría, LiDAR 3D (con guardar y descargar el mapa), conducción WASD, estado del robot, replay (con «● Grabar sesión») y diagnóstico.
 
 ### Conectar al perro y comprobar que funciona
 
@@ -227,24 +227,38 @@ Abre **http://127.0.0.1:8777** en el navegador. Paneles: cámara en directo (MJP
    - la **cámara en directo** en unos segundos (FPS en la esquina);
    - telemetría (batería, IMU…) a medida que el robot la publica;
    - la nube **LiDAR 3D** actualizándose (vóxeles ocupados, en metros asumidos).
-4. Prueba una **captura**: «Iniciar captura» → mueve el robot con su mando unos segundos → «Detener y guardar». Aparece en la lista y puedes descargar el PLY.
+4. **Escanea el entorno** con los botones de arriba a la derecha del visor LiDAR 3D:
+   - **papelera** (en «Acumulado»): empieza un mapa SLAM nuevo;
+   - lleva el perro por todo el entorno;
+   - **pausa**: el mapa acumulado deja de sumar mapas, así lo que ves es lo que se guarda (si cierras la pestaña, se reanuda solo);
+   - **descarga**: guarda el **mapa SLAM acumulado** en `runtime/scans/<id>/` y el navegador baja el **`.glb`**. Se guardan tres archivos:
+     - **`.glb`**: se ve como el visor. Tiene los mismos cubos y colores, las aristas grises y no lleva luz. Lo abren Blender (en «Vista previa del material»; para los colores exactos, Gestión de color → «Estándar»), Babylon y los visores glTF del navegador.
+     - **`.ply`**: malla de cubos con las coordenadas del robot, para CloudCompare y MeshLab. Cada programa le pone su propia luz, así que no se ve igual que el visor.
+     - **metadatos y SHA-256**: `point_type = voxel_mesh`, clase `derived`.
+
+   Si la conexión se corta, lo acumulado se puede guardar igual.
+
+> Para una nube de puntos **medida** (`robot_measured`, sin el filtro del SLAM) sigue existiendo el comando `capture` del CLI (con el dashboard desconectado del robot: el Go2 admite un solo cliente).
+
+5. Para la demo sin robot, graba una sesión con **«● Grabar sesión»** en el panel Replay (robot conectado) y detenla con «■ Detener grabación». Después podrás reproducirla con el robot desconectado.
 
 ### Conducir con WASD (teleoperación supervisada)
 
-> **Solo con espacio libre y un operador junto al paro de emergencia físico.**
+> **Solo con espacio libre y un operador junto al paro de emergencia físico.** El control está **activo por defecto**: en cuanto el robot está conectado, WASD lo mueve (no hay botón «Habilitar»).
 
-1. En el panel **Conducción (WASD)** pulsa **«Habilitar control»** y confirma. El guardián pasa a modo control (acotado).
-2. Conduce manteniendo pulsado:
+1. Conduce manteniendo pulsado:
    - **W / S** — avanzar / retroceder
    - **A / D** — girar izquierda / derecha
    - **Q / E** — desplazamiento lateral
    - **Espacio** — parar
-   - Botones de postura: **Levantar / Sentar / Equilibrio / Amortiguar**
-3. El robot **solo se mueve mientras mantienes la tecla**. Al soltarla, cambiar de ventana, cerrar la pestaña o perder la conexión, se detiene solo (hombre muerto, 0,4 s). Botones **PARAR** y **Deshabilitar** siempre disponibles.
-4. Límites de velocidad (recortados en el servidor): avance 0,6 m/s · lateral 0,4 m/s · giro 0,8 rad/s; el mando WASD usa valores aún más suaves. Saltos y volteretas están **bloqueados**.
+   - Botones de postura: **Levantar / Sentar / Equilibrio / Amortiguar / Recuperarse**
+2. El robot **solo se mueve mientras mantienes la tecla**; mientras no pulses nada, no se le envía ninguna orden. Al soltarla, pasar a escribir en un campo de texto, cambiar de ventana, cerrar la pestaña o perder la conexión, se detiene solo (hombre muerto, 0,4 s). Las teclas no cuentan mientras escribes en un campo de texto. El botón **PARAR** está siempre disponible.
+3. Límites de velocidad (recortados en el servidor): avance 1,0 m/s · lateral 0,5 m/s · giro 1,5 rad/s; el selector Lento / Normal / Rápido elige dentro de esos topes. Saltos y volteretas están **bloqueados**.
 
 ### Qué está probado y qué no
 
-- **Probado sin robot** (159 tests, incluidos los del dashboard con un robot simulado): los endpoints, el modo control acotado, el hombre muerto, el recorte de velocidad y que la clave/credenciales no se filtran.
+- **Probado sin robot** (213 tests, incluidos los del dashboard con un robot simulado): los endpoints, el modo control acotado y activo por defecto, el hombre muerto, el recorte de velocidad, el mapa guardado como PLY + GLB, la pausa, la grabación de sesiones y que la clave/credenciales no se filtran.
+- **Probado con Pluffy (2026-11-14, 22:18):** el guardado del mapa como malla PLY (40 275 vóxeles, 0,38 s fuera del bucle de la conexión).
+- **Pendiente de probar con Pluffy:** el `.glb`, la pausa del acumulado, «● Grabar sesión» desde el panel Replay y el WASD activo por defecto. El `.glb` sí está comprobado, sin robot, con el mapa real de las 22:18: se ve como el visor en three.js y en Blender 4.5.
 - **Pendiente de comprobar con el Go2 físico:** que lleguen vídeo y LiDAR reales y a qué frecuencia, y el comportamiento real de la locomoción. Nada de esto está verificado hasta probarlo con el robot.
 - Three.js se incluye vendorizado en `dashboard/static/vendor/` (MIT) para que el visor 3D funcione **sin internet** en la red del robot.

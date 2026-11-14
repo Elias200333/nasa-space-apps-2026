@@ -74,6 +74,10 @@ class AccumulatedCloud:
     last_info: LidarFrameInfo | None
     validation: dict = field(default_factory=dict)
     deduplication: dict = field(default_factory=dict)
+    # Solo en una malla (point_type = voxel_mesh): ``points`` son sus vértices, ``faces``
+    # los triángulos (T, 3) y ``colors`` el RGB uint8 de cada vértice.
+    faces: np.ndarray | None = None
+    colors: np.ndarray | None = None
 
 
 class CaptureAccumulator:

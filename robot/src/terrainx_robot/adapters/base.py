@@ -311,6 +311,29 @@ class RobotAdapter(ABC):
         log.info("Sesión grabada: %s (%d mensajes)", info.session_id, info.record_count)
         return info
 
+    @property
+    def recording_info(self) -> SessionInfo | None:
+        """La sesión que se está grabando ahora (None si no se graba ninguna)."""
+        recorder = self._recorder
+        return recorder.info if recorder is not None else None
+
+    def start_recording(self, notes: str | None = None) -> str:
+        """Graba la sesión cruda (para el replay) SIN captura de nube. Devuelve su id.
+        Lo usa «● Grabar sesión» del dashboard: el mapa lo junta el SLAM, aquí solo se graba."""
+        self._require_connected()
+        self._start_recorder(notes)
+        return self._recorder.info.session_id
+
+    async def stop_recording(self) -> SessionInfo | None:
+        """Cierra la sesión que se esté grabando (None si no hay ninguna). El cierre calcula
+        el SHA-256 del archivo: va en otro hilo para no parar el bucle de la conexión."""
+        recorder, self._recorder = self._recorder, None    # desde aquí no se escribe más
+        if recorder is None:
+            return None
+        info = await asyncio.to_thread(recorder.close)
+        log.info("Sesión grabada: %s (%d mensajes)", info.session_id, info.record_count)
+        return info
+
     # ------------------------------------------------------------------- captura
     async def observe(
         self, duration_s: float | None, *, record_session: bool = False, notes: str | None = None

@@ -46,21 +46,27 @@ def test_conectar_y_estado(tmp_path):
     s = client.get("/api/status").json()
     assert s["connected"] is True
     assert s["video"]["has_frame"] is False        # sin fotogramas reales
-    assert s["control_enabled"] is False            # arranca en solo lectura
+    assert s["control_available"] is True           # WASD activo por defecto…
+    assert s["control_enabled"] is False            # …pero el guardián sigue en solo lectura hasta la 1.ª orden
 
 
 def test_control_requiere_conexion(tmp_path):
     client, service, lib = build(tmp_path)
-    assert client.post("/api/control/arm").status_code == 409
+    assert client.get("/api/status").json()["control_available"] is False
+    assert client.post("/api/control/arm").status_code == 404     # ya no hay «Habilitar control»
+    with client.websocket_connect("/ws/control") as wsc:
+        wsc.send_json({"type": "drive", "vx": 0.3, "vy": 0.0, "yaw": 0.0})
+        assert wsc.receive_json()["ok"] is False
+    assert lib.instances == []
 
 
 def test_wasd_por_websocket_conduce_y_al_cerrar_desarma(tmp_path):
     client, service, lib = build(tmp_path)
     client.post("/api/connect")
-    assert client.post("/api/control/arm").json()["control_enabled"] is True
-    with client.websocket_connect("/ws/control") as wsc:
+    with client.websocket_connect("/ws/control") as wsc:      # sin «Habilitar»: conduce directamente
         wsc.send_json({"type": "drive", "vx": 0.3, "vy": 0.0, "yaw": 0.0})
-        assert wsc.receive_json()["ok"] is True
+        r = wsc.receive_json()
+        assert r["ok"] is True and r["control_enabled"] is True
         wsc.send_json({"type": "posture", "command": "StandUp"})
         wsc.receive_json()
     # al cerrar el WS: el robot queda detenido y fuera de modo control

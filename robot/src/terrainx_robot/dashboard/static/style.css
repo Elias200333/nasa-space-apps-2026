@@ -52,9 +52,9 @@ button.danger:disabled, button.stop:disabled, button.secondary:disabled {
     "cam cam telemetry"
     "cam cam control"
     "lidar lidar control"
-    "lidar lidar captures"
+    "lidar lidar replay"
     "health health replay"
-    "auth diag replay";
+    "auth auth diag";
 }
 .panel {
   background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
@@ -62,7 +62,7 @@ button.danger:disabled, button.stop:disabled, button.secondary:disabled {
 }
 .panel h2 { margin: 0 0 10px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
 .cam { grid-area: cam; } .telemetry { grid-area: telemetry; } .control { grid-area: control; }
-.lidar { grid-area: lidar; } .captures { grid-area: captures; } .auth { grid-area: auth; } .diag { grid-area: diag; }
+.lidar { grid-area: lidar; } .auth { grid-area: auth; } .diag { grid-area: diag; }
 .health { grid-area: health; } .replay { grid-area: replay; }
 .panel h3 { margin: 12px 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase;
   letter-spacing: .4px; }
@@ -97,7 +97,7 @@ button.danger:disabled, button.stop:disabled, button.secondary:disabled {
 table { width: 100%; border-collapse: collapse; }
 table td, table th { padding: 5px 4px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
 table td:first-child { color: var(--muted); width: 42%; }
-#scans th { color: var(--muted); font-weight: 500; font-size: 12px; }
+#btn-record.rec { background: var(--danger); color: #fff; }
 .note { color: var(--muted); font-size: 12px; margin: 8px 0 0; line-height: 1.5; }
 .warn-text { color: var(--warn); font-size: 12px; line-height: 1.5; margin: 0 0 10px; }
 
@@ -140,6 +140,10 @@ table td:first-child { color: var(--muted); width: 42%; }
   font-size: 12px; padding: 0 10px; }
 .lv-status { position: absolute; left: 11px; bottom: 11px; max-width: calc(100% - 70px); border-radius: 6px;
   background: rgba(0,0,0,.6); padding: 4px 8px; font-size: 11px; color: rgba(255,255,255,.85); pointer-events: none; }
+.lv-toast { position: absolute; right: 11px; top: 50px; max-width: min(380px, calc(100% - 22px)); border-radius: 6px;
+  background: rgba(0,0,0,.82); border: 1px solid rgba(255,255,255,.25); padding: 6px 10px; font-size: 12px;
+  line-height: 1.4; color: #fff; pointer-events: none; }
+.lv-toast.err { border-color: var(--danger); color: #fca5a5; }
 .auth-form { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
 .auth-form input { flex: 1 1 140px; padding: 8px; background: var(--panel-2); border: 1px solid var(--border);
   border-radius: 7px; color: var(--text); }
@@ -150,10 +154,10 @@ table td:first-child { color: var(--muted); width: 42%; }
 
 @media (max-width: 1100px) {
   .grid { grid-template-columns: 1fr 1fr; grid-template-areas:
-    "cam cam" "telemetry control" "lidar lidar" "captures replay" "health health" "auth diag"; }
+    "cam cam" "telemetry control" "lidar lidar" "replay replay" "health health" "auth diag"; }
 }
 @media (max-width: 720px) {
   .grid { grid-template-columns: 1fr; grid-template-areas:
-    "cam" "telemetry" "control" "lidar" "health" "captures" "replay" "auth" "diag"; }
+    "cam" "telemetry" "control" "lidar" "health" "replay" "auth" "diag"; }
   .health-grid { grid-template-columns: 1fr; }
 }

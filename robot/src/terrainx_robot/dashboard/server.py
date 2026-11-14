@@ -7,23 +7,26 @@ Endpoints
     POST /api/disconnect       la cierra
     GET  /video/stream         cámara en directo (MJPEG)
     GET  /api/lidar            última nube de puntos (submuestreada)
-    POST /api/capture/start|stop
+    POST /api/slam/save        descarga del visor: guarda el mapa acumulado (PLY malla + GLB
+                               igual que el visor + metadatos + SHA-256) y devuelve sus metadatos
     GET  /api/scans            lista de escaneos
-    GET  /api/scans/{id}/download   descarga el PLY
+    GET  /api/scans/{id}/download?format=ply|glb   descarga un archivo del escaneo
+    POST /api/record/start|stop   «● Grabar sesión»: sesión cruda del robot para el replay
     POST /api/auth/devices     lista robots de la cuenta (pide credenciales; NO devuelve clave)
     POST /api/auth/fetch-key   recupera y guarda la clave (NO la devuelve)
-    POST /api/control/arm|disarm
-    WS   /ws/control           teleoperación WASD con hombre muerto
-    WS   /ws/lidar             visor LiDAR 3D: mapa en vivo / acumulado + pose (solo lectura)
+    WS   /ws/control           teleoperación WASD con hombre muerto (activa por defecto)
+    WS   /ws/lidar             visor LiDAR 3D: mapa en vivo / acumulado + pose (solo lectura);
+                               borrar y congelar el acumulado
     GET  /api/sessions         sesiones grabadas (para replay)
     POST /api/replay/start|stop   demo SIN robot: reproduce una sesión grabada (sin control)
-    POST /api/slam/save        guarda el mapa acumulado como escaneo (PLY + metadatos)
 
 Seguridad
     - host fijo 127.0.0.1 (no accesible desde la red).
     - la clave AES y los tokens nunca se devuelven en las respuestas.
-    - el control arranca deshabilitado; WASD solo tras /api/control/arm.
-    - hombre muerto: si no llegan órdenes en DEADMAN_S, el robot se detiene.
+    - WASD activo por defecto con el robot conectado (sin «Habilitar»): la primera orden pasa
+      el guardián a modo control ACOTADO; al cerrar el canal, StopMove y solo lectura.
+    - hombre muerto: si el robot iba en marcha y dejan de llegar órdenes en DEADMAN_S, se
+      detiene. Sin teclas pulsadas no se envía nada al robot.
 """
 
 from __future__ import annotations
@@ -54,6 +57,14 @@ POSTURE_COMMANDS = {"BalanceStand", "StandUp", "StandDown", "RecoveryStand", "Da
 LIDAR_TICK_S = 0.1       # visor 3D: como mucho 10 mapas/s (el navegador dibuja 1 cada 150 ms)
 SLAM_INFO_S = 1.0        # visor 3D: estado del mapa acumulado cada segundo
 LIDAR_MODES = {"live", "slam", "off"}
+
+
+def _safe_stop(service: DashboardService, why: str) -> None:
+    """StopMove sin dejar que un fallo de envío (conexión caída) corte lo que va detrás."""
+    try:
+        service.stop_move()
+    except Exception:
+        log.exception("No se pudo enviar StopMove (%s)", why)
 
 
 def create_app(settings: Settings, service: DashboardService | None = None) -> FastAPI:
@@ -107,10 +118,24 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
     @app.post("/api/slam/save")
     async def api_slam_save() -> dict[str, Any]:
         try:
-            meta = await run_in_threadpool(service.save_slam_scan)
-        except (ConnectionFailed, ScanStoreError) as exc:
+            return await service.save_slam_map()
+        except (CaptureError, ScanStoreError) as exc:
             raise HTTPException(status_code=409, detail=str(exc))
-        return meta.model_dump(mode="json")
+
+    # ------------------------------------------------- grabar sesión cruda
+    @app.post("/api/record/start")
+    async def api_record_start() -> dict[str, Any]:
+        try:
+            return await service.start_recording()
+        except (ConnectionFailed, CaptureError) as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+
+    @app.post("/api/record/stop")
+    async def api_record_stop() -> dict[str, Any]:
+        try:
+            return await service.stop_recording()
+        except CaptureError as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
 
     @app.post("/api/disconnect")
     async def api_disconnect() -> dict[str, Any]:
@@ -135,23 +160,7 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
     async def api_lidar() -> dict[str, Any]:
         return service.live_lidar()
 
-    # ------------------------------------------------------------- capturas
-    @app.post("/api/capture/start")
-    async def api_capture_start(body: dict[str, Any] | None = None) -> dict[str, Any]:
-        mode = (body or {}).get("mode", "accumulate")
-        record = bool((body or {}).get("record_session", False))
-        try:
-            return await service.start_capture(mode=mode, record_session=record)
-        except (ConnectionFailed, CaptureError) as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
-
-    @app.post("/api/capture/stop")
-    async def api_capture_stop() -> dict[str, Any]:
-        try:
-            return await service.stop_capture()
-        except (ConnectionFailed, CaptureError) as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
-
+    # ------------------------------------------------------------- escaneos
     @app.get("/api/scans")
     async def api_scans() -> list[dict[str, Any]]:
         return [m.model_dump(mode="json") for m in service.store.list()]
@@ -164,13 +173,17 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
             raise HTTPException(status_code=404, detail=str(exc))
 
     @app.get("/api/scans/{scan_id}/download")
-    async def api_scan_download(scan_id: str) -> FileResponse:
+    async def api_scan_download(scan_id: str, format: str = "ply") -> FileResponse:
         try:
             meta = service.store.load_metadata(scan_id)
         except ScanStoreError as exc:
             raise HTTPException(status_code=404, detail=str(exc))
-        path = service.store.scans_dir / scan_id / meta.files["ply"].path
-        return FileResponse(path, media_type="application/octet-stream", filename=path.name)
+        ref = meta.files.get(format)
+        if ref is None:
+            raise HTTPException(status_code=404, detail=f"el escaneo {scan_id} no tiene archivo {format!r}")
+        path = service.store.scans_dir / scan_id / ref.path
+        media = "model/gltf-binary" if format == "glb" else "application/octet-stream"
+        return FileResponse(path, media_type=media, filename=path.name)
 
     # ----------------------------------------------------------- autenticación
     @app.post("/api/auth/devices")
@@ -201,32 +214,31 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
         return {"configured": bool(st.get("configured")), "fingerprint": st.get("fingerprint")}
 
     # --------------------------------------------------------------- control
-    @app.post("/api/control/arm")
-    async def api_control_arm() -> dict[str, Any]:
-        try:
-            return service.arm_control()
-        except ConnectionFailed as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
-
-    @app.post("/api/control/disarm")
-    async def api_control_disarm() -> dict[str, Any]:
-        return service.disarm_control()
-
     @app.websocket("/ws/control")
     async def ws_control(ws: WebSocket) -> None:
+        """WASD, activo por defecto (sin «Habilitar»). El navegador manda «drive» cada 100 ms
+        SOLO mientras hay una tecla pulsada, y «stop» al soltar la última."""
         await ws.accept()
+        moving = False   # la última orden fue de marcha (velocidad distinta de 0)
         try:
             while True:
                 try:
                     msg = await asyncio.wait_for(ws.receive_json(), timeout=DEADMAN_S)
                 except asyncio.TimeoutError:
-                    service.stop_move()  # hombre muerto: sin órdenes -> parar
+                    if moving:   # hombre muerto: iba en marcha y dejaron de llegar órdenes -> parar
+                        moving = False
+                        _safe_stop(service, "hombre muerto")
+                    continue
+                if not isinstance(msg, dict):
                     continue
                 kind = msg.get("type")
                 try:
                     if kind == "drive":
-                        service.drive(float(msg.get("vx", 0)), float(msg.get("vy", 0)), float(msg.get("yaw", 0)))
+                        vx, vy, yaw = (float(msg.get(k, 0)) for k in ("vx", "vy", "yaw"))
+                        service.drive(vx, vy, yaw)
+                        moving = any(v != 0 for v in (vx, vy, yaw))
                     elif kind == "stop":
+                        moving = False
                         service.stop_move()
                     elif kind == "posture" and msg.get("command") in POSTURE_COMMANDS:
                         service.posture(msg["command"])
@@ -234,24 +246,29 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
                         pass
                     await ws.send_json({"ok": True, "control_enabled": service.adapter is not None
                                         and service.adapter.control_enabled})
-                except (ConnectionFailed, CaptureError) as exc:
+                except (ConnectionFailed, CaptureError, ValueError, TypeError) as exc:
                     await ws.send_json({"ok": False, "error": str(exc)})
+                except Exception as exc:   # p. ej. el canal de datos del robot se cerró
+                    log.exception("Control: orden %r no enviada", kind)
+                    await ws.send_json({"ok": False, "error": f"{type(exc).__name__}: {exc}"})
         except WebSocketDisconnect:
             pass
         finally:
             # Cerrar el canal detiene y sale de control: no se queda conduciendo solo.
-            service.stop_move()
-            service.disarm_control()
+            _safe_stop(service, "cierre del canal de control")
+            service.release_control()
 
     # ------------------------------------------------------------ LiDAR 3D
     @app.websocket("/ws/lidar")
     async def ws_lidar(ws: WebSocket) -> None:
         """Visor LiDAR 3D. El navegador pide {"mode": "live" | "slam" | "off"},
-        {"type": "SLAM_RESET"} (borrar el acumulado) o {"type": "SLAM_SYNC"} (reenviarlo
-        entero). Recibe mensajes binarios LVX1 (LIDAR_VOXELS en vivo, SLAM_CHUNK del
-        acumulado) y JSON (POSE, SLAM_INFO). Nada de esto envía órdenes al robot."""
+        {"type": "SLAM_RESET"} (borrar el acumulado), {"type": "SLAM_SYNC"} (reenviarlo
+        entero) o {"type": "SLAM_PAUSE", "paused": bool} (congelar: no se suman mapas; si el
+        visor que lo congeló se cierra, se reanuda). Recibe mensajes binarios LVX1
+        (LIDAR_VOXELS en vivo, SLAM_CHUNK del acumulado) y JSON (POSE, SLAM_INFO). Nada de esto
+        envía órdenes al robot."""
         await ws.accept()
-        want = {"mode": "off", "sync": False}
+        want = {"mode": "off", "sync": False, "paused_here": False}
 
         async def receiver() -> None:
             while True:
@@ -273,6 +290,9 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
                     service.slam_reset()
                 elif kind == "SLAM_SYNC":
                     want["sync"] = True
+                elif kind == "SLAM_PAUSE" and isinstance(msg.get("paused"), bool):
+                    service.set_slam_paused(msg["paused"])
+                    want["paused_here"] = msg["paused"]
 
         recv = asyncio.create_task(receiver())
         last_raw = last_pose = -1
@@ -298,7 +318,8 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
                         last_info = 0.0                   # el visor tira lo viejo antes de los trozos
                     if now - last_info >= SLAM_INFO_S:
                         last_info = now
-                        await ws.send_json(dict(info, type="SLAM_INFO", evidence_class="derived"))
+                        await ws.send_json(dict(info, type="SLAM_INFO", evidence_class="derived",
+                                                paused=service.slam_paused))
                     blobs, slam_seq = service.slam.frames_since(slam_seq)
                     for blob in blobs:
                         await ws.send_bytes(blob)
@@ -311,6 +332,8 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
                 await recv
             except (asyncio.CancelledError, Exception):  # cancelada o cerrada: nada que hacer
                 pass
+            if want["paused_here"]:          # el visor que congeló el mapa se cerró: se reanuda
+                service.set_slam_paused(False)
 
     return app
 
