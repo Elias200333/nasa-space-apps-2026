@@ -136,8 +136,24 @@ $("btn-fetch").onclick = async () => {
 // ---------------------------------------------------------------- CONTROL WASD
 let armed = false, ws = null, heartbeat = null;
 const pressed = new Set();
-const SPEED = { vx: 0.3, vy: 0.25, yaw: 0.5 };   // dentro de los topes del backend
+// Niveles de velocidad (m/s, m/s, rad/s). El backend recorta además a sus topes
+// (go2_webrtc.MAX_*), así que aunque aquí se suba algo, al robot no llega más.
+const SPEED_LEVELS = {
+  lento:  { vx: 0.3, vy: 0.25, yaw: 0.5 },   // el de antes
+  normal: { vx: 0.6, vy: 0.4,  yaw: 1.0 },
+  rapido: { vx: 1.0, vy: 0.5,  yaw: 1.5 },
+};
+let SPEED = SPEED_LEVELS.normal;
 const KEYS = ["w", "a", "s", "d", "q", "e"];
+
+function setSpeedLevel(level) {
+  if (!SPEED_LEVELS[level]) return;
+  SPEED = SPEED_LEVELS[level];
+  document.querySelectorAll(".sbtn").forEach((b) => b.classList.toggle("active", b.dataset.level === level));
+  $("speed-now").textContent = `avance ${SPEED.vx} m/s · lateral ${SPEED.vy} m/s · giro ${SPEED.yaw} rad/s`;
+  sendDrive();   // si hay una tecla pulsada, la nueva velocidad se aplica ya
+}
+document.querySelectorAll(".sbtn").forEach((b) => b.onclick = () => { setSpeedLevel(b.dataset.level); b.blur(); });
 
 function velocity() {
   let vx = 0, vy = 0, yaw = 0;
@@ -200,5 +216,6 @@ window.addEventListener("keyup", onKey(false));
 window.addEventListener("blur", () => { if (armed) { pressed.clear(); highlight(); sendDrive(); } });  // soltar el foco detiene
 
 // ---------------------------------------------------------------- arranque
+setSpeedLevel("normal");
 refresh(); loadScans();
 setInterval(refresh, 1000);

@@ -93,6 +93,10 @@ table td:first-child { color: var(--muted); width: 42%; }
 .ctrl-extra { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 8px; }
 .postures { display: flex; gap: 6px; flex-wrap: wrap; }
 .pbtn { background: #24303f; color: var(--text); padding: 5px 9px; font-size: 12px; }
+.speed { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.sbtn { background: #24303f; color: var(--text); padding: 5px 10px; font-size: 12px; }
+.sbtn:hover { background: #30425a; }
+.sbtn.active, .sbtn.active:hover { background: var(--accent); color: #04121c; }
 
 /* Visor LiDAR 3D (static/lidar/lidarView.js): fondo y controles como la app de Unitree */
 #lidar-canvas { position: relative; width: 100%; aspect-ratio: 16/10; background: #26272b;
