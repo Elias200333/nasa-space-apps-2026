@@ -59,6 +59,7 @@ export class AnalogMap2DManager {
 
     // 3. Cargar automáticamente la previsualización 3D del radio a su alrededor (10 km) con generate_terrain_3D.py
     this.loadTerrain3DPreview(lat, lon, 10.0);
+    this.toggle3DPanel(true);
 
     // 4. Crossfade suave
     requestAnimationFrame(() => {
@@ -102,6 +103,7 @@ export class AnalogMap2DManager {
 
     // Cargar la previsualización 3D del radio de 10 km alrededor de la ubicación analógica
     this.loadTerrain3DPreview(lat, lon, 10.0);
+    this.toggle3DPanel(true);
 
     requestAnimationFrame(() => {
       this.mapContainer.classList.add('active');
@@ -131,7 +133,7 @@ export class AnalogMap2DManager {
       attribution: 'Esri, Maxar, Earthstar Geographics'
     }).addTo(this.map);
 
-    L.control.zoom({ position: 'bottomright' }).addTo(this.map);
+    L.control.zoom({ position: 'bottomleft' }).addTo(this.map);
 
     // Detección de alejamiento con rueda del ratón: volver a la esfera 3D al llegar a vista global
     this.map.on('zoomend', () => {
@@ -458,16 +460,40 @@ export class AnalogMap2DManager {
         thematicImg.src = `${data.thematic_url}?t=${Date.now()}`;
       }
 
-      // 2. Actualizar tarjetas de métricas analíticas
+      // 2. Actualizar tarjetas de métricas analíticas y barra superior
       const simEl = document.getElementById('metricOverallSim');
       const elevEl = document.getElementById('metricElevRange');
       const slopeEl = document.getElementById('metricMeanSlope');
       const pearsonEl = document.getElementById('metricPearson');
 
-      if (simEl) simEl.textContent = `${data.metrics.overall_similarity_pct ?? 98.1}%`;
-      if (elevEl) elevEl.textContent = `${data.metrics.elevation_min_m ?? 0}m - ${data.metrics.elevation_max_m ?? 360}m`;
-      if (slopeEl) slopeEl.textContent = `${data.metrics.mean_slope_deg ?? 4.1}°`;
-      if (pearsonEl) pearsonEl.textContent = `r = ${data.metrics.pearson_correlation_r ?? 0.999}`;
+      const simPct = data.metrics.overall_similarity_pct ?? (this.activeTargetSite?.similarity_score ?? 98.1);
+      const minElev = data.metrics.elevation_min_m !== undefined ? Math.round(data.metrics.elevation_min_m) : 0;
+      const maxElev = data.metrics.elevation_max_m !== undefined ? Math.round(data.metrics.elevation_max_m) : 360;
+      const slopeDeg = data.metrics.mean_slope_deg !== undefined ? data.metrics.mean_slope_deg.toFixed(1) : '4.1';
+      const rPearson = data.metrics.pearson_correlation_r !== undefined ? data.metrics.pearson_correlation_r.toFixed(3) : '0.999';
+      const numCavs = data.cavities ? data.cavities.length : 0;
+
+      if (simEl) simEl.textContent = `${typeof simPct === 'number' ? simPct.toFixed(1) : simPct}%`;
+      if (elevEl) elevEl.textContent = `${minElev} m - ${maxElev} m`;
+      if (slopeEl) slopeEl.textContent = `${slopeDeg}°`;
+      if (pearsonEl) pearsonEl.textContent = `r = ${rPearson}`;
+
+      // Barra superior fija de métricas sobre el mapa
+      const topSimEl = document.getElementById('topSimVal');
+      const topElevEl = document.getElementById('topElevVal');
+      const topSlopeEl = document.getElementById('topSlopeVal');
+      const topCavitiesEl = document.getElementById('topCavitiesVal');
+      const topPearsonEl = document.getElementById('topPearsonVal');
+      const scoreVal = document.getElementById('mapSiteScore');
+
+      if (topSimEl) topSimEl.textContent = `${typeof simPct === 'number' ? simPct.toFixed(1) : simPct}%`;
+      if (topElevEl) topElevEl.textContent = `${minElev} - ${maxElev} m`;
+      if (topSlopeEl) topSlopeEl.textContent = `${slopeDeg}°`;
+      if (topCavitiesEl) topCavitiesEl.textContent = `${numCavs} detectadas`;
+      if (topPearsonEl) topPearsonEl.textContent = `r = ${rPearson}`;
+      if (scoreVal && simPct) {
+        scoreVal.textContent = `${Math.round(Number(simPct))}%`;
+      }
 
       // 3. Poblar tabla científica de cavidades detectadas
       const tbody = document.getElementById('cavitiesTableBody');
