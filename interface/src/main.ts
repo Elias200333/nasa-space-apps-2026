@@ -4,133 +4,213 @@ import { MiniPlanetViewer } from './babylon/miniPlanets';
 import { AnalogMap2DManager } from './map/analogMap2D';
 import { generateRandomAnalogCoordinates, PLANET_METRICS } from './data/analogs';
 import { sound } from './audio';
-import { CelestialBody, AnalogSite } from './types';
+import { CelestialBody, AnalogSite, PlanetaryLayerMode } from './types';
+import { formatPlanetaryCoordinates, VERIFIED_PLANETARY_POIS } from './nasa/trekProviders';
 
 // Estado global de la aplicación
 let activeBody: CelestialBody = 'Earth';
+let currentLayerMode: PlanetaryLayerMode = 'surface';
 let currentSelectedSite: AnalogSite | null = null;
 let earthScene: EarthSceneManager;
 let miniMoon: MiniPlanetViewer;
 let miniMars: MiniPlanetViewer;
 let map2DManager: AnalogMap2DManager;
 
-function initApp() {
-  setupIntroSplashScreen();
-  initBabylonScenes();
-  init2DMapManager();
-  setupUIEventListeners();
-  updateLiveTelemetry(0.0000, 0.0000);
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initApp);
-} else {
-  initApp();
-}
-
 /**
- * Pantalla de inicio / Splash Screen cinemática con el logo de IEF Comparation y NASA Space Apps
+ * Coordinador de carga en tiempo real para el splash screen:
+ * - Se mueve continuamente desde 0% ("poco a poco").
+ * - Cuanto más se acerca al 75%, más lento avanza (desaceleración asintótica suave).
+ * - En cuanto termina de cargar la página (recursos + shaders y motor 3D listos),
+ *   recibe un evento que termina de cargar la barra velozmente al 100%.
+ * - Finalmente cambia la ventana (fade-out hacia el globo interactivo 3D).
  */
-function setupIntroSplashScreen() {
-  const splash = document.getElementById('introSplashScreen');
-  const progressBar = document.getElementById('splashProgressBar');
-  const statusText = document.getElementById('splashStatusText');
-  const progressPct = document.getElementById('splashProgressPct');
-  if (!splash) return;
+class SplashLoadingCoordinator {
+  private splashEl: HTMLElement | null;
+  private fillEl: HTMLElement | null;
+  private pctEl: HTMLElement | null;
+  private statusEl: HTMLElement | null;
+  private currentProgress = 0;
+  private isAppReady = false;
+  private isFinished = false;
+  private animId = 0;
+  private lastTimestamp = 0;
+  private customStatus: string | null = null;
 
-  let progress = 0;
-  let isClosed = false;
+  constructor() {
+    this.splashEl = document.getElementById('introSplashScreen');
+    this.fillEl = document.getElementById('splashProgressBar');
+    this.pctEl = document.getElementById('splashProgressPct');
+    this.statusEl = document.getElementById('splashStatusText');
 
-  const messages = [
-    { at: 10, text: 'Iniciando subsistemas orbitales BabylonJS...' },
-    { at: 35, text: 'Conectando con NASA Earth & Space Data APIs...' },
-    { at: 65, text: 'Cargando catálogos de análogos lunares y marcianos...' },
-    { at: 88, text: 'Calibrando modelos geomorfométricos IEF Comparation...' },
-    { at: 100, text: 'Sistemas listos • Iniciando misión' }
-  ];
+    // Escuchar el evento de carga completada de la aplicación
+    window.addEventListener('ief:app-loaded', () => this.notifyAppLoaded(), { once: true });
 
-  const updateProgress = (target: number, duration: number, callback?: () => void) => {
-    const start = progress;
-    const startTime = performance.now();
+    if (this.splashEl) {
+      this.splashEl.addEventListener('click', () => this.forceFinish());
+      window.addEventListener('keydown', (e) => {
+        if (!this.isFinished && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) {
+          this.forceFinish();
+        }
+      }, { once: true });
+    }
 
-    function step(currentTime: number) {
-      if (isClosed) return;
-      const elapsed = currentTime - startTime;
-      const fraction = Math.min(1, elapsed / duration);
-      progress = start + (target - start) * fraction;
+    this.runLoop();
+  }
 
-      if (progressBar) progressBar.style.width = `${progress}%`;
-      if (progressPct) progressPct.textContent = `${Math.round(progress)}%`;
+  public startShrinkTransition() {
+    if (this.splashEl) {
+      this.splashEl.classList.add('shrink-active');
+    }
+  }
 
-      for (let i = messages.length - 1; i >= 0; i--) {
-        if (progress >= messages[i].at) {
-          if (statusText) statusText.textContent = messages[i].text;
-          break;
+  public setStatus(message: string) {
+    this.customStatus = message;
+    if (this.statusEl && !this.isFinished) {
+      this.statusEl.textContent = message;
+    }
+  }
+
+  public notifyAppLoaded() {
+    if (this.isAppReady) return;
+    this.isAppReady = true;
+    if (this.statusEl) {
+      this.statusEl.textContent = 'Finalizando configuración y telemetría...';
+    }
+  }
+
+  private runLoop = (timestamp = performance.now()) => {
+    if (!this.lastTimestamp) this.lastTimestamp = timestamp;
+    const dt = Math.min(50, Math.max(10, timestamp - this.lastTimestamp));
+    this.lastTimestamp = timestamp;
+
+    if (!this.isAppReady) {
+      // Fase 1: Se mueve poco a poco y cuanto más se acerca al 75%, más lento va
+      const remainingTo75 = Math.max(0, 75 - this.currentProgress);
+      // Velocidad proporcional a la distancia restante: desaceleración continua hacia el 75%
+      const speed = Math.max(0.003, (remainingTo75 / 75) * 0.20 * (dt / 16.67));
+      this.currentProgress = Math.min(74.8, this.currentProgress + speed);
+
+      // Textos dinámicos acordes al avance si no hay un mensaje específico
+      if (this.statusEl && !this.customStatus) {
+        if (this.currentProgress < 20) {
+          this.statusEl.textContent = 'Iniciando subsistemas orbitales IEF Comparation...';
+        } else if (this.currentProgress < 45) {
+          this.statusEl.textContent = 'Cargando modelos y texturas orbitales NASA...';
+        } else if (this.currentProgress < 62) {
+          this.statusEl.textContent = 'Sincronizando análogos planetarios 3D...';
+        } else {
+          this.statusEl.textContent = 'Compilando sombreadores atmosféricos...';
         }
       }
+    } else {
+      // Fase 2: El evento de carga ha saltado ("lo termina de cargar")
+      // Avanza con decisión y fluidez hacia el 100%
+      const remainingTo100 = Math.max(0.2, 100 - this.currentProgress);
+      const speed = Math.max(0.85, remainingTo100 * 0.16 * (dt / 16.67));
+      this.currentProgress = Math.min(100, this.currentProgress + speed);
 
-      if (fraction < 1) {
-        requestAnimationFrame(step);
-      } else {
-        if (callback) callback();
+      if (this.currentProgress >= 99.7 && !this.isFinished) {
+        this.currentProgress = 100;
+        this.isFinished = true;
+        this.updateUI(100);
+        this.finishAndExit();
+        return;
       }
     }
 
-    requestAnimationFrame(step);
+    this.updateUI(this.currentProgress);
+    this.animId = requestAnimationFrame(this.runLoop);
   };
 
-  const closeSplash = () => {
-    if (isClosed) return;
-    isClosed = true;
-    splash.classList.add('fade-out');
-    setTimeout(() => {
-      splash.style.display = 'none';
-      splash.remove();
-    }, 750);
-  };
-
-  // Animar avance fluido de la barra hasta 100% en aproximadamente 1.8 segundos
-  updateProgress(40, 550, () => {
-    updateProgress(80, 650, () => {
-      updateProgress(100, 450, () => {
-        setTimeout(closeSplash, 350);
-      });
-    });
-  });
-
-  // Omitir inmediatamente al hacer clic o pulsar tecla
-  splash.addEventListener('click', closeSplash);
-  window.addEventListener('keydown', (e) => {
-    if (!isClosed && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) {
-      closeSplash();
+  private updateUI(progress: number) {
+    if (this.fillEl) {
+      this.fillEl.style.width = `${progress.toFixed(1)}%`;
     }
-  }, { once: true });
+    if (this.pctEl) {
+      this.pctEl.textContent = `${Math.round(progress)}%`;
+    }
+  }
+
+  private finishAndExit() {
+    this.updateUI(100);
+    if (this.statusEl) {
+      this.statusEl.textContent = '100% • Misión iniciada';
+    }
+
+    // Pausa visual para ver el 100% antes de cambiar la ventana
+    setTimeout(() => {
+      if (this.splashEl) {
+        this.splashEl.classList.add('fade-out');
+        setTimeout(() => {
+          this.splashEl?.remove();
+          cancelAnimationFrame(this.animId);
+        }, 750);
+      }
+    }, 380);
+  }
+
+  private forceFinish() {
+    this.notifyAppLoaded();
+    this.currentProgress = 100;
+    this.isFinished = true;
+    this.updateUI(100);
+    this.finishAndExit();
+  }
 }
 
-/**
- * Inicialización de las escenas 3D fotorrealistas en BabylonJS
- */
-function initBabylonScenes() {
+async function initApp() {
+  const coordinator = new SplashLoadingCoordinator();
+
+  // Transición suave del círculo mientras avanza el loadbar
+  setTimeout(() => {
+    coordinator.startShrinkTransition();
+  }, 220);
+
+  // 1. Inicializar escena 3D principal y monitorizar texturas reales
   const earthCanvas = document.getElementById('earthCanvas') as HTMLCanvasElement;
   if (earthCanvas) {
     earthScene = new EarthSceneManager(earthCanvas);
-    earthScene.onCoordinatesChange = (lat, lon) => {
-      const latDir = lat >= 0 ? 'N' : 'S';
-      const lonDir = lon >= 0 ? 'E' : 'W';
-      const coordsText = `${Math.abs(lat).toFixed(4)}° ${latDir}, ${Math.abs(lon).toFixed(4)}° ${lonDir}`;
+
+    earthScene.onTextureProgress = (texName) => {
+      coordinator.setStatus(`Cargando ${texName}...`);
+    };
+
+    earthScene.onCoordinatesChange = (lat, lon, planet) => {
+      const active = planet || activeBody;
+      const coordsText = formatPlanetaryCoordinates(active, lat, lon);
       const readoutElem = document.getElementById('hudCoordsText');
-      if (readoutElem) {
-        readoutElem.textContent = coordsText;
+      if (readoutElem) readoutElem.textContent = coordsText;
+
+      const scaleSpan = document.querySelector('.hud-scale span');
+      if (scaleSpan) {
+        if (active === 'Mars') scaleSpan.textContent = '3,390 km (Radio)';
+        else if (active === 'Moon') scaleSpan.textContent = '1,737 km (Radio)';
+        else scaleSpan.textContent = '5,000 km';
       }
     };
 
-    // Zoom manual con la rueda del ratón hacia el planeta: transición suave a navegación libre en esa ubicación
-    earthScene.onZoomDiveTrigger = (lat, lon) => {
-      map2DManager.triggerFreeExplorationDive(lat, lon);
+    earthScene.onZoomDiveTrigger = (lat, lon, planet) => {
+      const body = planet || activeBody;
+      if (body === 'Earth') {
+        map2DManager.triggerFreeExplorationDive(lat, lon, 5, 'Earth', 'surface');
+      } else {
+        map2DManager.triggerFreeExplorationDive(lat, lon, 5, body, currentLayerMode);
+      }
+    };
+
+    earthScene.onPOIClicked = (poi) => {
+      sound.playClick(850);
+      const body = (activeBody === 'Mars' || activeBody === 'Moon') ? activeBody : 'Mars';
+      setTimeout(() => {
+        map2DManager.triggerFreeExplorationDive(poi.latitude, poi.longitude, 5, body, 'exploration');
+        setTimeout(() => {
+          map2DManager.flyToPlanetaryPOI(poi);
+        }, 550);
+      }, 700);
     };
   }
 
-  // Miniaturas 3D fotorrealistas en tarjetas laterales
+  // 2. Inicializar mini planetas (Luna y Marte)
   const miniMoonCanvas = document.getElementById('miniMoonCanvas') as HTMLCanvasElement;
   if (miniMoonCanvas) {
     miniMoon = new MiniPlanetViewer(miniMoonCanvas, 'Moon');
@@ -140,6 +220,40 @@ function initBabylonScenes() {
   if (miniMarsCanvas) {
     miniMars = new MiniPlanetViewer(miniMarsCanvas, 'Mars');
   }
+
+  // 3. Inicializar cartografía 2D y HUD
+  init2DMapManager();
+  setupUIEventListeners();
+  updateLiveTelemetry(0.0000, 0.0000);
+
+  // 4. Promesa de carga completa de página y recursos del navegador
+  const windowLoadPromise = new Promise<void>((resolve) => {
+    if (document.readyState === 'complete') {
+      resolve();
+    } else {
+      window.addEventListener('load', () => resolve(), { once: true });
+      setTimeout(resolve, 3500); // Salvaguarda en caso de timeout
+    }
+  });
+
+  // 5. Promesa de compilación y renderizado en BabylonJS
+  const scenePromises: Promise<void>[] = [];
+  if (earthScene) scenePromises.push(earthScene.whenReady());
+  if (miniMoon) scenePromises.push(miniMoon.whenReady());
+  if (miniMars) scenePromises.push(miniMars.whenReady());
+
+  // Esperar a que la página cargue y el motor 3D dibuje el primer frame
+  await Promise.all([windowLoadPromise, Promise.all(scenePromises)]);
+
+  // ¡Disparar el evento que salta al loadbar, termina la carga y cambia la ventana!
+  window.dispatchEvent(new CustomEvent('ief:app-loaded'));
+  coordinator.notifyAppLoaded();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
 }
 
 /**
@@ -197,11 +311,13 @@ function setupUIEventListeners() {
     });
   });
 
-  // 2. Clic en las tarjetas laterales completas
+  // 2. Clic en las tarjetas laterales completas (selecciona el cuerpo celeste en el globo central)
   const moonCard = document.getElementById('moonCard');
   if (moonCard) {
     moonCard.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('.card-subtabs')) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('.card-subtabs, .card-more-btn, .card-action-btn, .mini-planet-viewport')) return;
+      sound.playClick(600);
       selectCelestialTarget('Moon');
     });
   }
@@ -209,17 +325,20 @@ function setupUIEventListeners() {
   const marsCard = document.getElementById('marsCard');
   if (marsCard) {
     marsCard.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('.card-subtabs')) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('.card-subtabs, .card-more-btn, .card-action-btn, .mini-planet-viewport')) return;
+      sound.playClick(600);
       selectCelestialTarget('Mars');
     });
   }
 
-  // 3. Botones "Compare with Earth"
+  // 3. Botones "Compare with Earth" (generan análogo terrestre e inician descenso guiado)
   const moonActionBtn = document.getElementById('moonActionBtn');
   if (moonActionBtn) {
     moonActionBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      selectCelestialTarget('Moon');
+      sound.playClick(600);
+      generateAndDiveToAnalog('Moon');
     });
   }
 
@@ -227,11 +346,31 @@ function setupUIEventListeners() {
   if (marsActionBtn) {
     marsActionBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      selectCelestialTarget('Mars');
+      sound.playClick(600);
+      generateAndDiveToAnalog('Mars');
     });
   }
 
-  // 4. Barra de herramientas flotante sobre la Tierra
+  // 4. Selector de capas cartográficas NASA (Superficie / Topografía / Exploración)
+  const layerButtons = document.querySelectorAll('.planet-layer-selector .layer-btn');
+  layerButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-layer') as PlanetaryLayerMode;
+      if (!mode) return;
+      currentLayerMode = mode;
+      sound.playClick(650);
+
+      const targetPlanet = activeBody === 'Mars' || activeBody === 'Moon' ? activeBody : 'Mars';
+      updateLayerModeUI(targetPlanet, mode);
+      earthScene.setLayerMode(mode);
+
+      if (map2DManager && map2DManager.isMapActive()) {
+        map2DManager.switchPlanetaryLayer(mode);
+      }
+    });
+  });
+
+  // 5. Barra de herramientas flotante sobre la Tierra / planeta activo
   const btnResetEarth = document.getElementById('btnResetEarth');
   if (btnResetEarth) {
     btnResetEarth.addEventListener('click', () => {
@@ -248,8 +387,20 @@ function setupUIEventListeners() {
   const btnRandomTarget = document.getElementById('btnRandomTarget');
   if (btnRandomTarget) {
     btnRandomTarget.addEventListener('click', () => {
-      const target: 'Moon' | 'Mars' = activeBody === 'Mars' ? 'Mars' : 'Moon';
-      generateAndDiveToAnalog(target);
+      sound.playClick(600);
+      if (activeBody === 'Earth') {
+        generateAndDiveToAnalog('Mars');
+      } else {
+        const pois = VERIFIED_PLANETARY_POIS[activeBody];
+        const randomPoi = pois[Math.floor(Math.random() * pois.length)];
+        earthScene.flyToPOI(randomPoi.latitude, randomPoi.longitude);
+        setTimeout(() => {
+          map2DManager.triggerFreeExplorationDive(randomPoi.latitude, randomPoi.longitude, 5, activeBody, currentLayerMode);
+          setTimeout(() => {
+            map2DManager.flyToPlanetaryPOI(randomPoi);
+          }, 550);
+        }, 700);
+      }
     });
   }
 
@@ -277,13 +428,16 @@ function setupUIEventListeners() {
     });
   }
 
-  // 5. Pestañas de subcategoría en las tarjetas
+  // 6. Pestañas de subcategoría en las tarjetas
   setupCardSubtabs('moonCard', 'Moon');
   setupCardSubtabs('marsCard', 'Mars');
 }
 
 /**
- * Selecciona un cuerpo celeste: Moon, Earth o Mars
+ * Selecciona un cuerpo celeste central: Moon, Earth o Mars
+ * - Transiciona suavemente el globo esférico central de BabylonJS
+ * - Actualiza texturas y materiales científicos de NASA Trek
+ * - Gestiona el selector de capas y el dock de métricas
  */
 export function selectCelestialTarget(body: CelestialBody) {
   activeBody = body;
@@ -301,16 +455,30 @@ export function selectCelestialTarget(body: CelestialBody) {
   moonCard?.classList.remove('card-selected');
   marsCard?.classList.remove('card-selected', 'mars-selected');
 
+  updateBottomDockHighlight(body);
+
   if (body === 'Moon') {
     moonCard?.classList.add('card-selected');
     miniMoon?.spinFast();
-    generateAndDiveToAnalog('Moon');
+    showPlanetaryLayerSelector('Moon');
+    earthScene.switchPlanet('Moon', currentLayerMode);
+    if (map2DManager && map2DManager.isMapActive()) {
+      map2DManager.returnToSpaceOrbit();
+    }
+    hideTargetCard();
   } else if (body === 'Mars') {
     marsCard?.classList.add('card-selected', 'mars-selected');
     miniMars?.spinFast();
-    generateAndDiveToAnalog('Mars');
+    showPlanetaryLayerSelector('Mars');
+    earthScene.switchPlanet('Mars', currentLayerMode);
+    if (map2DManager && map2DManager.isMapActive()) {
+      map2DManager.returnToSpaceOrbit();
+    }
+    hideTargetCard();
   } else {
-    // Si pulsa Earth, regresa a la vista de órbita global
+    // Earth
+    hidePlanetaryLayerSelector();
+    earthScene.switchPlanet('Earth');
     if (map2DManager && map2DManager.isMapActive()) {
       map2DManager.returnToSpaceOrbit();
     } else {
@@ -318,6 +486,77 @@ export function selectCelestialTarget(body: CelestialBody) {
     }
     hideTargetCard();
   }
+}
+
+function showPlanetaryLayerSelector(body: 'Mars' | 'Moon') {
+  const selector = document.getElementById('planetLayerSelector');
+  if (!selector) return;
+
+  selector.classList.remove('hidden', 'mars-theme', 'moon-theme');
+  selector.classList.add(body === 'Mars' ? 'mars-theme' : 'moon-theme');
+
+  const titleEl = document.getElementById('layerSelectorPlanetTitle');
+  if (titleEl) {
+    titleEl.textContent = `${body === 'Mars' ? 'MARTE' : 'LUNA'} • CARTOGRAFÍA NASA`;
+  }
+
+  updateLayerModeUI(body, currentLayerMode);
+}
+
+function hidePlanetaryLayerSelector() {
+  const selector = document.getElementById('planetLayerSelector');
+  if (selector) selector.classList.add('hidden');
+}
+
+function updateLayerModeUI(body: 'Mars' | 'Moon', mode: PlanetaryLayerMode) {
+  const btns = document.querySelectorAll('.planet-layer-selector .layer-btn');
+  btns.forEach(b => {
+    b.classList.remove('active');
+    if (b.getAttribute('data-layer') === mode) {
+      b.classList.add('active');
+    }
+  });
+
+  const provenanceBadge = document.getElementById('layerProvenanceBadge');
+  const infoNotice = document.getElementById('layerInfoNotice');
+
+  if (body === 'Mars') {
+    if (mode === 'surface') {
+      if (provenanceBadge) provenanceBadge.textContent = 'NASA Mars Trek / Viking MDIM2.1 (232 m/px)';
+      if (infoNotice) infoNotice.textContent = 'Mosaico orbital global en color real Viking MDIM2.1 (NASA Trek WMTS)';
+    } else if (mode === 'topography') {
+      if (provenanceBadge) provenanceBadge.textContent = 'NASA Mars Trek / MGS MOLA (463 m/px)';
+      if (infoNotice) infoNotice.textContent = 'Altimetría de relieve sombreado en color MOLA • Gradiente hipsométrico (relieve visual, no malla DEM 3D)';
+    } else {
+      if (provenanceBadge) provenanceBadge.textContent = 'NASA Mars Trek / 5 Accidentes Científicos';
+      if (infoNotice) infoNotice.textContent = 'Exploración de Olympus Mons, Valles Marineris, Jezero, Gale y Elysium Mons con coordenadas verificadas';
+    }
+  } else {
+    // Moon
+    if (mode === 'surface') {
+      if (provenanceBadge) provenanceBadge.textContent = 'NASA Moon Trek / LRO WAC (100 m/px)';
+      if (infoNotice) infoNotice.textContent = 'Mosaico global fotográfico Lunar Reconnaissance Orbiter WAC 303ppd (NASA Trek WMTS)';
+    } else if (mode === 'topography') {
+      if (provenanceBadge) provenanceBadge.textContent = 'NASA Moon Trek / LRO LOLA (128 ppd)';
+      if (infoNotice) infoNotice.textContent = 'Cartografía de elevación en color LOLA • Relieve sombreado altimétrico (relieve visual, no malla DEM 3D)';
+    } else {
+      if (provenanceBadge) provenanceBadge.textContent = 'NASA Moon Trek / 5 Accidentes Científicos';
+      if (infoNotice) infoNotice.textContent = 'Exploración de Tycho, Copernicus, Mare Tranquillitatis, Aristarchus y Shackleton con coordenadas verificadas';
+    }
+  }
+}
+
+function updateBottomDockHighlight(body: CelestialBody) {
+  const items = document.querySelectorAll('.dock-metrics-grid .val-item');
+  items.forEach(item => {
+    item.classList.remove('active-planet-metric', 'mars-metric', 'moon-metric');
+    const tag = item.querySelector('.tag')?.textContent?.trim();
+    if (body === 'Mars' && tag === 'Mars') {
+      item.classList.add('active-planet-metric', 'mars-metric');
+    } else if (body === 'Moon' && tag === 'Moon') {
+      item.classList.add('active-planet-metric', 'moon-metric');
+    }
+  });
 }
 
 function siteCountryLookup(siteId: string): string {

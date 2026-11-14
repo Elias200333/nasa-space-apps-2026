@@ -5,6 +5,37 @@
 
 export type CelestialBody = 'Moon' | 'Earth' | 'Mars';
 
+export type PlanetaryLayerMode = 'surface' | 'topography' | 'exploration';
+
+export interface PlanetaryPOI {
+  id: string;
+  name: string;
+  nameEs: string;
+  body: 'Moon' | 'Mars';
+  latitude: number;
+  longitude: number;
+  elevation_km: number;
+  diameter_km?: number;
+  type: string;
+  description: string;
+  mission?: string;
+  datasetProvenance: string;
+}
+
+export interface TrekLayerConfig {
+  id: string;
+  title: string;
+  body: 'Moon' | 'Mars';
+  layerType: 'surface' | 'topography';
+  layerName: string;
+  format: 'jpg' | 'png';
+  minZoom: number;
+  maxZoom: number;
+  attribution: string;
+  datasetInfo: string;
+  isHillshade: boolean;
+}
+
 export interface GeoCoordinates {
   latitude: number;   // -90 a +90
   longitude: number;  // -180 a +180

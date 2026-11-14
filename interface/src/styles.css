@@ -1689,62 +1689,46 @@ body {
   100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.95; }
 }
 
-.splash-content {
+.splash-hero-stage {
   position: relative;
   z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
   max-width: 680px;
-  padding: 30px;
-  animation: splashContentIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  padding: 20px;
 }
 
-@keyframes splashContentIn {
-  from { opacity: 0; transform: scale(0.92) translateY(15px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.splash-nasa-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 24px;
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  padding: 8px 22px;
-  border-radius: 9999px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-}
-
-.splash-nasa-logo {
-  height: 28px;
-  width: auto;
-  object-fit: contain;
-  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.35));
-}
-
-.splash-edition-tag {
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.15em;
-  color: #ffffff;
-  text-transform: uppercase;
-  background: linear-gradient(90deg, #ffffff 40%, #38bdf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.splash-logo-container {
+/* El círculo central grande inicial */
+.splash-logo-circle {
   position: relative;
-  width: 230px;
-  height: 230px;
+  width: 250px;
+  height: 250px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 24px;
+  transition: width 0.75s cubic-bezier(0.16, 1, 0.3, 1), height 0.75s cubic-bezier(0.16, 1, 0.3, 1), margin 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scale(1);
+  animation: initialLogoPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes initialLogoPulse {
+  0% { transform: scale(0.98); }
+  100% { transform: scale(1.02); }
+}
+
+.splash-team-logo {
+  position: relative;
+  z-index: 5;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), 0 0 30px rgba(56, 189, 248, 0.55), 0 0 60px rgba(249, 115, 22, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  transition: all 0.75s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .splash-energy-ring {
@@ -1753,8 +1737,9 @@ body {
   border-radius: 50%;
   background: conic-gradient(from 0deg, #38bdf8, #f97316, #22d3ee, #e11d48, #38bdf8);
   animation: splashEnergySpin 7s linear infinite;
-  filter: blur(6px);
-  opacity: 0.85;
+  filter: blur(7px);
+  opacity: 0.9;
+  transition: all 0.75s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes splashEnergySpin {
@@ -1764,9 +1749,9 @@ body {
 
 .splash-pulse-glow {
   position: absolute;
-  inset: -6px;
+  inset: -8px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.45) 0%, rgba(249, 115, 22, 0.22) 60%, transparent 80%);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.5) 0%, rgba(249, 115, 22, 0.25) 60%, transparent 80%);
   animation: splashPulseGlow 3s ease-in-out infinite alternate;
 }
 
@@ -1775,43 +1760,89 @@ body {
   100% { transform: scale(1.08); opacity: 1; }
 }
 
-.splash-team-logo {
-  position: relative;
-  z-index: 5;
-  width: 210px;
-  height: 210px;
-  border-radius: 50%;
-  object-fit: cover;
-  box-shadow: 0 0 35px rgba(0, 0, 0, 0.85), 0 0 25px rgba(56, 189, 248, 0.45);
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  animation: splashLogoFloat 4s ease-in-out infinite;
+/* Transición cuando el círculo se hace más pequeño */
+.intro-splash-screen.shrink-active .splash-logo-circle {
+  width: 108px;
+  height: 108px;
+  margin-bottom: 4px;
 }
 
-@keyframes splashLogoFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+.intro-splash-screen.shrink-active .splash-team-logo {
+  width: 98px;
+  height: 98px;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.45);
+}
+
+.intro-splash-screen.shrink-active .splash-energy-ring {
+  inset: -6px;
+  filter: blur(5px);
+}
+
+/* El bloque desplegable que contiene el distintivo NASA, títulos y barra de carga (siempre visible) */
+.splash-expandable-details {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 1;
+  max-height: none;
+  overflow: visible;
+  transform: translateY(0) scale(1);
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+  margin-top: 6px;
+}
+
+.splash-nasa-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 6px 18px;
+  border-radius: 9999px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.splash-nasa-logo {
+  height: 22px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.35));
+}
+
+.splash-edition-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #ffffff;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #ffffff 40%, #38bdf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .splash-titles {
-  margin-bottom: 26px;
+  margin-bottom: 18px;
 }
 
 .splash-title {
-  font-size: 2.3rem;
+  font-size: 2.0rem;
   font-weight: 900;
   letter-spacing: 0.08em;
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   background: linear-gradient(135deg, #ffffff 20%, #38bdf8 65%, #f97316 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 22px rgba(56, 189, 248, 0.35));
+  filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.35));
 }
 
 .splash-subtitle {
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   color: #94a3b8;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   margin: 0;
 }
 
@@ -1820,18 +1851,18 @@ body {
   max-width: 90vw;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .splash-progress-track {
   width: 100%;
-  height: 6px;
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(34, 211, 238, 0.3);
+  height: 8px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1.5px solid rgba(56, 189, 248, 0.5);
   border-radius: 9999px;
   overflow: hidden;
   position: relative;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 .splash-progress-fill {
@@ -1840,14 +1871,14 @@ body {
   background: linear-gradient(90deg, #38bdf8, #22d3ee, #f97316);
   border-radius: 9999px;
   box-shadow: 0 0 12px #38bdf8;
-  transition: width 0.15s ease-out;
+  transition: width 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .splash-status-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-family: var(--font-mono, monospace);
 }
 
@@ -1863,15 +1894,233 @@ body {
   font-weight: 700;
 }
 
-.splash-skip-hint {
-  margin-top: 22px;
-  font-size: 0.72rem;
-  color: rgba(148, 163, 184, 0.55);
-  cursor: pointer;
-  transition: color 0.2s ease;
+/* ==========================================================================
+   Selector de Capas Planetarias NASA Trek (Marte y Luna)
+   ========================================================================== */
+.planet-layer-selector {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: rgba(10, 18, 34, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 14px;
+  padding: 8px 14px 6px 14px;
+  z-index: 45;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), 0 0 15px rgba(56, 189, 248, 0.15);
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
 }
 
-.splash-skip-hint:hover {
-  color: #ffffff;
+.planet-layer-selector.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-10px) scale(0.96);
 }
+
+.planet-layer-selector.mars-theme {
+  border-color: rgba(249, 115, 22, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), 0 0 18px rgba(249, 115, 22, 0.2);
+}
+
+.planet-layer-selector.moon-theme {
+  border-color: rgba(203, 213, 225, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), 0 0 18px rgba(203, 213, 225, 0.2);
+}
+
+.layer-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+}
+
+.layer-selector-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #f1f5f9;
+  text-transform: uppercase;
+  font-family: var(--font-mono, monospace);
+}
+
+.pulse-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cyan-glow);
+  box-shadow: 0 0 8px var(--cyan-glow);
+  animation: pulseIndicator 2s infinite ease-in-out;
+}
+
+.mars-theme .pulse-indicator {
+  background: var(--mars-accent);
+  box-shadow: 0 0 8px var(--mars-glow);
+}
+
+.moon-theme .pulse-indicator {
+  background: #cbd5e1;
+  box-shadow: 0 0 8px #cbd5e1;
+}
+
+@keyframes pulseIndicator {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.layer-provenance-badge {
+  font-size: 0.64rem;
+  font-family: var(--font-mono, monospace);
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--cyan-glow);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  white-space: nowrap;
+}
+
+.mars-theme .layer-provenance-badge {
+  color: #fdba74;
+  border-color: rgba(249, 115, 22, 0.4);
+}
+
+.moon-theme .layer-provenance-badge {
+  color: #cbd5e1;
+  border-color: rgba(203, 213, 225, 0.35);
+}
+
+.layer-selector-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.8);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.layer-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 5px 12px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.layer-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.layer-btn.active {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: var(--cyan-glow);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.mars-theme .layer-btn.active {
+  background: rgba(249, 115, 22, 0.22);
+  border-color: var(--mars-accent);
+  color: #ffffff;
+  box-shadow: 0 0 10px var(--mars-glow);
+}
+
+.moon-theme .layer-btn.active {
+  background: rgba(203, 213, 225, 0.2);
+  border-color: #cbd5e1;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(203, 213, 225, 0.3);
+}
+
+.layer-selector-footer {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 440px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Indicador discreto de carga NASA Trek */
+.nasa-trek-loading-badge {
+  position: absolute;
+  top: 75px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  padding: 5px 12px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-family: var(--font-mono, monospace);
+  color: var(--cyan-glow);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  z-index: 50;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.nasa-trek-loading-badge.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-6px);
+  pointer-events: none;
+}
+
+.trek-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(56, 189, 248, 0.25);
+  border-top-color: var(--cyan-glow);
+  border-radius: 50%;
+  animation: trekSpin 0.7s linear infinite;
+}
+
+@keyframes trekSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Resaltado dinámico en el dock inferior para el planeta activo */
+.val-item.active-planet-metric {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-radius: 6px;
+  padding: 1px 6px;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+}
+
+.val-item.active-planet-metric.mars-metric {
+  background: rgba(249, 115, 22, 0.18);
+  border-color: var(--mars-accent);
+  box-shadow: 0 0 10px var(--mars-glow);
+}
+
+.val-item.active-planet-metric.moon-metric {
+  background: rgba(203, 213, 225, 0.16);
+  border-color: #cbd5e1;
+  box-shadow: 0 0 10px rgba(203, 213, 225, 0.25);
+}
+
 
