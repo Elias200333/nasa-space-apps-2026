@@ -276,6 +276,8 @@ def main():
     parser = argparse.ArgumentParser(description="TERRAIN-X Planetary Analog Analyzer")
     parser.add_argument("--body", choices=["moon", "mars", "luna", "marte"], help="Target planetary body (moon or mars)")
     parser.add_argument("--site", help="Specific Earth analog site ID (default: auto-selected best candidate)")
+    parser.add_argument("--radius-m", type=float, default=100.0, help="Exploration radius in meters (default: 100.0)")
+    parser.add_argument("--generate-3d", action="store_true", help="Generate 3D WebGL model and comparative atlas")
     args = parser.parse_args()
 
     selected_body = select_target_body(args.body)
@@ -283,10 +285,31 @@ def main():
     site_id = args.site or target_info["recommended_site"]
 
     print(f"\n>>> TARGET SELECTED: {target_info['name'].upper()}")
-    print(f">>> EVALUATING TERRESTRIAL ANALOG: {site_id}")
+
+    # Display dynamic comparative ranking of all candidates
+    try:
+        from generate_terrain_3d import print_analog_ranking, RealisticTerrainComparisonEngine
+        print_analog_ranking(selected_body)
+    except Exception as e:
+        print(f"(Ranking module info: {e})")
+
+    print(f">>> EVALUATING SELECTED ANALOG: {site_id}")
     time.sleep(0.5)
 
     analyze_multidomain_analog(selected_body, site_id)
+
+    # Automatically generate the synchronized 100m 3D model and side-by-side atlas
+    try:
+        outdir = os.path.join(_DATA_ROOT, "output_3d")
+        print("\n>>> GENERATING SYNCHRONIZED 100-METER 3D MODEL & COMPARATIVE ATLAS...")
+        engine = RealisticTerrainComparisonEngine(
+            site_id=site_id,
+            target_body=selected_body,
+            exploration_radius_m=args.radius_m
+        )
+        engine.run_all(outdir)
+    except Exception as e:
+        print(f"(3D engine notice: {e})")
 
 
 if __name__ == "__main__":
