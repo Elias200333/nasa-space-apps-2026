@@ -105,6 +105,9 @@ class PointType(str, Enum):
     """Qué representa cada punto de la nube."""
 
     VOXEL_OCCUPANCY = "voxel_occupancy"  # vóxel ocupado de un mapa (Go2 vía WebRTC)
+    # Malla de cubos de vóxeles ocupados: los vértices son ESQUINAS de los cubos, no
+    # puntos medidos (mapa SLAM acumulado del dashboard, ver lidar/voxel_mesh.py).
+    VOXEL_MESH = "voxel_mesh"
     RAW_RETURNS = "raw_returns"  # retorno crudo del sensor
     UNKNOWN = "unknown"
 

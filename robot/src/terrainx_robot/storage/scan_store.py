@@ -3,8 +3,10 @@
 Qué hace
     Guarda cada escaneo en su propia carpeta:
         <data_dir>/scans/<scan_id>/<scan_id>.ply
+        <data_dir>/scans/<scan_id>/<scan_id>.glb    (solo el mapa SLAM: se ve como el visor)
         <data_dir>/scans/<scan_id>/<scan_id>.metadata.json
         <data_dir>/scans/<scan_id>/SHA256SUMS   (formato de sha256sum)
+    Cada archivo va en metadata.files (clave → ruta, SHA-256, bytes, formato).
     Lista, verifica (recalcula hashes) y exporta escaneos.
     Genera automáticamente las advertencias (caveats) de procedencia: tipo de
     punto, unidades/ejes no verificados, ausencia de pose y georreferencia.
@@ -13,6 +15,8 @@ Errores: ScanStoreError (escaneo inexistente, hash alterado, nube vacía).
 
 from __future__ import annotations
 
+import os
+import re
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -35,11 +39,23 @@ from ..models import (
     Verification,
 )
 from ..util import new_id, sha256_file, software_versions, write_json_atomic
-from .ply import read_ply, write_ply
+from .ply import read_ply, write_mesh_ply, write_ply
 
 
 class ScanStoreError(RuntimeError):
     pass
+
+
+# Archivo extra de un escaneo: clave en metadata.files → (sufijo, contenido, formato)
+ExtraFile = tuple[str, bytes, str]
+_EXTRA_KEY = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
+_EXTRA_SUFFIX = re.compile(r"^\.[a-z0-9]{1,8}$")
+
+
+def _write_bytes_atomic(path: Path, data: bytes) -> None:
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_bytes(data)
+    os.replace(tmp, path)
 
 
 def _caveats(
@@ -66,6 +82,12 @@ def _caveats(
             f"Cada punto es un vóxel ocupado (celda de {cloud.resolution} m) {origin}; "
             "no son retornos crudos del LiDAR. Error de cuantización de hasta una celda."
         )
+    elif cloud.point_type is PointType.VOXEL_MESH:
+        notes.append(
+            f"MALLA de cubos: cada cubo es un vóxel ocupado (celda de {cloud.resolution} m) del "
+            "mapa que publica el robot por WebRTC; los vértices son esquinas de los cubos, no "
+            "puntos medidos ni retornos crudos del LiDAR. Error de cuantización de hasta una celda."
+        )
     elif cloud.point_type is PointType.UNKNOWN:
         notes.append("Tipo de punto desconocido (nube importada sin metadatos de origen).")
     notes.append(
@@ -91,6 +113,17 @@ def _caveats(
     return notes
 
 
+def _coordinate_rule(point_type: PointType) -> str:
+    if point_type is PointType.VOXEL_OCCUPANCY:
+        return ("punto = origin + índice_vóxel * resolution (fórmula del decodificador; "
+                "no documentado si el punto es esquina o centro del vóxel)")
+    if point_type is PointType.VOXEL_MESH:
+        return ("malla de cubos: el vóxel del mundo k ocupa de (k − ½)·resolution a (k + ½)·resolution "
+                "en cada eje (la caja que pinta el visor); vértices = esquinas de los cubos, solo caras "
+                "exteriores, 2 triángulos por cara; point_count = número de vértices del PLY")
+    return "coordenadas tal como venían en el archivo de origen"
+
+
 class ScanStore:
     def __init__(self, data_dir: Path) -> None:
         self.data_dir = Path(data_dir)
@@ -112,9 +145,19 @@ class ScanStore:
         binary: bool = True,
         extra_caveats: tuple[str, ...] = (),
         extra_provenance: dict | None = None,
+        extra_files: dict[str, ExtraFile] | None = None,
     ) -> ScanMetadata:
+        """extra_files: archivos que acompañan al PLY (p. ej. {"glb": (".glb", bytes, formato)}):
+        se guardan como <scan_id><sufijo>, con su SHA-256 en metadata.files y en SHA256SUMS."""
         if cloud.points.shape[0] == 0:
             raise ScanStoreError("no se guarda una nube vacía")
+        suffixes = set()
+        for key, (suffix, data, _fmt) in (extra_files or {}).items():
+            if key == "ply" or not _EXTRA_KEY.match(key) or not _EXTRA_SUFFIX.match(suffix):
+                raise ScanStoreError(f"archivo extra inválido: {key!r} ({suffix!r})")
+            if suffix in suffixes or suffix in (".ply", ".json") or not data:
+                raise ScanStoreError(f"archivo extra repetido o vacío: {key!r} ({suffix!r})")
+            suffixes.add(suffix)
         scan_id = new_id("scan", capture_start)
         folder = self.scans_dir / scan_id
         folder.mkdir(parents=True, exist_ok=False)
@@ -124,7 +167,7 @@ class ScanStore:
                 delivery_mode=delivery_mode, scan_context=scan_context,
                 capture_start=capture_start, capture_end=capture_end, session_id=session_id,
                 pose_source=pose_source, binary=binary, extra_caveats=extra_caveats,
-                extra_provenance=extra_provenance,
+                extra_provenance=extra_provenance, extra_files=extra_files or {},
             )
         except BaseException:
             shutil.rmtree(folder, ignore_errors=True)
@@ -147,33 +190,40 @@ class ScanStore:
         binary: bool,
         extra_caveats: tuple[str, ...],
         extra_provenance: dict | None,
+        extra_files: dict[str, ExtraFile],
     ) -> ScanMetadata:
         ply_name = f"{scan_id}.ply"
         meta_name = f"{scan_id}.metadata.json"
         frame_id = cloud.frame_id or "unknown_robot_frame"
         demo = evidence_class is EvidenceClass.SYNTHETIC_TEST
-        encoding = "binary_little_endian float32" if binary else "ascii float32"
-
-        write_ply(
-            folder / ply_name,
-            cloud.points,
-            binary=binary,
-            comments=[
-                f"terrainx scan_id {scan_id}",
-                f"frame_id {frame_id}",
-                "unit m (assumed, unverified)",
-                f"point_type {cloud.point_type.value}",
-                f"evidence_class {evidence_class.value}",
-                f"delivery_mode {delivery_mode.value}",
-                f"demo {'true' if demo else 'false'}",
-            ],
-        )
+        comments = [
+            f"terrainx scan_id {scan_id}",
+            f"frame_id {frame_id}",
+            "unit m (assumed, unverified)",
+            f"point_type {cloud.point_type.value}",
+            f"evidence_class {evidence_class.value}",
+            f"delivery_mode {delivery_mode.value}",
+            f"demo {'true' if demo else 'false'}",
+        ]
+        if cloud.faces is not None:
+            # Malla de cubos: siempre binaria (vértices con color + triángulos)
+            encoding = "binary_little_endian float32 · malla (vertex xyz + rgb uchar; face triángulos)"
+            write_mesh_ply(folder / ply_name, cloud.points, cloud.colors, cloud.faces,
+                           comments=comments + ["voxel cube mesh: vertices are cube corners"])
+        else:
+            encoding = "binary_little_endian float32" if binary else "ascii float32"
+            write_ply(folder / ply_name, cloud.points, binary=binary, comments=comments)
         ply_ref = FileRef(
             path=ply_name,
             sha256=sha256_file(folder / ply_name),
             bytes=(folder / ply_name).stat().st_size,
             format=f"PLY {encoding}",
         )
+        refs = {"ply": ply_ref}
+        for key, (suffix, data, fmt) in extra_files.items():
+            name = f"{scan_id}{suffix}"
+            _write_bytes_atomic(folder / name, data)
+            refs[key] = FileRef(path=name, sha256=sha256_file(folder / name), bytes=len(data), format=fmt)
 
         pts = cloud.points
         first, last = cloud.first_info, cloud.last_info
@@ -216,12 +266,7 @@ class ScanStore:
             geometry=GeometryInfo(
                 point_type=cloud.point_type,
                 voxel_resolution_m=cloud.resolution,
-                coordinate_rule=(
-                    "punto = origin + índice_vóxel * resolution (fórmula del decodificador; "
-                    "no documentado si el punto es esquina o centro del vóxel)"
-                    if cloud.point_type is PointType.VOXEL_OCCUPANCY
-                    else "coordenadas tal como venían en el archivo de origen"
-                ),
+                coordinate_rule=_coordinate_rule(cloud.point_type),
                 bounds_min=pts.min(axis=0).round(6).tolist(),
                 bounds_max=pts.max(axis=0).round(6).tolist(),
                 units_verification=Verification.UNVERIFIED,
@@ -235,7 +280,7 @@ class ScanStore:
                 filters_applied=[],
                 ply_encoding=encoding,
             ),
-            files={"ply": ply_ref},
+            files=refs,
             provenance=provenance,
             quality_flag=(
                 "synthetic_test_data" if demo else "unverified_units_and_axes"
@@ -251,9 +296,8 @@ class ScanStore:
         )
         write_json_atomic(folder / meta_name, meta.model_dump(mode="json"))
         meta_hash = sha256_file(folder / meta_name)
-        (folder / "SHA256SUMS").write_text(
-            f"{ply_ref.sha256}  {ply_name}\n{meta_hash}  {meta_name}\n", encoding="ascii", newline="\n"
-        )
+        lines = [f"{ref.sha256}  {ref.path}" for ref in refs.values()] + [f"{meta_hash}  {meta_name}"]
+        (folder / "SHA256SUMS").write_text("\n".join(lines) + "\n", encoding="ascii", newline="\n")
         return meta
 
     # --------------------------------------------------------------- consultar
@@ -284,15 +328,16 @@ class ScanStore:
         return sorted(out, key=lambda m: m.timestamp_utc)
 
     def verify(self, scan_id: str) -> dict:
-        """Recalcula los hashes. ok=False si el PLY o los metadatos se alteraron."""
+        """Recalcula los hashes. ok=False si algún archivo (PLY, GLB…) o los metadatos se alteraron."""
         folder = self._folder(scan_id)
         meta = self.load_metadata(scan_id)
         result = {"scan_id": scan_id, "files": {}, "ok": True}
-        ply_path = folder / meta.files["ply"].path
-        actual = sha256_file(ply_path) if ply_path.is_file() else None
-        result["files"]["ply"] = {"expected": meta.files["ply"].sha256, "actual": actual}
-        if actual != meta.files["ply"].sha256:
-            result["ok"] = False
+        for key, ref in meta.files.items():
+            path = folder / ref.path
+            actual = sha256_file(path) if path.is_file() else None
+            result["files"][key] = {"expected": ref.sha256, "actual": actual}
+            if actual != ref.sha256:
+                result["ok"] = False
         sums = folder / "SHA256SUMS"
         if sums.is_file():
             for line in sums.read_text(encoding="ascii").splitlines():

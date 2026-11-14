@@ -706,5 +706,8 @@ def main():
     engine.run_all(outdir)
 
 
+# Backward-compatibility alias for API server & previous modules
+Terrain3DEngine = RealisticTerrainComparisonEngine
+
 if __name__ == "__main__":
     main()

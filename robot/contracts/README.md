@@ -35,10 +35,11 @@ Los estados del dossier (§6.4) se conservan, repartidos en dos máquinas de est
 | `demo` | bool | Obligatorio y coherente: `synthetic_test` implica `true`; `robot_measured` implica `false` (dossier §6.5) |
 | `scan_context` | `controlled_test` · `field_campaign` · `synthetic` | Amplía el valor `controlled_test` del dossier |
 | `robot` | `robot_id`, `platform`, `model_variant` (+ fuente), `firmware_version` (+ fuente), `adapter`, `delivery_mode` | Modelo y firmware constan como `declared_by_operator` o `unknown`: nunca se inventan |
-| `geometry.point_type` | `voxel_occupancy` · `raw_returns` · `unknown` | **El Go2 por WebRTC entrega vóxeles ocupados (rejilla de 0,05), no retornos crudos.** Importa para la resolución efectiva de cualquier métrica |
+| `geometry.point_type` | `voxel_occupancy` · `voxel_mesh` · `raw_returns` · `unknown` | **El Go2 por WebRTC entrega vóxeles ocupados (rejilla de 0,05), no retornos crudos.** Importa para la resolución efectiva de cualquier métrica. `voxel_mesh` = el mapa SLAM del dashboard guardado como malla de cubos: el PLY lleva vértices con color (esquinas de los cubos, no puntos medidos) y caras triangulares; `point_count` = nº de vértices y `provenance.mesh.voxels` = nº de vóxeles |
 | `geometry.units_verification` / `axes_verification` | `unverified` · `verified` | Unidades y ejes pendientes de verificación física |
 | `capture.*` | ventana de captura, frames usados y rechazados con sus motivos, hora original de adquisición | Trazabilidad de cómo se formó la nube |
 | `files.ply` | `path`, `sha256`, `bytes`, `format` | Integridad (dossier §6.5) |
+| `files.glb` (solo `voxel_mesh`) | `path`, `sha256`, `bytes`, `format` | El mismo mapa en glTF 2.0 binario con el aspecto del visor del dashboard: material sin luz (`KHR_materials_unlit`), textura con la paleta de altura y aristas grises, **Y arriba** (`(x, y, z)` del robot → `(x, z, −y)`). BabylonJS lo carga directamente. La clase de evidencia va también en `asset.extras` |
 | `provenance`, `quality_flag`, `caveats[]` | versiones de software, sesión de origen, advertencias legibles | Lo que la interfaz debe mostrar junto a la nube |
 
 ## 3. Archivos que produce el módulo
@@ -46,6 +47,8 @@ Los estados del dossier (§6.4) se conservan, repartidos en dos máquinas de est
 ```
 scans/<id>/<id>.ply             PLY binary_little_endian, vértices x y z float32,
                                 con comentarios de cabecera (frame, unidad, evidencia, demo)
+scans/<id>/<id>.glb             solo el mapa SLAM del dashboard (voxel_mesh): glTF 2.0
+                                binario que se ve como el visor (ver files.glb)
 scans/<id>/<id>.metadata.json   ScanMetadata (schemas/scan_metadata.schema.json)
 scans/<id>/SHA256SUMS           formato sha256sum: verificable con herramientas estándar
 ```

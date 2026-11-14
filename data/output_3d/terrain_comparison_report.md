@@ -1,7 +1,7 @@
 # TERRAIN-X: Informe de Verificación Científica de Análogos Planetarios (Radio 100 m)
 **NASA Space Apps Challenge 2026 — Validación Rigurosa de Análogos para la Luna y Marte**  
-**Fecha de Generación:** `2026-11-14T22:09:24.546462+00:00`  
-**Cuerpo Planetario Objetivo:** `MOON` | **Emparejamiento Orbital:** `Marius Hills Pit / Oceanus Procellarum rille (Moon)`
+**Fecha de Generación:** `2026-11-14T10:39:14.469433+00:00`  
+**Cuerpo Planetario Objetivo:** `MOON` | **Emparejamiento Orbital:** `Cráteres de Impacto Complejos y Calderas Lunares/Marcianas`
 
 ---
 

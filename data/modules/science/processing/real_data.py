@@ -193,13 +193,24 @@ class IGNPnoaLidarFetcher:
                 with open(cache_tif, "wb") as f:
                     f.write(tif_bytes)
 
-        if rasterio is None:
-            raise RuntimeError("La librería 'rasterio' es obligatoria para procesar GeoTIFF del IGN.")
-
-        with rasterio.open(io.BytesIO(tif_bytes)) as src:
-            raw_grid = src.read(1).astype(np.float64)
-            bounds = src.bounds
-            crs_str = str(src.crs) if src.crs else "EPSG:4258 (ETRS89)"
+        if rasterio is not None:
+            with rasterio.open(io.BytesIO(tif_bytes)) as src:
+                raw_grid = src.read(1).astype(np.float64)
+                bounds = src.bounds
+                crs_str = str(src.crs) if src.crs else "EPSG:4258 (ETRS89)"
+        else:
+            try:
+                import tifffile
+                raw_grid = tifffile.imread(io.BytesIO(tif_bytes)).astype(np.float64)
+                class _Bounds:
+                    top = max_lat
+                    bottom = min_lat
+                    left = min_lon
+                    right = max_lon
+                bounds = _Bounds()
+                crs_str = "EPSG:4258 (ETRS89)"
+            except Exception as e:
+                raise RuntimeError(f"La librería 'rasterio' o 'tifffile' es obligatoria para procesar GeoTIFF del IGN: {e}")
 
         # Filter nodata
         raw_grid = np.where(raw_grid < -500, np.nan, raw_grid)

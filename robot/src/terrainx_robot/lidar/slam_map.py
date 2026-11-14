@@ -18,6 +18,8 @@ Qué hace
 
     A los visores va cada trozo con el formato de la rejilla de bits del propio
     perro (lz4): el navegador lo dibuja con el mismo código que el mapa en vivo.
+    Para guardarlo, snapshot() / export_voxels() dan los mismos vóxeles que pinta el visor
+    (de ahí salen la malla PLY y el GLB: lidar/voxel_mesh.py y lidar/voxel_glb.py).
 
 Clase de evidencia
     DERIVADO de datos medidos por el robot (no es una medida directa).
@@ -39,6 +41,8 @@ from datetime import datetime, timezone
 
 import lz4.block
 import numpy as np
+
+from .voxel_mesh import VoxelMesh, build_voxel_mesh
 
 CHUNK = 128          # vóxeles por lado (x, y) de un trozo: como la ventana del perro
 LAYERS = 64          # capas por trozo (3,2 m)
@@ -143,23 +147,49 @@ class SlamMap:
             self.first_utc = self.first_utc or now
             self.last_utc = now
 
-    # ── Salida: nube de puntos (para guardarla como escaneo) ──
-    def export_points(self) -> np.ndarray:
-        """Vóxeles pintados del mapa acumulado → (N, 3) en metros del marco del perro.
-        Misma regla de pintado que los trozos (MIN_HITS, KEEP_RATIO, sin vóxeles sueltos)
-        y MISMA convención que las capturas en vivo (voxel_codec): punto = origen de la
-        ventana + índice · res = (k − ½) · res para el vóxel del mundo k."""
+    # ── Salida: los vóxeles pintados (para guardar el mapa) ──
+    def export_voxels(self) -> tuple[np.ndarray, float | None]:
+        """Vóxeles pintados del mapa acumulado: índices enteros del mundo k (N, 3) y la
+        resolución. Misma regla de pintado que los trozos que ve el visor (MIN_HITS,
+        KEEP_RATIO, sin vóxeles sueltos). El vóxel k ocupa de (k − ½)·res a (k + ½)·res."""
         with self._lock:
-            res = self.res
-            parts = []
-            for (cx, cy, cz), hits in self._hits.items():
-                vis = (hits >= MIN_HITS) & (hits >= KEEP_RATIO * self._seen[(cx, cy)][None])
-                z, y, x = np.nonzero(_drop_alone(vis))
-                if len(x):
-                    parts.append(np.column_stack((x + cx * CHUNK, y + cy * CHUNK, z + cz * LAYERS - Z_BASE)))
+            return self._voxels_locked()
+
+    def snapshot(self) -> dict:
+        """Foto coherente del mapa para guardarlo: vóxeles, resolución, estado (meta), marco y
+        horas del primer y último mapa sumados, todo leído bajo el mismo cerrojo."""
+        with self._lock:
+            idx, res = self._voxels_locked()
+            return {"voxels": idx, "res": res, "meta": self._meta_locked(), "frame_id": self.frame_id,
+                    "first_utc": self.first_utc, "last_utc": self.last_utc}
+
+    def _voxels_locked(self) -> tuple[np.ndarray, float | None]:
+        res = self.res
+        parts = []
+        for (cx, cy, cz), hits in self._hits.items():
+            vis = (hits >= MIN_HITS) & (hits >= KEEP_RATIO * self._seen[(cx, cy)][None])
+            z, y, x = np.nonzero(_drop_alone(vis))
+            if len(x):
+                parts.append(np.column_stack((x + cx * CHUNK, y + cy * CHUNK, z + cz * LAYERS - Z_BASE)))
         if not parts or res is None:
+            return np.empty((0, 3), dtype=np.int64), res
+        return np.concatenate(parts).astype(np.int64), res
+
+    def export_points(self) -> np.ndarray:
+        """Vóxeles pintados → (N, 3) en metros, con la MISMA convención que las capturas en
+        vivo (voxel_codec): punto = origen de la ventana + índice · res = (k − ½) · res."""
+        idx, res = self.export_voxels()
+        if not len(idx) or res is None:
             return np.empty((0, 3), dtype=np.float64)
-        return (np.concatenate(parts).astype(np.float64) - 0.5) * res
+        return (idx.astype(np.float64) - 0.5) * res
+
+    def export_mesh(self) -> VoxelMesh | None:
+        """El mapa acumulado como malla de cubos (lo que pinta el visor), o None si está vacío.
+        Solo se bloquea el mapa mientras se leen los vóxeles; la malla se hace fuera."""
+        idx, res = self.export_voxels()
+        if not len(idx) or res is None:
+            return None
+        return build_voxel_mesh(idx, res)
 
     # ── Salida: los trozos para los visores ──
     def changed_frames(self) -> list[bytes]:
@@ -215,9 +245,12 @@ class SlamMap:
 
     def meta(self) -> dict:
         with self._lock:
-            voxels = sum(n for _, n, _, _ in self._sent.values())
-            cols = sum(c for _, _, c, _ in self._sent.values())
-            res = self.res or 0.05
-            return {"epoch": self.epoch, "version": self.version, "frames": self.frames,
-                    "voxels": voxels, "chunks": sum(1 for _, n, _, _ in self._sent.values() if n),
-                    "area": round(cols * res * res, 1)}
+            return self._meta_locked()
+
+    def _meta_locked(self) -> dict:
+        voxels = sum(n for _, n, _, _ in self._sent.values())
+        cols = sum(c for _, _, c, _ in self._sent.values())
+        res = self.res or 0.05
+        return {"epoch": self.epoch, "version": self.version, "frames": self.frames,
+                "voxels": voxels, "chunks": sum(1 for _, n, _, _ in self._sent.values() if n),
+                "area": round(cols * res * res, 1)}

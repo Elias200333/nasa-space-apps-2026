@@ -32,7 +32,7 @@ PLANETARY_TARGETS = {
         "surface_temp_range": "-130°C to +120°C (equatorial day/night)",
         "subsurface_temp": "-20°C (stable within lava tube interior)",
         "radiation_environment": "Extreme unshielded (GCR & Solar Particle Events)",
-        "recommended_site": "ES_LANZAROTE_CORONA",
+        "recommended_site": "ES_LANZAROTE_CALDERA_BLANCA",
         "ode_product": "LOLA_EDR",
         "trek_layer": "LRO_LOLA_ClrShade_Global_128ppd_v04"
     },
@@ -45,7 +45,7 @@ PLANETARY_TARGETS = {
         "surface_temp_range": "-125°C to +20°C (diurnal extremes)",
         "subsurface_temp": "-40°C to -60°C (thermally buffered cavity)",
         "radiation_environment": "High (thin atmosphere attenuates minimal cosmic rays)",
-        "recommended_site": "US_LAVA_BEDS_VALENTINE",
+        "recommended_site": "ES_LANZAROTE_TIMANFAYA",
         "ode_product": "MOLA_MEGDR",
         "trek_layer": "Mars_MGS_MOLA_ClrShade_merge_global_463m"
     }

@@ -2,16 +2,23 @@
 
 Qué hace
     Mantiene como mucho una conexión WebRTC (vía Go2WebRTCAdapter) y la comparte
-    entre todos los paneles (cámara, LiDAR, telemetría, capturas, diagnóstico).
+    entre todos los paneles (cámara, LiDAR, telemetría, replay, diagnóstico).
     Expone operaciones de alto nivel para la capa FastAPI. Es asíncrono y vive en
     el mismo bucle de eventos que el servidor.
 
 Seguridad
-    - Arranca y permanece en SOLO LECTURA. El control (WASD) es un modo aparte
-      que hay que habilitar explícitamente y que usa el guardián acotado.
+    - El guardián arranca en SOLO LECTURA. El control WASD está activo por defecto con el
+      robot conectado (decisión del operador, 2026-11-14): la primera orden de conducción o
+      de postura pasa el guardián a modo control (subconjunto ACOTADO: sin saltos ni
+      volteretas, velocidades recortadas). Al cerrar el canal de control o desconectar se
+      envía StopMove y se vuelve a solo lectura. El hombre muerto vive en server.py.
     - La clave AES nunca se expone: el estado solo dice si está configurada.
     - Un único punto de conexión: no se abren conexiones paralelas al robot.
     - El mapa SLAM acumulado solo LEE los mapas que ya llegan: no envía nada al robot.
+      Desde el visor: papelera = mapa nuevo, pausa = deja de sumar mapas (lo que se ve es lo
+      que se guarda), descarga = se guarda (PLY malla + GLB igual que el visor + metadatos
+      + SHA-256, clase DERIVED) y se baja el GLB.
+    - «● Grabar sesión» (panel Replay) graba la sesión cruda del robot para el replay.
     - Modo REPLAY (demo sin robot): reproduce una sesión grabada por el mismo camino
       que el robot real. Es excluyente con la conexión en vivo y NO admite control.
       La clase de evidencia la fija la sesión (una sesión sintética sigue siendo
@@ -29,7 +36,7 @@ from typing import Any
 
 import numpy as np
 
-from ..adapters.base import ConnectionFailed
+from ..adapters.base import CaptureError, ConnectionFailed
 from ..adapters.go2_topics import DEFAULT_READONLY_TOPICS
 from ..adapters.go2_webrtc import MAX_VX_MS, MAX_VY_MS, MAX_YAW_RPS, Go2WebRTCAdapter
 from ..adapters.replay import ReplayAdapter
@@ -38,6 +45,8 @@ from ..config import Settings
 from ..lidar.accumulator import AccumulatedCloud
 from ..lidar.live_stream import raw_frame_fields
 from ..lidar.slam_map import KEEP_RATIO, MIN_HITS, SlamMap
+from ..lidar.voxel_glb import build_voxel_glb
+from ..lidar.voxel_mesh import build_voxel_mesh
 from ..models import (
     CaptureState,
     ConnectionState,
@@ -49,6 +58,7 @@ from ..models import (
     SessionInfo,
 )
 from ..storage.scan_store import ScanStore, ScanStoreError
+from ..util import utc_now
 from . import robot_details
 
 log = logging.getLogger(__name__)
@@ -58,6 +68,8 @@ SLAM_INTERVAL_S = 0.5           # como mucho 2 mapas/s se suman al mapa acumulad
 SLAM_PACK_INTERVAL_S = 1.0      # como mucho 1 vez/s se reempaquetan los trozos cambiados
 REPLAY_SPEED = 1.0              # replay a tiempo real (como se grabó)
 _SESSION_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]{0,127}$")   # sin rutas: solo un nombre
+GLB_FORMAT = ("glTF 2.0 binario (GLB) · malla de cubos como el visor: paleta de la app, aristas grises, "
+              "sin luz (KHR_materials_unlit), Y arriba = Z del robot")
 
 
 class DashboardService:
@@ -74,18 +86,20 @@ class DashboardService:
             lambda: Go2WebRTCAdapter(self.settings, self.store, enable_video=True)
         )
         self._adapter: Go2WebRTCAdapter | ReplayAdapter | None = None
-        self.control_armed = False  # el operador confirmó el modo control
         self.last_error: str | None = None
         # Mapa SLAM acumulado (DERIVADO). Sobrevive a reconexiones con el MISMO origen (el
         # marco odom del perro sigue siendo el mismo mientras no se reinicie); al cambiar de
         # origen (robot ↔ sesión grabada) se empieza otro: sus marcos no tienen nada que ver.
         self.slam = SlamMap()
         self.slam_errors = 0
+        self.slam_paused = False          # «Congelar» del visor: no se suman mapas nuevos
         self._slam_thread: threading.Thread | None = None
         self._slam_stop = threading.Event()
         self._slam_last_pack = 0.0
         self._slam_source: str | None = None
         self._slam_evidence = EvidenceClass.DERIVED
+        self._slam_adapter: Go2WebRTCAdapter | ReplayAdapter | None = None   # de dónde sale el mapa
+        self._saving = False
         # Modo replay
         self._replay_task: asyncio.Task | None = None
         self.replay_info: dict[str, Any] | None = None
@@ -127,12 +141,15 @@ class DashboardService:
             raise
         self._adapter = adapter
         self._use_slam_source(f"live:{self.settings.go2.ip or self.settings.go2.serial}",
-                              EvidenceClass.DERIVED)
+                              EvidenceClass.DERIVED, adapter)
         self._start_slam()
         return self.status()
 
     async def disconnect(self) -> dict[str, Any]:
-        self.control_armed = False
+        # Parar y volver a solo lectura ANTES de cerrar. El mapa acumulado no se pierde: sigue
+        # en memoria y se puede guardar (descarga del visor) aún sin conexión. Una sesión que
+        # se estuviera grabando la cierra el adaptador al desconectar.
+        self.release_control()
         self._stop_slam()
         task, self._replay_task = self._replay_task, None
         if task is not None:
@@ -149,12 +166,14 @@ class DashboardService:
                 self._adapter = None
         return self.status()
 
-    def _use_slam_source(self, key: str, evidence: EvidenceClass) -> None:
+    def _use_slam_source(self, key: str, evidence: EvidenceClass, adapter) -> None:
         if key != self._slam_source:
             self.slam.reset()
             self.slam_errors = 0
+            self.slam_paused = False
         self._slam_source = key
         self._slam_evidence = evidence
+        self._slam_adapter = adapter
 
     # ----------------------------------------------------------------- replay
     def list_sessions(self) -> list[dict[str, Any]]:
@@ -208,7 +227,6 @@ class DashboardService:
         adapter.connection_info = {"method": "replay", "address": f"sesión {session_id}",
                                    "session_id": session_id, "library_version": None}
         self._adapter = adapter
-        self.control_armed = False
         self.last_error = None
         self.replay_info = {
             "session_id": session_id,
@@ -219,7 +237,7 @@ class DashboardService:
         }
         derived = (EvidenceClass.SYNTHETIC_TEST if adapter.evidence_class is EvidenceClass.SYNTHETIC_TEST
                    else EvidenceClass.DERIVED)
-        self._use_slam_source(f"replay:{session_id}", derived)
+        self._use_slam_source(f"replay:{session_id}", derived, adapter)
         self._replay_task = asyncio.create_task(self._replay_loop(adapter))
         self._start_slam()
         return self.status()
@@ -243,14 +261,15 @@ class DashboardService:
 
     # ----------------------------------------------------------------- estado
     def status(self) -> dict[str, Any]:
-        if self.control_armed and not self.connected:
-            self.control_armed = False   # conexión perdida: el control no sigue «armado»
         key = self.key_manager.status()
         base: dict[str, Any] = {
             "connected": self.connected,
             "connection_state": ConnectionState.DISCONNECTED.value,
             "capture_state": CaptureState.IDLE.value,
-            "control_armed": self.control_armed,
+            # WASD activo por defecto: se puede conducir con el robot real conectado
+            "control_available": self.connected and self._live_adapter() is not None,
+            "control_enabled": False,
+            "recording": self.recording_status(),
             "last_error": self.last_error,
             "model_variant": self.settings.model_variant,
             "firmware_version": self.settings.firmware_version,
@@ -289,8 +308,8 @@ class DashboardService:
             dict(self.replay_info, kind="replay") if self.replaying and self.replay_info
             else {"kind": "live" if self._live_adapter() is not None else "none"}
         )
-        base["slam"] = dict(self.slam.meta(), errors=self.slam_errors,
-                            evidence_class=self._slam_evidence.value)
+        base["slam"] = dict(self.slam.meta(), errors=self.slam_errors, paused=self.slam_paused,
+                            saving=self._saving, evidence_class=self._slam_evidence.value)
         return base
 
     # ------------------------------------------------------------------- vídeo
@@ -343,47 +362,95 @@ class DashboardService:
     def slam_reset(self) -> None:
         self.slam.reset()
 
-    def save_slam_scan(self) -> ScanMetadata:
-        """Guarda el mapa acumulado como escaneo (PLY + metadatos + SHA-256).
-        Clase de evidencia: DERIVED si sale de datos del robot; SYNTHETIC_TEST si sale de
-        una sesión sintética (un cálculo sobre datos de prueba sigue siendo de prueba)."""
-        adapter = self._adapter
+    def set_slam_paused(self, paused: bool) -> None:
+        """«Congelar el mapa» del visor: mientras está en pausa no se suma ningún mapa nuevo, así
+        lo que se guarda es lo que se ve. Al robot no se le envía nada."""
+        paused = bool(paused)
+        if paused != self.slam_paused:
+            log.info("Mapa SLAM %s", "en pausa" if paused else "reanudado")
+        self.slam_paused = paused
+
+    async def save_slam_map(self) -> dict[str, Any]:
+        """Botón de descarga del visor: guarda el mapa acumulado tal como se ve (PLY malla + GLB
+        igual que el visor + metadatos + SHA-256) y devuelve sus metadatos; el navegador baja
+        luego el GLB. Funciona también desconectado (el mapa sigue en memoria). Lo pesado va en
+        otro hilo: en este bucle vive la conexión WebRTC (con Pluffy, bloquearlo 8–14 s hizo
+        que el perro cortara; ver base.stop_capture)."""
+        if self._saving:
+            raise CaptureError("ya se está guardando el mapa: espera a que termine")
+        adapter, evidence, source = self._slam_adapter, self._slam_evidence, self._slam_source
         if adapter is None:
-            raise ConnectionFailed("not_connected", "No hay robot ni replay activo: no hay de dónde guardar.")
-        points = self.slam.export_points()
-        meta = self.slam.meta()
-        if points.shape[0] == 0:
-            raise ScanStoreError("el mapa acumulado está vacío: deja que el perro vea algo antes de guardar")
-        res = self.slam.res
-        start = self.slam.first_utc
-        end = self.slam.last_utc or start
+            raise ScanStoreError("el mapa acumulado está vacío: conecta el robot y deja que vea algo")
+        self._saving = True
+        try:
+            t0 = time.monotonic()
+            snap = await asyncio.to_thread(self.slam.snapshot)
+            if not len(snap["voxels"]) or snap["res"] is None:
+                raise ScanStoreError("el mapa acumulado está vacío: deja que el perro vea algo antes de guardar")
+            meta, faces = await asyncio.to_thread(
+                self._save_slam_map, snap, adapter=adapter, evidence=evidence, source=source)
+        finally:
+            self._saving = False
+        log.info("Mapa SLAM guardado: %s (%d vóxeles, %d caras; PLY + GLB en %.2f s fuera del bucle "
+                 "de la conexión)", meta.id, len(snap["voxels"]), faces, time.monotonic() - t0)
+        return meta.model_dump(mode="json")
+
+    def _save_slam_map(self, snap: dict, *, adapter, evidence: EvidenceClass,
+                       source: str | None) -> tuple[ScanMetadata, int]:
+        """Hilo aparte. Clase de evidencia: DERIVED si sale de datos del robot; SYNTHETIC_TEST
+        si sale de una sesión sintética (un cálculo sobre datos de prueba sigue siendo de prueba)."""
+        idx, res, slam_meta = snap["voxels"], snap["res"], snap["meta"]
+        mesh = build_voxel_mesh(idx, res)
+        delivery = adapter.descriptor.delivery_mode
+        glb = build_voxel_glb(idx, res, extras={
+            "evidence_class": evidence.value, "delivery_mode": delivery.value,
+            "demo": evidence is EvidenceClass.SYNTHETIC_TEST, "frame_id": snap["frame_id"] or "unknown_robot_frame",
+            "source": source, "nota": "mapa SLAM acumulado (DERIVADO); metadatos completos en el .metadata.json"})
+        now = utc_now()
         cloud = AccumulatedCloud(
-            points=points, mode="accumulate", topic="rt/utlidar/voxel_map_compressed",
-            frame_id=self.slam.frame_id, resolution=res, point_type=PointType.VOXEL_OCCUPANCY,
-            decoder="terrainx_robot.lidar.slam_map (portado del Bridge)",
-            frames_received=meta["frames"], frames_used=meta["frames"], frames_rejected=self.slam_errors,
+            points=mesh.vertices, mode="accumulate", topic="rt/utlidar/voxel_map_compressed",
+            frame_id=snap["frame_id"], resolution=mesh.resolution, point_type=PointType.VOXEL_MESH,
+            decoder="terrainx_robot.lidar.slam_map (portado del Bridge) + lidar.voxel_mesh / voxel_glb",
+            frames_received=slam_meta["frames"], frames_used=slam_meta["frames"], frames_rejected=self.slam_errors,
             rejection_reasons={"descartados": self.slam_errors} if self.slam_errors else {},
             first_info=None, last_info=None,
             validation={"rule": f"vóxel pintado si sale en ≥ {MIN_HITS} mapas y en ≥ {KEEP_RATIO:.0%} "
                                 "de los mapas que cubrían su sitio; fuera los vóxeles sin vecinos"},
-            deduplication={"rule": "rejilla de vóxeles del mundo: un punto por vóxel"},
+            deduplication={"rule": "rejilla de vóxeles del mundo: un cubo por vóxel; vértices "
+                                   "compartidos entre caras del mismo color"},
+            faces=mesh.triangles, colors=mesh.colors,
         )
         caveats = (
             "Mapa ACUMULADO (DERIVADO): unión filtrada de los mapas de vóxeles del robot hecha "
             "por el dashboard, no una medida directa.",
             "Sin cierre de bucles: si la odometría del perro derivó, al volver a un sitio las "
             "paredes pueden salir desplazadas o dobles.",
-            "Tiempos = cuando el dashboard sumó los mapas (en replay, no la hora original).",
+            "Colores = paleta de altura de la app de Unitree (como el visor); no son colores reales.",
+            "El .glb es el mismo mapa con el aspecto del visor (aristas grises, sin luz) y los ejes de "
+            "glTF: (x, y, z) del robot → (x, z, −y). El .ply guarda las coordenadas del robot.",
+            "Tiempos = primer y último mapa del robot sumados al acumulado (en replay, la hora de la "
+            "reproducción, no la original).",
         )
-        return self.store.save(
-            cloud, robot=adapter.descriptor, evidence_class=self._slam_evidence,
-            delivery_mode=adapter.descriptor.delivery_mode, scan_context=adapter.scan_context,
-            capture_start=start, capture_end=end,
-            session_id=self.replay_info["session_id"] if self.replaying and self.replay_info else None,
-            pose_source=None, binary=True, extra_caveats=caveats,
-            extra_provenance={"slam": dict(meta, source=self._slam_source, min_hits=MIN_HITS,
-                                           keep_ratio=KEEP_RATIO)},
+        meta = self.store.save(
+            cloud, robot=adapter.descriptor, evidence_class=evidence,
+            delivery_mode=delivery, scan_context=adapter.scan_context,
+            capture_start=snap["first_utc"] or now, capture_end=snap["last_utc"] or now,
+            session_id=adapter._source_session_id(), pose_source=None, binary=True, extra_caveats=caveats,
+            extra_files={"glb": (".glb", glb.data, GLB_FORMAT)},
+            extra_provenance={
+                "slam": dict(slam_meta, source=source, min_hits=MIN_HITS, keep_ratio=KEEP_RATIO,
+                             paused_when_saved=self.slam_paused),
+                "mesh": {"voxels": mesh.voxels, "cube_faces": mesh.cube_faces,
+                         "vertices": int(mesh.vertices.shape[0]),
+                         "triangles": int(mesh.triangles.shape[0]),
+                         "cube_size_m": mesh.resolution,
+                         "colors": "paleta de altura de la app de Unitree (franja = kz + 9)"},
+                "glb": {"vertices": glb.vertices, "triangles": glb.triangles, "cube_faces": glb.cube_faces,
+                        "axes": "glTF Y arriba: (x, y, z) del robot → (x, z, −y)",
+                        "material": "KHR_materials_unlit + textura con la paleta y aristas grises (1/32 de cara)"},
+            },
         )
+        return meta, mesh.cube_faces
 
     def _start_slam(self) -> None:
         if self._slam_thread is not None and self._slam_thread.is_alive():
@@ -409,6 +476,9 @@ class DashboardService:
             if pack:
                 self._slam_last_pack = now
             seq, frame = (adapter.lidar_raw_seq, adapter.last_lidar_raw) if adapter else (last_seq, None)
+            if self.slam_paused:              # congelado: lo que llegue mientras tanto no se suma
+                last_seq = seq
+                frame = None
             if frame is None or seq == last_seq:
                 if pack:  # lo que quedara sin empaquetar del último mapa
                     try:
@@ -419,47 +489,58 @@ class DashboardService:
             last_seq = seq
             self.slam_step(frame[0], frame[1], pack=pack)
 
-    # ----------------------------------------------------------------- captura
-    async def start_capture(self, mode: str = "accumulate", record_session: bool = False) -> dict[str, Any]:
-        if self._adapter is None:
-            raise ConnectionFailed("not_connected", "No hay conexión con el robot.")
-        if self.replaying:
-            record_session = False   # no se graba una sesión a partir de otra sesión
-        await self._adapter.start_capture(mode=mode, record_session=record_session,
-                                          notes="captura desde dashboard")
-        return {"capturing": True, "mode": mode, "record_session": record_session}
+    # ------------------------------------------------------- grabar sesión cruda
+    def recording_status(self) -> dict[str, Any]:
+        live = self._live_adapter()
+        info = live.recording_info if live is not None else None
+        if info is None:
+            return {"active": False}
+        return {"active": True, "session_id": info.session_id, "start_utc": info.created_utc.isoformat(),
+                "elapsed_s": round((utc_now() - info.created_utc).total_seconds(), 1)}
 
-    async def stop_capture(self) -> dict[str, Any]:
-        if self._adapter is None:
+    async def start_recording(self) -> dict[str, Any]:
+        """«● Grabar sesión» (panel Replay): graba lo que manda el robot (mapas, pose, telemetría)
+        para reproducirlo luego sin robot. No envía nada al robot ni toca el mapa acumulado."""
+        if self.replaying:
+            raise CaptureError("en replay no se graba: esa sesión ya está grabada")
+        live = self._live_adapter()
+        if live is None or not self.connected:
             raise ConnectionFailed("not_connected", "No hay conexión con el robot.")
-        meta = await self._adapter.stop_capture()
-        return meta.model_dump(mode="json")
+        session_id = live.start_recording(notes="grabada desde el dashboard")   # CaptureError si ya graba
+        log.info("Grabando la sesión cruda %s", session_id)
+        return self.recording_status()
+
+    async def stop_recording(self) -> dict[str, Any]:
+        """Cierra la sesión que se está grabando (su SHA-256 se calcula en otro hilo)."""
+        live = self._live_adapter()
+        if live is None or live.recording_info is None:
+            raise CaptureError("no se está grabando ninguna sesión")
+        info = await live.stop_recording()
+        return {"session_id": info.session_id, "records": info.record_count,
+                "lidar_records": info.lidar_records}
 
     # ----------------------------------------------------------------- control
-    def arm_control(self) -> dict[str, Any]:
-        """Habilita el modo control (lo confirma el operador). Movimiento solo con WASD."""
+    # WASD activo por defecto: sin botón «Habilitar». Con el robot real conectado, la primera
+    # orden pasa el guardián a modo control (acotado). En replay no hay robot que conducir.
+    def _control_adapter(self) -> Go2WebRTCAdapter:
         if self.replaying:
             raise ConnectionFailed("replay_no_control", "En replay no hay robot que conducir.")
         live = self._live_adapter()
-        if live is None:
+        if live is None or not self.connected:
             raise ConnectionFailed("not_connected", "No hay conexión con el robot.")
-        live.enable_control()
-        self.control_armed = True
-        return {"control_armed": True, "control_enabled": live.control_enabled}
+        if not live.control_enabled:
+            live.enable_control()
+        return live
 
-    def disarm_control(self) -> dict[str, Any]:
-        """Detiene el robot y vuelve a solo lectura. Seguro de llamar siempre."""
-        self.control_armed = False
+    def release_control(self) -> None:
+        """Detiene el robot y vuelve a solo lectura (al cerrar el canal de control o al
+        desconectar). Seguro de llamar siempre."""
         live = self._live_adapter()
         if live is not None:
             live.disable_control()
-        return {"control_armed": False}
 
     def drive(self, vx: float, vy: float, yaw: float) -> None:
-        live = self._live_adapter()
-        if live is None or not self.control_armed or not live.control_enabled:
-            raise ConnectionFailed("control_not_armed", "El modo control no está habilitado.")
-        live.drive(vx, vy, yaw)
+        self._control_adapter().drive(vx, vy, yaw)
 
     def stop_move(self) -> None:
         live = self._live_adapter()
@@ -467,7 +548,4 @@ class DashboardService:
             live.stop_move()
 
     def posture(self, command: str) -> None:
-        live = self._live_adapter()
-        if live is None or not self.control_armed or not live.control_enabled:
-            raise ConnectionFailed("control_not_armed", "El modo control no está habilitado.")
-        live.posture(command)
+        self._control_adapter().posture(command)

@@ -22,7 +22,7 @@ $("btn-connect").onclick = async () => {
   refresh();
 };
 $("btn-disconnect").onclick = async () => {
-  await disarm();
+  stopNow();      // el servidor además para y vuelve a solo lectura al desconectar
   try { await api("/api/disconnect", { method: "POST" }); } catch (e) {}
   $("cam").removeAttribute("src");
   refresh();
@@ -71,14 +71,40 @@ async function refresh() {
   const lim = s.speed_limits || {};
   $("limits").textContent = `Topes: avance ${lim.vx_ms} m/s · lateral ${lim.vy_ms} m/s · giro ${lim.yaw_rps} rad/s`;
   const replay = !!(s.source && s.source.kind === "replay");
-  const canControl = connected && !replay;            // en replay no hay robot que conducir
   renderExtras(s, replay);
-  $("btn-arm").disabled = !canControl || armed;
-  $("btn-cap-start").disabled = !connected || s.capture_state === "capturing";
-  $("btn-cap-stop").disabled = s.capture_state !== "capturing";
-  $("ctrl-badge").textContent = s.control_enabled ? "CONTROL ACTIVO" : "solo lectura";
-  $("ctrl-badge").className = "badge " + (s.control_enabled ? "warn" : "");
+  renderControl(!!s.control_available, replay);
+  renderRecord(s, replay);
 }
+
+// «● Grabar sesión»: sesión cruda del robot (mapas, pose, telemetría) para el replay
+let recording = false, lastRecorded = null;
+function renderRecord(s, replay) {
+  const rec = s.recording || {};
+  recording = !!rec.active;
+  const btn = $("btn-record");
+  btn.disabled = !recording && (!s.control_available || replay);   // solo con el robot real conectado
+  btn.textContent = recording ? "■ Detener grabación" : "● Grabar sesión";
+  btn.classList.toggle("rec", recording);
+  $("record-status").textContent = recording
+    ? `grabando ${rec.session_id} · ${Math.round(rec.elapsed_s || 0)} s`
+    : (lastRecorded || (replay ? "En replay no se graba." : (s.connected ? "Lista para grabar." : "Para grabar, conecta el robot.")));
+}
+$("btn-record").onclick = async () => {
+  const btn = $("btn-record");
+  btn.disabled = true; btn.blur();   // sin foco: Espacio no lo vuelve a «pulsar»
+  try {
+    if (recording) {
+      $("record-status").textContent = "cerrando la sesión (SHA-256)…";
+      const r = await api("/api/record/stop", { method: "POST" });
+      lastRecorded = `grabada ${r.session_id} · ${r.lidar_records} mapas`;
+      loadSessions();
+    } else {
+      lastRecorded = null;
+      await api("/api/record/start", { method: "POST" });
+    }
+  } catch (e) { lastRecorded = "error: " + e.message; }
+  refresh();
+};
 
 // ---------------------------------------------------------------- estado del robot, replay, acumulado
 const esc = (x) => String(x).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -148,8 +174,8 @@ function renderExtras(s, replay) {
   const sl = s.slam || {};
   $("slam-info").textContent = `Acumulado — ${EVIDENCE_TXT[sl.evidence_class] || sl.evidence_class}: ` +
     `${num(sl.area, 1, " m²")} · ${sl.frames || 0} mapas sumados · ${(sl.voxels || 0).toLocaleString("es-ES")} vóxeles` +
-    (sl.errors ? ` · ${sl.errors} descartados` : "");
-  $("btn-slam-save").disabled = !s.connected || !sl.voxels;
+    (sl.errors ? ` · ${sl.errors} descartados` : "") + (sl.paused ? " · EN PAUSA (no suma mapas)" : "") +
+    (sl.saving ? " · guardando…" : "");
 
   // Replay
   $("btn-replay-stop").disabled = !replay;
@@ -161,21 +187,12 @@ function renderExtras(s, replay) {
   document.querySelectorAll(".rbtn").forEach((btn) => (btn.disabled = s.connected && !replay));
 }
 
-$("btn-slam-save").onclick = async () => {
-  $("slam-save-status").textContent = "guardando…";
-  try {
-    const m = await api("/api/slam/save", { method: "POST" });
-    $("slam-save-status").textContent = `guardado ${m.id} · ${m.point_count} puntos · ${m.evidence_class}${m.demo ? " (demo)" : ""}`;
-  } catch (e) { $("slam-save-status").textContent = "error: " + e.message; }
-  loadScans();
-};
-
 async function loadSessions() {
   let list; try { list = await api("/api/sessions"); } catch (e) { $("replay-status").textContent = "error: " + e.message; return; }
   const tb = $("sessions").querySelector("tbody"); tb.innerHTML = "";
   if (!list.length) {
-    tb.innerHTML = `<tr><td colspan="4" class="note">No hay sesiones grabadas. Graba una con el robot: Capturas → marca
-      «grabar sesión cruda» → Iniciar captura → muévelo → Detener y guardar.</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="4" class="note">No hay sesiones grabadas. Graba una con el robot conectado:
+      «● Grabar sesión» → muévelo → «■ Detener grabación».</td></tr>`;
     return;
   }
   list.forEach((x) => {
@@ -200,30 +217,6 @@ $("btn-replay-stop").onclick = async () => {
   try { await api("/api/replay/stop", { method: "POST" }); } catch (e) { $("replay-status").textContent = "error: " + e.message; }
   refresh();
 };
-
-// ---------------------------------------------------------------- capturas
-$("btn-cap-start").onclick = async () => {
-  try { await api("/api/capture/start", { method: "POST", body: JSON.stringify({ record_session: $("cap-record").checked }) }); $("cap-status").textContent = "capturando…"; }
-  catch (e) { $("cap-status").textContent = "error: " + e.message; }
-  refresh();
-};
-$("btn-cap-stop").onclick = async () => {
-  $("cap-status").textContent = "procesando…";
-  try { const m = await api("/api/capture/stop", { method: "POST" }); $("cap-status").textContent = `guardado ${m.id} · ${m.point_count} puntos`; }
-  catch (e) { $("cap-status").textContent = "error: " + e.message; }
-  loadScans(); refresh();
-};
-async function loadScans() {
-  let scans; try { scans = await api("/api/scans"); } catch (e) { return; }
-  const tb = $("scans").querySelector("tbody"); tb.innerHTML = "";
-  scans.slice().reverse().forEach((m) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${m.id}</td><td>${m.point_count}</td><td>${m.evidence_class}${m.demo ? " (demo)" : ""}` +
-      `${m.delivery_mode === "replay" ? " · replay" : ""}</td>` +
-      `<td><a href="/api/scans/${m.id}/download">PLY</a></td>`;
-    tb.appendChild(tr);
-  });
-}
 
 // ---------------------------------------------------------------- autenticación
 let selectedSN = null;
@@ -255,10 +248,17 @@ $("btn-fetch").onclick = async () => {
 };
 
 // ---------------------------------------------------------------- LiDAR 3D
-// El visor (mapa como la app de Unitree, en vivo / acumulado) está en static/lidar/lidarView.js.
+// El visor (mapa como la app de Unitree, en vivo / acumulado) está en static/lidar/lidarView.js;
+// sus botones (borrar, congelar, guardar y descargar el .glb) hacen lo que antes hacía el panel
+// «Capturas y datos».
 
 // ---------------------------------------------------------------- CONTROL WASD
-let armed = false, ws = null, heartbeat = null;
+// ACTIVO POR DEFECTO (sin «Habilitar»): con el robot real conectado, WASD conduce.
+//   · Solo se manda algo mientras hay una tecla pulsada («drive» cada 100 ms, que es también
+//     la señal de hombre muerto) y un «stop» al soltar la última. Sin teclas, nada al robot.
+//   · Las teclas no cuentan mientras se escribe en un campo de texto (p. ej. el correo).
+//   · Soltar el foco de la ventana, perder la conexión o cerrar la pestaña detienen el robot.
+let driveOK = false, ws = null, wsRetry = null;
 const pressed = new Set();
 // Niveles de velocidad (m/s, m/s, rad/s). El backend recorta además a sus topes
 // (go2_webrtc.MAX_*), así que aunque aquí se suba algo, al robot no llega más.
@@ -289,57 +289,77 @@ function velocity() {
   if (pressed.has("d")) yaw -= SPEED.yaw;
   return { vx, vy, yaw };
 }
+function send(msg) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg));
+}
 function sendDrive() {
-  if (!armed || !ws || ws.readyState !== 1) return;
-  ws.send(JSON.stringify(Object.assign({ type: "drive" }, velocity())));
+  if (!driveOK || !pressed.size) return;          // sin teclas pulsadas no se manda nada
+  send(Object.assign({ type: "drive" }, velocity()));
+}
+function stopNow() {
+  const was = pressed.size > 0;
+  pressed.clear(); highlight();
+  if (was || driveOK) send({ type: "stop" });
 }
 function highlight() {
   document.querySelectorAll(".key").forEach((k) => k.classList.toggle("active", pressed.has(k.dataset.k)));
 }
+// ¿Se está escribiendo? (las casillas y los botones no cuentan: ahí WASD sigue conduciendo)
+function typing(e) {
+  const t = e.target;
+  if (!t || !t.tagName) return false;
+  if (t.isContentEditable || t.tagName === "TEXTAREA" || t.tagName === "SELECT") return true;
+  return t.tagName === "INPUT" && !["checkbox", "radio", "button", "submit", "range"].includes(t.type);
+}
 function onKey(down) {
   return (e) => {
-    if (!armed) return;
-    const k = e.key.toLowerCase();
+    const k = (e.key || "").toLowerCase();
+    if (!down) {     // soltar cuenta SIEMPRE (aunque el foco esté en un campo de texto): es lo seguro
+      if (pressed.delete(k)) { highlight(); if (pressed.size) sendDrive(); else send({ type: "stop" }); }
+      return;
+    }
+    if (typing(e) || e.ctrlKey || e.metaKey || e.altKey || !driveOK) return;
     if (!KEYS.includes(k) && k !== " ") return;
     e.preventDefault();
-    if (k === " ") { pressed.clear(); if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "stop" })); highlight(); return; }
-    if (down) pressed.add(k); else pressed.delete(k);
-    highlight(); sendDrive();
+    if (k === " ") { stopNow(); return; }
+    if (e.repeat || pressed.has(k)) return;        // la repetición del teclado no añade nada
+    pressed.add(k); highlight(); sendDrive();
   };
 }
-
-$("btn-arm").onclick = async () => {
-  if (!confirm("¿Habilitar la conducción del robot físico?\n\nEl Go2 se moverá con WASD mientras mantengas la tecla pulsada. Asegúrate de que hay espacio libre y alguien junto al paro de emergencia.")) return;
-  try { await api("/api/control/arm", { method: "POST" }); } catch (e) { alert("No se pudo habilitar: " + e.message); return; }
-  armed = true;
-  ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws/control");
-  ws.onclose = () => { if (armed) disarm(); };
-  heartbeat = setInterval(sendDrive, 100);   // también es la señal de hombre muerto
-  $("btn-disarm").disabled = false; $("btn-stop").disabled = false;
-  document.querySelectorAll(".pbtn").forEach((b) => (b.disabled = false));
-  refresh();
-};
-async function disarm() {
-  if (!armed) return;
-  armed = false; pressed.clear(); highlight();
-  if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
-  if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify({ type: "stop" })); } catch (e) {} ws.close(); }
-  ws = null;
-  try { await api("/api/control/disarm", { method: "POST" }); } catch (e) {}
-  $("btn-disarm").disabled = true; $("btn-stop").disabled = true;
-  document.querySelectorAll(".pbtn").forEach((b) => (b.disabled = true));
-  refresh();
+function renderControl(available, replay) {
+  driveOK = available;
+  if (!driveOK && pressed.size) { pressed.clear(); highlight(); }
+  $("btn-stop").disabled = !driveOK;
+  document.querySelectorAll(".pbtn").forEach((b) => (b.disabled = !driveOK));
+  $("ctrl-badge").textContent = driveOK ? "CONTROL ACTIVO" : (replay ? "replay: sin control" : "sin robot");
+  $("ctrl-badge").className = "badge " + (driveOK ? "warn" : "");
 }
-$("btn-disarm").onclick = disarm;
-$("btn-stop").onclick = () => { pressed.clear(); highlight(); if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "stop" })); };
+// Canal de control: abierto siempre; si se cierra, se para y se vuelve a abrir solo.
+function openControl() {
+  clearTimeout(wsRetry);
+  const sock = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws/control");
+  sock.onclose = () => {
+    if (ws === sock) ws = null;
+    if (pressed.size) { pressed.clear(); highlight(); }
+    wsRetry = setTimeout(openControl, 1000);
+  };
+  ws = sock;
+}
+
+$("btn-stop").onclick = () => { stopNow(); $("btn-stop").blur(); };
 document.querySelectorAll(".pbtn").forEach((b) => b.onclick = () => {
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "posture", command: b.dataset.cmd }));
+  send({ type: "posture", command: b.dataset.cmd });
+  b.blur();                                        // sin foco: Espacio no repite la postura
 });
 window.addEventListener("keydown", onKey(true));
 window.addEventListener("keyup", onKey(false));
-window.addEventListener("blur", () => { if (armed) { pressed.clear(); highlight(); sendDrive(); } });  // soltar el foco detiene
+window.addEventListener("blur", () => { if (pressed.size) stopNow(); });   // soltar el foco detiene
+document.addEventListener("focusin", (e) => { if (pressed.size && typing(e)) stopNow(); });   // pasar a escribir detiene
+document.addEventListener("visibilitychange", () => { if (document.hidden && pressed.size) stopNow(); });
+setInterval(sendDrive, 100);   // mientras haya una tecla pulsada: también es la señal de hombre muerto
 
 // ---------------------------------------------------------------- arranque
 setSpeedLevel("normal");
-refresh(); loadScans(); loadSessions();
+openControl();
+refresh(); loadSessions();
 setInterval(refresh, 1000);

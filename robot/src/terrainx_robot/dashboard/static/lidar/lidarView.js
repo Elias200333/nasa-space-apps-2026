@@ -9,6 +9,10 @@
 //     solo; este dashboard solo permite conducción WASD con hombre muerto.
 //   · El modelo 3D del Go2 (go2Model, archivo GLB): se usa el perro de bloques del original.
 //   · La capa de ruta (routeLayer) y los stores de React (aquí, un objeto `ui`).
+// Cambiado (TERRAIN-X): el botón de descarga GUARDA el mapa SLAM acumulado en el dashboard
+// (POST /api/slam/save: PLY malla + GLB + metadatos + SHA-256) y baja el .glb, que se ve igual
+// que este visor. La pausa también congela el acumulado en el dashboard (no suma mapas): así lo
+// que se ve es lo que se guarda. Sustituyen al antiguo panel «Capturas y datos».
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { getLidarEngine } from './LidarMapEngine.js'
@@ -199,7 +203,7 @@ export function mountLidarView(mount, { onStats } = {}) {
     return { b, id: m.id }
   })
 
-  // Arriba a la derecha: borrar el acumulado (con confirmación), congelar, descargar .ply
+  // Arriba a la derecha: borrar el acumulado (con confirmación), congelar, descargar .ply (malla)
   const top = el('div', 'lv-top', mount)
   let confirmClear = false, confirmTimer = null
   const clearBtn = darkButton(top, 'Borrar el mapa acumulado', 'trash', () => {
@@ -217,20 +221,47 @@ export function mountLidarView(mount, { onStats } = {}) {
   })
   const pauseBtn = darkButton(top, 'Congelar el mapa', 'pause', () => {
     ui.paused = !ui.paused
-    engine.paused = slam.paused = ui.paused
-    if (!ui.paused && asked === 'slam') source.send('SLAM_SYNC')   // lo que cambió mientras estaba congelado
+    // En vivo se congela aquí; el acumulado lo congela el dashboard (deja de sumar mapas), así
+    // que este visor sigue mostrando justo lo que se guardaría, también al cambiar de modo
+    engine.paused = ui.paused
+    source.setPaused(ui.paused)
     render()
   })
-  darkButton(top, 'Descargar el mapa (.ply, sin metadatos)', 'download', async () => {
-    const acc = slamMode()
-    const blob = await (acc ? slam : engine).exportPly()
-    if (!blob) return
-    const a = Object.assign(document.createElement('a'), {
-      href: URL.createObjectURL(blob),
-      download: `terrainx_${acc ? 'mapa_acumulado' : 'mapa_vivo'}_${Date.now()}.ply`,
-    })
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+  // TERRAIN-X: guarda el mapa ACUMULADO en el dashboard (PLY malla + GLB + metadatos, en
+  // runtime/scans) y baja el .glb, que se ve como este visor. Se pasa a «Acumulado» para que
+  // lo que se ve sea lo que se guarda.
+  const toastEl = el('div', 'lv-toast', mount)
+  toastEl.style.display = 'none'
+  let toastTimer = null, saving = false
+  const toast = (text, err = false, ms = 9000) => {
+    clearTimeout(toastTimer)
+    toastEl.textContent = text
+    toastEl.classList.toggle('err', err)
+    toastEl.style.display = ''
+    if (ms) toastTimer = setTimeout(() => { toastEl.style.display = 'none' }, ms)
+  }
+  darkButton(top, 'Guardar el mapa acumulado y descargar el .glb (se ve como aquí; copia con metadatos en runtime/scans)', 'download', async () => {
+    if (saving) return
+    if (ui.mode !== 'slam') { ui.mode = 'slam'; stream(); render() }
+    saving = true
+    toast('Guardando el mapa acumulado…', false, 0)
+    try {
+      const r = await fetch('/api/slam/save', { method: 'POST' })
+      const m = await r.json().catch(() => ({}))
+      if (!r.ok) { toast(typeof m.detail === 'string' ? m.detail : 'No se pudo guardar el mapa.', true); return }
+      const a = Object.assign(document.createElement('a'), {
+        href: `/api/scans/${encodeURIComponent(m.id)}/download?format=glb`,
+        download: `${m.id}.glb`,
+      })
+      a.click()
+      const n = m.provenance?.mesh?.voxels ?? 0
+      toast(`Guardado ${m.id}: ${n.toLocaleString('es-ES')} vóxeles. Se descarga el .glb; el .ply y los ` +
+        'metadatos quedan en runtime/scans.')
+    } catch (e) {
+      toast('Sin respuesta del dashboard: no se pudo guardar.', true)
+    } finally {
+      saving = false
+    }
   })
 
   // Abajo a la derecha: acercar, alejar, seguir al robot
@@ -256,7 +287,8 @@ export function mountLidarView(mount, { onStats } = {}) {
     clearBtn.innerHTML = confirmClear ? '¿Borrar?' : svg('trash')
     clearBtn.title = confirmClear ? 'Pulsa otra vez para borrar el mapa acumulado' : 'Borrar el mapa acumulado'
     pauseBtn.innerHTML = svg(ui.paused ? 'play' : 'pause')
-    pauseBtn.title = ui.paused ? 'Reanudar el mapa' : 'Congelar el mapa'
+    pauseBtn.title = ui.paused ? 'Reanudar el mapa (vuelve a sumar mapas del perro)'
+      : 'Congelar el mapa (el acumulado deja de sumar: lo que ves es lo que se guarda)'
     pauseBtn.classList.toggle('active', ui.paused)
     followBtn.classList.toggle('active', ui.follow)
     followBtn.title = ui.follow ? 'Siguiendo al robot (pulsa para mover la cámara libre)' : 'Centrar y seguir al robot'
@@ -311,6 +343,7 @@ export function mountLidarView(mount, { onStats } = {}) {
     cancelAnimationFrame(raf)
     clearInterval(statsTimer)
     clearTimeout(confirmTimer)
+    clearTimeout(toastTimer)
     source.disconnect()
     offCloud(); offPose(); offSlam(); offInfo()
     ro.disconnect()

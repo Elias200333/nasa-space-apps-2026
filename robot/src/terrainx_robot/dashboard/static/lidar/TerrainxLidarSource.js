@@ -18,6 +18,7 @@ export class TerrainxLidarSource extends LidarSource {
   _infoCbs = new Set()
   _ws = null
   _want = { mode: 'off' }
+  _paused = false
   _closed = true
   _retry = null
 
@@ -42,6 +43,13 @@ export class TerrainxLidarSource extends LidarSource {
   /** Órdenes al dashboard: 'SLAM_RESET' (borrar el acumulado) · 'SLAM_SYNC' (reenviarlo) */
   send(type) { this._send({ type }) }
 
+  /** TERRAIN-X: congelar el acumulado en el dashboard (no suma mapas mientras tanto). Se vuelve
+   *  a pedir al reconectar: si este canal se cierra, el dashboard lo reanuda solo. */
+  setPaused(paused) {
+    this._paused = !!paused
+    this._send({ type: 'SLAM_PAUSE', paused: this._paused })
+  }
+
   disconnect() {
     this._closed = true
     clearTimeout(this._retry)
@@ -58,7 +66,10 @@ export class TerrainxLidarSource extends LidarSource {
     const ws = new WebSocket(url)
     ws.binaryType = 'arraybuffer'
     this._ws = ws
-    ws.onopen = () => this._send(this._want)           // lo que estuviera pidiendo el visor
+    ws.onopen = () => {                                // lo que estuviera pidiendo el visor
+      this._send(this._want)
+      if (this._paused) this._send({ type: 'SLAM_PAUSE', paused: true })
+    }
     ws.onmessage = (ev) => (typeof ev.data === 'string' ? this._onText(ev.data) : this._onBinary(ev.data))
     ws.onclose = () => {
       if (this._ws === ws) this._ws = null
