@@ -516,6 +516,27 @@ export class EarthSceneManager {
     this.scene.beginDirectAnimation(this.camera, [anim], 0, 20, false);
   }
 
+  /**
+   * Sincroniza la orientación de la Tierra 3D con unas coordenadas (lat, lon) específicas
+   */
+  public orientToCoordinates(lat: number, lon: number) {
+    const phi = (90 - lat) * (Math.PI / 180);
+    const lonRad = lon * (Math.PI / 180);
+    const v = new BABYLON.Vector3(
+      -Math.sin(phi) * Math.cos(lonRad),
+      Math.cos(phi),
+      -Math.sin(phi) * Math.sin(lonRad)
+    );
+
+    const rx = Math.atan2(-v.y, -v.z);
+    const mX = BABYLON.Matrix.RotationX(rx);
+    const vX = BABYLON.Vector3.TransformCoordinates(v, mX);
+    const ry = Math.atan2(vX.x, -vX.z);
+
+    this.earthRoot.rotation.x = rx;
+    this.earthRoot.rotation.y = ry;
+  }
+
   public getEarthRoot(): BABYLON.TransformNode {
     return this.earthRoot;
   }

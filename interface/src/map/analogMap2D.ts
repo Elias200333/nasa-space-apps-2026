@@ -3,118 +3,104 @@ import 'leaflet/dist/leaflet.css';
 import { AnalogSite } from '../types';
 import { sound } from '../audio';
 
-function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Radio medio de la Tierra en kilómetros
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Math.round(R * c);
-}
-
-function getBearingDirection(lat1: number, lon1: number, lat2: number, lon2: number): string {
-  const y = Math.sin((lon2 - lon1) * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180);
-  const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
-            Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos((lon2 - lon1) * Math.PI / 180);
-  let brng = Math.atan2(y, x) * 180 / Math.PI;
-  brng = (brng + 360) % 360;
-  const directions = ['Norte', 'Noreste', 'Este', 'Sureste', 'Sur', 'Suroeste', 'Oeste', 'Noroeste'];
-  return directions[Math.round(brng / 45) % 8];
-}
-
 export class AnalogMap2DManager {
   private mapContainer: HTMLElement;
   private map: L.Map | null = null;
   private currentMarker: L.Marker | null = null;
   private currentCircle: L.Circle | null = null;
-  private onReturnToOrbitCallback?: () => void;
+  private activeTargetSite: AnalogSite | null = null;
+  private onReturnToOrbitCallback?: (lat?: number, lon?: number) => void;
   private isReturning = false;
   private isTransitioning = false;
-
-  // Estado de exploración libre
-  private activeTargetSite: AnalogSite | null = null;
-  private isTargetReached = false;
 
   constructor(mapContainerId: string) {
     this.mapContainer = document.getElementById(mapContainerId) as HTMLElement;
   }
 
-  public setOnReturnToOrbit(callback: () => void) {
+  public setOnReturnToOrbit(callback: (lat?: number, lon?: number) => void) {
     this.onReturnToOrbitCallback = callback;
   }
 
   /**
-   * Transición de zoom a Exploración Libre:
-   * 1. El mapa satelital se funde a escala regional (zoom 5 o 6).
-   * 2. NO bloquea la vista ni abre ventanas invasivas de información.
-   * 3. Deja al usuario explorar libremente hasta alcanzar las coordenadas sugeridas.
+   * Navegación libre desde la perspectiva exacta que el usuario estaba mirando en 3D.
+   * - Abre a escala continental ("medianamente alejado", zoom 5) para que no cambie la perspectiva visual.
+   * - Sin indicadores de coordenadas ni popups que estorben la vista.
    */
-  public triggerSeamlessZoomDive(site: AnalogSite) {
+  public triggerFreeExplorationDive(lat: number, lon: number, zoomLevel = 5) {
+    if (this.isTransitioning) return;
+    this.isTransitioning = true;
+    this.isReturning = false;
+
+    // 1. Limpiar marcadores y balizas previas para exploración completamente limpia
+    this.clearMarkers();
+    this.activeTargetSite = null;
+
+    // 2. Preparar el contenedor para el crossfade suave
+    this.mapContainer.classList.remove('hidden');
+    this.mapContainer.style.opacity = '0';
+    this.mapContainer.style.transform = 'scale(0.98)';
+    this.mapContainer.style.transition = 'opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
+
+    this.ensureMapInitialized(lat, lon, zoomLevel);
+
+    // Centrar en las coordenadas exactas que el usuario estaba observando en la esfera 3D
+    this.map!.setView([lat, lon], zoomLevel, { animate: false });
+    this.map!.invalidateSize();
+
+    // Actualizar barra HUD limpia sin coordenadas forzadas
+    this.setupFreeExplorationHUD();
+
+    // 3. Crossfade suave
+    requestAnimationFrame(() => {
+      this.mapContainer.classList.add('active');
+      this.mapContainer.style.opacity = '1';
+      this.mapContainer.style.transform = 'scale(1)';
+      setTimeout(() => {
+        this.isTransitioning = false;
+      }, 500);
+    });
+  }
+
+  /**
+   * Transición hacia un análogo sugerido (Moon o Mars) a escala continental medianamente alejada.
+   * - NO abre ventanas emergentes invasivas.
+   * - Permite explorar toda la región con libertad.
+   */
+  public triggerSeamlessZoomDive(site: AnalogSite, zoomLevel = 5) {
     if (this.isTransitioning) return;
     this.isTransitioning = true;
     this.isReturning = false;
 
     this.activeTargetSite = site;
-    this.isTargetReached = false;
-
     const lat = site.coordinates.latitude;
     const lon = site.coordinates.longitude;
 
-    // Mostrar contenedor con crossfade suave
     this.mapContainer.classList.remove('hidden');
     this.mapContainer.style.opacity = '0';
-    this.mapContainer.style.transform = 'scale(0.97)';
-    this.mapContainer.style.transition = 'opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1)';
+    this.mapContainer.style.transform = 'scale(0.98)';
+    this.mapContainer.style.transition = 'opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
 
-    this.ensureMapInitialized(lat, lon, 6);
+    this.ensureMapInitialized(lat, lon, zoomLevel);
 
-    // Abrir a escala regional (zoom 6) para permitir exploración libre del área circundante
-    this.map!.setView([lat, lon], 6, { animate: false });
+    // Ajustar a escala continental medianamente alejada (zoom 5) sin saltos
+    this.map!.setView([lat, lon], zoomLevel, { animate: false });
     this.map!.invalidateSize();
 
-    // Dibujar la baliza de objetivo en el mapa
+    // Dibujar la baliza en el mapa (pero sin abrir ningún popup invasivo)
     this.renderSiteMarkers(site);
-    this.updateExplorationTracker();
+    this.setupTargetExplorationHUD(site);
 
-    // Crossfade de entrada
     requestAnimationFrame(() => {
       this.mapContainer.classList.add('active');
       this.mapContainer.style.opacity = '1';
       this.mapContainer.style.transform = 'scale(1)';
-      this.isTransitioning = false;
+      setTimeout(() => {
+        this.isTransitioning = false;
+      }, 500);
     });
   }
 
-  /**
-   * Transición cuando el usuario hace zoom in manual con la rueda del ratón
-   */
-  public triggerManualCoordinatesDive(lat: number, lon: number, defaultBody: 'Moon' | 'Mars' = 'Moon') {
-    if (!this.activeTargetSite) {
-      this.activeTargetSite = {
-        id: `manual-${lat.toFixed(2)}-${lon.toFixed(2)}`,
-        name: 'Zona Análoga Terrestre',
-        target_body: defaultBody,
-        region: `${Math.abs(lat).toFixed(2)}° ${lat >= 0 ? 'N' : 'S'}`,
-        country: `${Math.abs(lon).toFixed(2)}° ${lon >= 0 ? 'E' : 'W'}`,
-        coordinates: {
-          latitude: lat,
-          longitude: lon,
-          label: `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`
-        },
-        similarity_score: 87,
-        scientific_justification: 'Inspección de alta resolución mediante satélites de observación de la Tierra.',
-        sources: ['NASA Worldview', 'Esri High-Resolution World Imagery'],
-        status: 'candidate'
-      };
-    }
-
-    this.triggerSeamlessZoomDive(this.activeTargetSite);
-  }
-
-  private ensureMapInitialized(lat: number, lon: number, initialZoom = 6) {
+  private ensureMapInitialized(lat: number, lon: number, initialZoom = 5) {
     if (this.map) return;
 
     this.map = L.map('leafletMap', {
@@ -133,11 +119,6 @@ export class AnalogMap2DManager {
     }).addTo(this.map);
 
     L.control.zoom({ position: 'bottomright' }).addTo(this.map);
-
-    // Rastreo en tiempo real mientras el usuario se desplaza por el mapa
-    this.map.on('move', () => {
-      this.updateExplorationTracker();
-    });
 
     // Detección de alejamiento con rueda del ratón: volver a la esfera 3D al llegar a vista global
     this.map.on('zoomend', () => {
@@ -158,21 +139,31 @@ export class AnalogMap2DManager {
     }
   }
 
+  private clearMarkers() {
+    if (!this.map) return;
+    if (this.currentMarker) {
+      this.map.removeLayer(this.currentMarker);
+      this.currentMarker = null;
+    }
+    if (this.currentCircle) {
+      this.map.removeLayer(this.currentCircle);
+      this.currentCircle = null;
+    }
+  }
+
   private renderSiteMarkers(site: AnalogSite) {
     if (!this.map) return;
+    this.clearMarkers();
+
     const lat = site.coordinates.latitude;
     const lon = site.coordinates.longitude;
-
-    if (this.currentMarker) this.map.removeLayer(this.currentMarker);
-    if (this.currentCircle) this.map.removeLayer(this.currentCircle);
-
     const accentColor = site.target_body === 'Moon' ? '#22d3ee' : '#f97316';
 
     this.currentCircle = L.circle([lat, lon], {
       color: accentColor,
       fillColor: accentColor,
       fillOpacity: 0.15,
-      radius: 2200,
+      radius: 3500,
       weight: 1.5
     }).addTo(this.map);
 
@@ -188,6 +179,7 @@ export class AnalogMap2DManager {
 
     this.currentMarker = L.marker([lat, lon], { icon: customIcon }).addTo(this.map);
 
+    // Solo se abre el popup si el usuario hace clic directamente sobre el marcador
     this.currentMarker.bindPopup(`
       <div class="map-popup-card">
         <span class="popup-tag ${site.target_body.toLowerCase()}">${site.target_body} Analog</span>
@@ -200,69 +192,59 @@ export class AnalogMap2DManager {
         </div>
       </div>
     `);
-
-    // Al hacer clic en el marcador, se considera objetivo alcanzado y se abre su tarjeta
-    this.currentMarker.on('click', () => {
-      this.isTargetReached = true;
-      this.updateExplorationTracker();
-    });
   }
 
-  /**
-   * Actualiza el rastreador de distancia y rumbo hacia el objetivo en tiempo real
-   */
-  private updateExplorationTracker() {
-    if (!this.map || !this.activeTargetSite) return;
-
-    const center = this.map.getCenter();
-    const targetLat = this.activeTargetSite.coordinates.latitude;
-    const targetLon = this.activeTargetSite.coordinates.longitude;
-
-    const dist = getDistanceKm(center.lat, center.lng, targetLat, targetLon);
-    const dir = getBearingDirection(center.lat, center.lng, targetLat, targetLon);
-
+  private setupFreeExplorationHUD() {
     const titleEl = document.getElementById('mapSiteTitle');
     const coordsEl = document.getElementById('mapSiteCoords');
     const badgeEl = document.getElementById('mapTargetBadge');
-    const scoreEl = document.getElementById('mapSiteScore');
+    const btnCenter = document.getElementById('btnCenterTarget');
+    const scoreChip = document.getElementById('mapSiteScore')?.parentElement;
 
-    // Umbral de llegada: cuando el usuario sitúa la vista a menos de 50 km del análogo
-    if (dist <= 50 && !this.isTargetReached) {
-      this.isTargetReached = true;
-      sound.playClick(880);
+    if (badgeEl) {
+      badgeEl.textContent = 'VISTA SATELITAL 2D';
+      badgeEl.className = 'map-hud-badge';
+    }
+    if (titleEl) {
+      titleEl.textContent = 'Exploración Libre de Terreno';
+    }
+    if (coordsEl) {
+      coordsEl.textContent = 'Navegación satelital en alta resolución • Esri World Imagery';
+    }
+    if (btnCenter) {
+      btnCenter.style.display = 'none';
+    }
+    if (scoreChip) {
+      scoreChip.style.display = 'none';
+    }
+  }
 
-      if (badgeEl) {
-        badgeEl.textContent = `🎯 ANÁLOGO ALCANZADO [${this.activeTargetSite.target_body.toUpperCase()}]`;
-        badgeEl.className = 'map-hud-badge target-reached-badge';
-      }
-      if (titleEl) {
-        titleEl.textContent = this.activeTargetSite.name;
-      }
-      if (coordsEl) {
-        coordsEl.textContent = `📍 ${this.activeTargetSite.region}, ${this.activeTargetSite.country} — ${this.activeTargetSite.coordinates.label}`;
-      }
-      if (scoreEl) {
-        scoreEl.textContent = `${this.activeTargetSite.similarity_score}%`;
-      }
+  private setupTargetExplorationHUD(site: AnalogSite) {
+    const titleEl = document.getElementById('mapSiteTitle');
+    const coordsEl = document.getElementById('mapSiteCoords');
+    const badgeEl = document.getElementById('mapTargetBadge');
+    const btnCenter = document.getElementById('btnCenterTarget');
+    const scoreVal = document.getElementById('mapSiteScore');
+    const scoreChip = scoreVal?.parentElement;
 
-      // Abrir la información detallada una vez que el usuario ha llegado al lugar
-      if (this.currentMarker && !this.currentMarker.isPopupOpen()) {
-        this.currentMarker.openPopup();
-      }
-    } else if (!this.isTargetReached) {
-      if (badgeEl) {
-        badgeEl.textContent = `EXPLORACIÓN LIBRE [${this.activeTargetSite.target_body.toUpperCase()}]`;
-        badgeEl.className = `map-hud-badge ${this.activeTargetSite.target_body.toLowerCase()}-badge`;
-      }
-      if (titleEl) {
-        titleEl.textContent = `Explorando terreno: busca el análogo sugerido`;
-      }
-      if (coordsEl) {
-        coordsEl.textContent = `🎯 Objetivo: ${this.activeTargetSite.name} (${this.activeTargetSite.coordinates.label}) • A ${dist.toLocaleString()} km hacia el ${dir}`;
-      }
-      if (scoreEl) {
-        scoreEl.textContent = `--%`;
-      }
+    if (badgeEl) {
+      badgeEl.textContent = `${site.target_body.toUpperCase()} ANALOG SITE`;
+      badgeEl.className = `map-hud-badge ${site.target_body.toLowerCase()}-badge`;
+    }
+    if (titleEl) {
+      titleEl.textContent = `Región de ${site.name}`;
+    }
+    if (coordsEl) {
+      coordsEl.textContent = 'Exploración libre • Haz clic en la baliza para ver detalles científicos';
+    }
+    if (btnCenter) {
+      btnCenter.style.display = 'flex';
+    }
+    if (scoreChip) {
+      scoreChip.style.display = 'flex';
+    }
+    if (scoreVal) {
+      scoreVal.textContent = `${site.similarity_score}%`;
     }
   }
 
@@ -283,8 +265,6 @@ export class AnalogMap2DManager {
     });
 
     setTimeout(() => {
-      this.isTargetReached = true;
-      this.updateExplorationTracker();
       if (this.currentMarker) {
         this.currentMarker.openPopup();
       }
@@ -292,21 +272,24 @@ export class AnalogMap2DManager {
   }
 
   /**
-   * Regresa suavemente del mapa 2D a la órbita espacial 3D
+   * Regresa suavemente del mapa 2D a la órbita espacial 3D,
+   * sincronizando la rotación de la Tierra con el punto donde el usuario estaba mirando en 2D.
    */
   public returnToSpaceOrbit() {
     if (this.isReturning) return;
     this.isReturning = true;
     sound.playClick(480);
 
+    const center = this.map ? this.map.getCenter() : null;
+
     // 1. Desvanecer suavemente el contenedor 2D
     this.mapContainer.style.transition = 'opacity 0.45s ease-out, transform 0.45s ease-out';
     this.mapContainer.style.opacity = '0';
-    this.mapContainer.style.transform = 'scale(0.97)';
+    this.mapContainer.style.transform = 'scale(0.98)';
 
-    // 2. Disparar el ascenso de la cámara 3D de BabylonJS de fondo
+    // 2. Disparar el ascenso de la cámara 3D de BabylonJS pasando las coordenadas actuales
     if (this.onReturnToOrbitCallback) {
-      this.onReturnToOrbitCallback();
+      this.onReturnToOrbitCallback(center ? center.lat : undefined, center ? center.lng : undefined);
     }
 
     setTimeout(() => {

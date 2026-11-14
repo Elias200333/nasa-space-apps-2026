@@ -38,9 +38,9 @@ function initBabylonScenes() {
       }
     };
 
-    // Zoom manual con la rueda del ratón hacia el planeta: transición suave al mapa 2D
+    // Zoom manual con la rueda del ratón hacia el planeta: transición suave a navegación libre en esa ubicación
     earthScene.onZoomDiveTrigger = (lat, lon) => {
-      map2DManager.triggerManualCoordinatesDive(lat, lon, activeBody === 'Mars' ? 'Mars' : 'Moon');
+      map2DManager.triggerFreeExplorationDive(lat, lon);
     };
   }
 
@@ -63,8 +63,11 @@ function init2DMapManager() {
   map2DManager = new AnalogMap2DManager('map2dContainer');
 
   // Callback cuando el usuario pulsa "Regresar a Órbita Espacial" desde el mapa 2D
-  map2DManager.setOnReturnToOrbit(() => {
-    earthScene.ascendToOrbit(1400);
+  map2DManager.setOnReturnToOrbit((lat, lon) => {
+    if (lat !== undefined && lon !== undefined) {
+      earthScene.orientToCoordinates(lat, lon);
+    }
+    earthScene.ascendToOrbit(1200);
     // Restablecer selector a Tierra
     document.querySelectorAll('.selector-option').forEach(el => {
       el.classList.remove('active', 'mars-active');
