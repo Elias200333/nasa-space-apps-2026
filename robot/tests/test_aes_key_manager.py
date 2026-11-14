@@ -158,3 +158,38 @@ def test_rechaza_ruta_dentro_del_repositorio(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "find_repo_root", lambda start: tmp_path)
     with pytest.raises(ConfigError, match="dentro del repositorio"):
         AesKeyManager(tmp_path / "robot" / "clave.aes")
+
+
+# ------------------------------------ regresión: Windows español + WAF 567
+def test_cabeceras_de_la_nube_se_sanean_a_ascii(monkeypatch):
+    """En Windows en español, time.strftime('%Z') -> 'Hora estándar romance'.
+
+    La librería lo mete en la cabecera HTTP AppTimezone y curl_cffi falla con
+    'ascii' codec can't decode byte 0xe1. El cliente que fabricamos debe dejar
+    todas las cabeceras en ASCII sin tocar la librería.
+    """
+    import time as _time
+
+    from terrainx_robot.auth import aes_key_manager as akm
+
+    monkeypatch.setattr(_time, "strftime", lambda fmt: "Hora estándar romance")
+    cloud = akm._default_cloud_factory("global", "Go2")
+    headers = cloud._headers()
+    assert headers["AppTimezone"] == "Hora estndar romance"  # á eliminada
+    for k, v in headers.items():
+        if isinstance(v, str):
+            v.encode("ascii")  # no debe lanzar para ninguna cabecera
+    assert len(headers["AppSign"]) == 32  # la firma MD5 queda intacta
+
+
+def test_cliente_evita_el_bloqueo_waf(monkeypatch):
+    """El WAF de Tencent devuelve HTTP 567 si la huella TLS (escritorio) y el
+    User-Agent (móvil) no concuerdan. El cliente debe quitar el User-Agent de
+    la librería y usar una huella Edge coherente."""
+    from terrainx_robot.auth import aes_key_manager as akm
+
+    cloud = akm._default_cloud_factory("global", "Go2")
+    # La librería sí define un User-Agent de móvil; nuestras cabeceras no.
+    assert "User-Agent" not in cloud._headers()
+    # Se reconfiguró la sesión con una de las huellas preferidas (Edge).
+    assert getattr(cloud._session, "impersonate", None) in akm._IMPERSONATE_PREFERENCE
