@@ -72,8 +72,8 @@
         "terrestrial_value": "-0.0000 m\u207b\u00b9",
         "planetary_target": "Inversi\u00f3n de colapso (-0.04)",
         "similarity_score": 0.2,
-        "weight_pct": 10.0,
-        "contribution_pct": 2.0
+        "weight_pct": 8.0,
+        "contribution_pct": 1.6
       },
       {
         "id": "lava_tubes_cavities",

@@ -1,6 +1,7 @@
 {
   "lunar_ranking": [
     {
+      "rank": 1,
       "id": "ES_FUERTEVENTURA_ARENA",
       "name": "Malpaís de la Arena y Complejo Basal (Fuerteventura, Islas Canarias, España)",
       "target_body": "Moon",
@@ -13,7 +14,18 @@
         420.0
       ],
       "local_utm_epsg": "EPSG:32628",
-      "score_pct": 65.79,
+      "score_pct": 66.83,
+      "status": "candidate",
+      "strong_analogies": [
+        "Campo de lava 'aa' holoceno con bloques escarpados y aristas afiladas sin cobertura vegetal, que pone a prueba la durabilidad de ruedas de rovers.",
+        "Tubos de lava pequeños y conductos volcánicos con suelos de enfriamiento basáltico sin alteración.",
+        "Ambiente desértico cálido con tasas de radiación solar elevadas y sequedad extrema."
+      ],
+      "analogy_limitations": [
+        "Vientos alisios salinos que transportan aerosoles marinos.",
+        "Menor espesor de regolito fino que en la superficie lunar milenaria."
+      ],
+      "mission_training_value": "Pruebas de abrasión y desgaste mecánico de llantas metálicas de rovers lunares; calibración de cámaras de visión estereoscópica para evasión de obstáculos.",
       "metrics_table": [
         {
           "id": "elevation_relief",
@@ -27,16 +39,16 @@
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "7.86° (máx 13.6°)",
+          "terrestrial_value": "5.72° (máx 5.7°)",
           "planetary_target": "6.5° ± 3.0°",
-          "similarity_score": 0.902,
+          "similarity_score": 0.967,
           "weight_pct": 16.0,
-          "contribution_pct": 14.43
+          "contribution_pct": 15.47
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "11.33 m",
+          "terrestrial_value": "8.18 m",
           "planetary_target": "2.6 ± 1.2 m",
           "similarity_score": 0.0,
           "weight_pct": 14.0,
@@ -87,34 +99,10 @@
           "weight_pct": 8.0,
           "contribution_pct": 7.12
         }
-      ],
-      "strong_analogies": [
-        "Campo de lava 'aa' holoceno con bloques escarpados y aristas afiladas sin cobertura vegetal, que pone a prueba la durabilidad de ruedas de rovers.",
-        "Tubos de lava pequeños y conductos volcánicos con suelos de enfriamiento basáltico sin alteración.",
-        "Ambiente desértico cálido con tasas de radiación solar elevadas y sequedad extrema."
-      ],
-      "analogy_limitations": [
-        "Vientos alisios salinos que transportan aerosoles marinos.",
-        "Menor espesor de regolito fino que en la superficie lunar milenaria."
-      ],
-      "mission_training_value": "Pruebas de abrasión y desgaste mecánico de llantas metálicas de rovers lunares; calibración de cámaras de visión estereoscópica para evasión de obstáculos.",
-      "sources": [
-        "Ancochea_1996_Fuerteventura_Volcanism",
-        "IGN_PNOA_LiDAR_MDT05",
-        "Copernicus_Sentinel2"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.93,
-        "cave_accessibility_evidence": 0.65,
-        "slope_mean_deg": 11.2,
-        "roughness_tri_m": 5.4,
-        "spectral_basaltic_match": 0.89,
-        "crater_morphology_proxy": 0.72,
-        "surface_aridity_proxy": 0.89,
-        "subsurface_thermal_stability": 0.82
-      }
+      ]
     },
     {
+      "rank": 2,
       "id": "US_ARIZONA_SP_CRATER",
       "name": "SP Crater & San Francisco Volcanic Field (Arizona, EE.UU.)",
       "target_body": "Moon",
@@ -127,7 +115,18 @@
         2141.0
       ],
       "local_utm_epsg": "EPSG:32612",
-      "score_pct": 65.62,
+      "score_pct": 66.74,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Cono de ceniza basáltico-andesítico perfectamente simétrico con ángulo de reposo de 33° que replica conos de piroclastos lunares.",
+        "Colada de lava 'aa' en bloque de 7 km de longitud con bordes de enfriamiento nítidos y rugosidad decamétrica extrema.",
+        "Composición rica en clinopiroxeno y plagioclasa con firmas de reflectancia análogas a los domos volcánicos de Marius Hills."
+      ],
+      "analogy_limitations": [
+        "La gravedad terrestre genera conos más empinados que los conos lunares (que se dispersan más por 1/6 g y vacío).",
+        "Matorral árido disperso de enebros y artemisas en la base del cono."
+      ],
+      "mission_training_value": "Entrenamiento de astronautas Apolo 15 y 16; validación de radares de penetración de regolito (LPR) y maniobras de aterrizaje visual autónomo.",
       "metrics_table": [
         {
           "id": "elevation_relief",
@@ -141,16 +140,16 @@
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "7.89° (máx 13.7°)",
+          "terrestrial_value": "5.74° (máx 5.7°)",
           "planetary_target": "6.5° ± 3.0°",
-          "similarity_score": 0.898,
+          "similarity_score": 0.968,
           "weight_pct": 16.0,
-          "contribution_pct": 14.37
+          "contribution_pct": 15.49
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "11.37 m",
+          "terrestrial_value": "8.21 m",
           "planetary_target": "2.6 ± 1.2 m",
           "similarity_score": 0.0,
           "weight_pct": 14.0,
@@ -159,7 +158,7 @@
         {
           "id": "curvature_profile",
           "name": "Curvatura Topográfica y Sumideros",
-          "terrestrial_value": "-0.0000 m⁻¹",
+          "terrestrial_value": "0.0000 m⁻¹",
           "planetary_target": "Inversión de colapso (-0.04)",
           "similarity_score": 0.2,
           "weight_pct": 10.0,
@@ -201,262 +200,10 @@
           "weight_pct": 8.0,
           "contribution_pct": 6.56
         }
-      ],
-      "strong_analogies": [
-        "Cono de ceniza basáltico-andesítico perfectamente simétrico con ángulo de reposo de 33° que replica conos de piroclastos lunares.",
-        "Colada de lava 'aa' en bloque de 7 km de longitud con bordes de enfriamiento nítidos y rugosidad decamétrica extrema.",
-        "Composición rica en clinopiroxeno y plagioclasa con firmas de reflectancia análogas a los domos volcánicos de Marius Hills."
-      ],
-      "analogy_limitations": [
-        "La gravedad terrestre genera conos más empinados que los conos lunares (que se dispersan más por 1/6 g y vacío).",
-        "Matorral árido disperso de enebros y artemisas en la base del cono."
-      ],
-      "mission_training_value": "Entrenamiento de astronautas Apolo 15 y 16; validación de radares de penetración de regolito (LPR) y maniobras de aterrizaje visual autónomo.",
-      "sources": [
-        "Ulrich_1984_San_Francisco_Field",
-        "NASA_Apollo_Field_Training_Archives",
-        "USGS_3DEP_1m"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.96,
-        "cave_accessibility_evidence": 0.5,
-        "slope_mean_deg": 28.5,
-        "roughness_tri_m": 5.2,
-        "spectral_basaltic_match": 0.92,
-        "crater_morphology_proxy": 0.9,
-        "surface_aridity_proxy": 0.82,
-        "subsurface_thermal_stability": 0.65
-      }
+      ]
     },
     {
-      "id": "US_LAVA_BEDS_VALENTINE",
-      "name": "Valentine Cave, Lava Beds National Monument (California, EE.UU.)",
-      "target_body": "Moon",
-      "pairing": "Marius Hills Pit / Philolaus Crater skylight (Moon)",
-      "country": "EE.UU.",
-      "lat": 41.712,
-      "lon": -121.509,
-      "elevation_range_m": [
-        1260.0,
-        1450.0
-      ],
-      "local_utm_epsg": "EPSG:32610",
-      "score_pct": 64.08,
-      "metrics_table": [
-        {
-          "id": "elevation_relief",
-          "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "190.0 m (cota 1260-1450 m)",
-          "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
-          "similarity_score": 0.629,
-          "weight_pct": 12.0,
-          "contribution_pct": 7.55
-        },
-        {
-          "id": "slope_morphometry",
-          "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "5.01° (máx 8.7°)",
-          "planetary_target": "6.5° ± 3.0°",
-          "similarity_score": 0.883,
-          "weight_pct": 16.0,
-          "contribution_pct": 14.13
-        },
-        {
-          "id": "surface_roughness_tri",
-          "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "7.17 m",
-          "planetary_target": "2.6 ± 1.2 m",
-          "similarity_score": 0.001,
-          "weight_pct": 14.0,
-          "contribution_pct": 0.01
-        },
-        {
-          "id": "curvature_profile",
-          "name": "Curvatura Topográfica y Sumideros",
-          "terrestrial_value": "0.0000 m⁻¹",
-          "planetary_target": "Inversión de colapso (-0.04)",
-          "similarity_score": 0.2,
-          "weight_pct": 10.0,
-          "contribution_pct": 2.0
-        },
-        {
-          "id": "lava_tubes_cavities",
-          "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 95% (Contexto volcánico: 94%)",
-          "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.946,
-          "weight_pct": 20.0,
-          "contribution_pct": 18.91
-        },
-        {
-          "id": "crater_morphology",
-          "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 60%",
-          "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.6,
-          "weight_pct": 8.0,
-          "contribution_pct": 4.8
-        },
-        {
-          "id": "spectral_mineralogy",
-          "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 89%",
-          "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-          "similarity_score": 0.89,
-          "weight_pct": 12.0,
-          "contribution_pct": 10.68
-        },
-        {
-          "id": "environmental_aridity",
-          "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 75%",
-          "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.75,
-          "weight_pct": 8.0,
-          "contribution_pct": 6.0
-        }
-      ],
-      "strong_analogies": [
-        "Red densa de tubos de lava basáltica bien preservados con cornisas de flujo, estafilitos y suelo de bloques caídos.",
-        "Acceso mediante colapso cenital que simula con precisión las condiciones de descenso en pit craters lunares.",
-        "Ambiente subterráneo protegido con apantallamiento térmico y de radiación cósmica."
-      ],
-      "analogy_limitations": [
-        "Presencia de humedad condensada y esteras microbianas terrestres autótrofas.",
-        "Dimensiones métricas limitadas por la resistencia a tracción del basalto bajo 1 g."
-      ],
-      "mission_training_value": "Sede del proyecto NASA BRAILLE para navegación SLAM y espectroscopía láser subterránea autónoma sin satélites GPS.",
-      "sources": [
-        "NASA_BRAILLE_PSTAR_2020",
-        "Waters_1990_Lava_Beds_Geology",
-        "USGS_LiDAR_3DEP"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.94,
-        "cave_accessibility_evidence": 0.95,
-        "slope_mean_deg": 5.4,
-        "roughness_tri_m": 2.2,
-        "spectral_basaltic_match": 0.89,
-        "crater_morphology_proxy": 0.6,
-        "surface_aridity_proxy": 0.75,
-        "subsurface_thermal_stability": 0.95
-      }
-    },
-    {
-      "id": "ES_LANZAROTE_CALDERA_BLANCA",
-      "name": "Cráter de Caldera Blanca (Lanzarote, Islas Canarias, España)",
-      "target_body": "Moon",
-      "pairing": "Hyginus Crater / Schrödinger Basin volcanic vents (Moon)",
-      "country": "España",
-      "lat": 29.038,
-      "lon": -13.719,
-      "elevation_range_m": [
-        168.0,
-        321.0
-      ],
-      "local_utm_epsg": "EPSG:32628",
-      "score_pct": 60.79,
-      "metrics_table": [
-        {
-          "id": "elevation_relief",
-          "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "153.0 m (cota 168-321 m)",
-          "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
-          "similarity_score": 0.546,
-          "weight_pct": 12.0,
-          "contribution_pct": 6.55
-        },
-        {
-          "id": "slope_morphometry",
-          "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "4.04° (máx 7.0°)",
-          "planetary_target": "6.5° ± 3.0°",
-          "similarity_score": 0.714,
-          "weight_pct": 16.0,
-          "contribution_pct": 11.42
-        },
-        {
-          "id": "surface_roughness_tri",
-          "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "5.78 m",
-          "planetary_target": "2.6 ± 1.2 m",
-          "similarity_score": 0.03,
-          "weight_pct": 14.0,
-          "contribution_pct": 0.42
-        },
-        {
-          "id": "curvature_profile",
-          "name": "Curvatura Topográfica y Sumideros",
-          "terrestrial_value": "0.0000 m⁻¹",
-          "planetary_target": "Inversión de colapso (-0.04)",
-          "similarity_score": 0.2,
-          "weight_pct": 10.0,
-          "contribution_pct": 2.0
-        },
-        {
-          "id": "lava_tubes_cavities",
-          "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 70% (Contexto volcánico: 94%)",
-          "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.808,
-          "weight_pct": 20.0,
-          "contribution_pct": 16.16
-        },
-        {
-          "id": "crater_morphology",
-          "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 85%",
-          "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.85,
-          "weight_pct": 8.0,
-          "contribution_pct": 6.8
-        },
-        {
-          "id": "spectral_mineralogy",
-          "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 88%",
-          "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-          "similarity_score": 0.88,
-          "weight_pct": 12.0,
-          "contribution_pct": 10.56
-        },
-        {
-          "id": "environmental_aridity",
-          "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 86%",
-          "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.86,
-          "weight_pct": 8.0,
-          "contribution_pct": 6.88
-        }
-      ],
-      "strong_analogies": [
-        "Cráter freatomagmático de 1.2 km de diámetro con geometría de cresta circular escarpada y fondo plano árido sin cobertura vegetal.",
-        "Manto de lapilli y toba basáltica compacta que reproduce la respuesta mecánica del regolito lunar cohesivo.",
-        "Desnivel neto de 153 m ideal para pruebas de transitabilidad de rovers en pendientes pronunciadas."
-      ],
-      "analogy_limitations": [
-        "Génesis freatomagmática con interacción de agua subterránea terrestre, ausente en la Luna.",
-        "Viento atmosférico constante que causa deflación eólica suave."
-      ],
-      "mission_training_value": "Validación de tráfico y tracción de rovers con ruedas metálicas en rampas escarpadas; cartografía fotogramétrica de bordes de cráteres.",
-      "sources": [
-        "Carracedo_2003_Lanzarote_Volcanism",
-        "IGN_PNOA_LiDAR_MDT05",
-        "Copernicus_Sentinel2_2024"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.94,
-        "cave_accessibility_evidence": 0.7,
-        "slope_mean_deg": 14.5,
-        "roughness_tri_m": 3.8,
-        "spectral_basaltic_match": 0.88,
-        "crater_morphology_proxy": 0.85,
-        "surface_aridity_proxy": 0.86,
-        "subsurface_thermal_stability": 0.8
-      }
-    },
-    {
+      "rank": 3,
       "id": "US_HAWAII_MAUNA_KEA",
       "name": "Mauna Kea Summit & Tephra Cones (Hawái, EE.UU.)",
       "target_body": "Moon",
@@ -469,7 +216,18 @@
         4207.0
       ],
       "local_utm_epsg": "EPSG:32605",
-      "score_pct": 56.26,
+      "score_pct": 64.64,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Conos de ceniza y tephra basáltica hawaiítica a 4,200 m de altitud expuestos a meteorización mecánica criogénica sin meteorización química.",
+        "Humedad relativa extremadamente baja (<10%) e inversión térmica que minimiza la presencia de agua líquida en superficie.",
+        "Distribución granulométrica de piroclastos análoga a los depósitos piroclásticos oscuros del polo sur lunar (Shorty Crater / Apolo 17)."
+      ],
+      "analogy_limitations": [
+        "Presión atmosférica de 600 mbar (reducida para la Tierra, pero infinita respecto al vacío lunar).",
+        "Permafrost residual y hielo fósil en conos sombríos ausentes en el ecuador lunar."
+      ],
+      "mission_training_value": "Pruebas de excavación y procesamiento de regolito in situ (NASA ISRU O2 extraction); simuladores lunares de PISCES.",
       "metrics_table": [
         {
           "id": "elevation_relief",
@@ -483,16 +241,16 @@
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "10.59° (máx 18.2°)",
+          "terrestrial_value": "7.74° (máx 7.7°)",
           "planetary_target": "6.5° ± 3.0°",
-          "similarity_score": 0.395,
+          "similarity_score": 0.918,
           "weight_pct": 16.0,
-          "contribution_pct": 6.31
+          "contribution_pct": 14.69
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "15.37 m",
+          "terrestrial_value": "11.10 m",
           "planetary_target": "2.6 ± 1.2 m",
           "similarity_score": 0.0,
           "weight_pct": 14.0,
@@ -543,34 +301,313 @@
           "weight_pct": 8.0,
           "contribution_pct": 7.2
         }
-      ],
-      "strong_analogies": [
-        "Conos de ceniza y tephra basáltica hawaiítica a 4,200 m de altitud expuestos a meteorización mecánica criogénica sin meteorización química.",
-        "Humedad relativa extremadamente baja (<10%) e inversión térmica que minimiza la presencia de agua líquida en superficie.",
-        "Distribución granulométrica de piroclastos análoga a los depósitos piroclásticos oscuros del polo sur lunar (Shorty Crater / Apolo 17)."
-      ],
-      "analogy_limitations": [
-        "Presión atmosférica de 600 mbar (reducida para la Tierra, pero infinita respecto al vacío lunar).",
-        "Permafrost residual y hielo fósil en conos sombríos ausentes en el ecuador lunar."
-      ],
-      "mission_training_value": "Pruebas de excavación y procesamiento de regolito in situ (NASA ISRU O2 extraction); simuladores lunares de PISCES.",
-      "sources": [
-        "Wolfe_1997_Mauna_Kea_Geology",
-        "NASA_PISCES_ISRU_Field_Reports",
-        "USGS_3DEP_LiDAR"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.92,
-        "cave_accessibility_evidence": 0.3,
-        "slope_mean_deg": 16.0,
-        "roughness_tri_m": 3.4,
-        "spectral_basaltic_match": 0.91,
-        "crater_morphology_proxy": 0.8,
-        "surface_aridity_proxy": 0.9,
-        "subsurface_thermal_stability": 0.7
-      }
+      ]
     },
     {
+      "rank": 4,
+      "id": "ES_LANZAROTE_CALDERA_BLANCA",
+      "name": "Cráter de Caldera Blanca (Lanzarote, Islas Canarias, España)",
+      "target_body": "Moon",
+      "pairing": "Hyginus Crater / Schrödinger Basin volcanic vents (Moon)",
+      "country": "España",
+      "lat": 29.038,
+      "lon": -13.719,
+      "elevation_range_m": [
+        168.0,
+        321.0
+      ],
+      "local_utm_epsg": "EPSG:32628",
+      "score_pct": 62.75,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Cráter freatomagmático de 1.2 km de diámetro con geometría de cresta circular escarpada y fondo plano árido sin cobertura vegetal.",
+        "Manto de lapilli y toba basáltica compacta que reproduce la respuesta mecánica del regolito lunar cohesivo.",
+        "Desnivel neto de 153 m ideal para pruebas de transitabilidad de rovers en pendientes pronunciadas."
+      ],
+      "analogy_limitations": [
+        "Génesis freatomagmática con interacción de agua subterránea terrestre, ausente en la Luna.",
+        "Viento atmosférico constante que causa deflación eólica suave."
+      ],
+      "mission_training_value": "Validación de tráfico y tracción de rovers con ruedas metálicas en rampas escarpadas; cartografía fotogramétrica de bordes de cráteres.",
+      "metrics_table": [
+        {
+          "id": "elevation_relief",
+          "name": "Rango Altimétrico y Relieve",
+          "terrestrial_value": "153.0 m (cota 168-321 m)",
+          "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
+          "similarity_score": 0.546,
+          "weight_pct": 12.0,
+          "contribution_pct": 6.55
+        },
+        {
+          "id": "slope_morphometry",
+          "name": "Gradiente de Pendiente (Horn)",
+          "terrestrial_value": "2.92° (máx 2.9°)",
+          "planetary_target": "6.5° ± 3.0°",
+          "similarity_score": 0.492,
+          "weight_pct": 16.0,
+          "contribution_pct": 7.86
+        },
+        {
+          "id": "surface_roughness_tri",
+          "name": "Rugosidad Superficial (TRI)",
+          "terrestrial_value": "4.17 m",
+          "planetary_target": "2.6 ± 1.2 m",
+          "similarity_score": 0.424,
+          "weight_pct": 14.0,
+          "contribution_pct": 5.94
+        },
+        {
+          "id": "curvature_profile",
+          "name": "Curvatura Topográfica y Sumideros",
+          "terrestrial_value": "0.0000 m⁻¹",
+          "planetary_target": "Inversión de colapso (-0.04)",
+          "similarity_score": 0.2,
+          "weight_pct": 10.0,
+          "contribution_pct": 2.0
+        },
+        {
+          "id": "lava_tubes_cavities",
+          "name": "Tubos de Lava y Cavidades",
+          "terrestrial_value": "Evidencia: 70% (Contexto volcánico: 94%)",
+          "planetary_target": "Claraboyas intactas / Pit Craters",
+          "similarity_score": 0.808,
+          "weight_pct": 20.0,
+          "contribution_pct": 16.16
+        },
+        {
+          "id": "crater_morphology",
+          "name": "Morfología de Conos / Cráteres",
+          "terrestrial_value": "Índice: 85%",
+          "planetary_target": "Cráteres de impacto / conos piroclásticos",
+          "similarity_score": 0.85,
+          "weight_pct": 8.0,
+          "contribution_pct": 6.8
+        },
+        {
+          "id": "spectral_mineralogy",
+          "name": "Composición Espectral y Mineralógica",
+          "terrestrial_value": "Concordancia: 88%",
+          "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
+          "similarity_score": 0.88,
+          "weight_pct": 12.0,
+          "contribution_pct": 10.56
+        },
+        {
+          "id": "environmental_aridity",
+          "name": "Extremos Ambientales e Hiperaridez",
+          "terrestrial_value": "Proxy Aridez: 86%",
+          "planetary_target": "Desierto poliextremo / Vacío",
+          "similarity_score": 0.86,
+          "weight_pct": 8.0,
+          "contribution_pct": 6.88
+        }
+      ]
+    },
+    {
+      "rank": 5,
+      "id": "US_LAVA_BEDS_VALENTINE",
+      "name": "Valentine Cave, Lava Beds National Monument (California, EE.UU.)",
+      "target_body": "Moon",
+      "pairing": "Marius Hills Pit / Philolaus Crater skylight (Moon)",
+      "country": "EE.UU.",
+      "lat": 41.712,
+      "lon": -121.509,
+      "elevation_range_m": [
+        1260.0,
+        1450.0
+      ],
+      "local_utm_epsg": "EPSG:32610",
+      "score_pct": 61.45,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Red densa de tubos de lava basáltica bien preservados con cornisas de flujo, estafilitos y suelo de bloques caídos.",
+        "Acceso mediante colapso cenital que simula con precisión las condiciones de descenso en pit craters lunares.",
+        "Ambiente subterráneo protegido con apantallamiento térmico y de radiación cósmica."
+      ],
+      "analogy_limitations": [
+        "Presencia de humedad condensada y esteras microbianas terrestres autótrofas.",
+        "Dimensiones métricas limitadas por la resistencia a tracción del basalto bajo 1 g."
+      ],
+      "mission_training_value": "Sede del proyecto NASA BRAILLE para navegación SLAM y espectroscopía láser subterránea autónoma sin satélites GPS.",
+      "metrics_table": [
+        {
+          "id": "elevation_relief",
+          "name": "Rango Altimétrico y Relieve",
+          "terrestrial_value": "190.0 m (cota 1260-1450 m)",
+          "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
+          "similarity_score": 0.629,
+          "weight_pct": 12.0,
+          "contribution_pct": 7.55
+        },
+        {
+          "id": "slope_morphometry",
+          "name": "Gradiente de Pendiente (Horn)",
+          "terrestrial_value": "3.63° (máx 3.6°)",
+          "planetary_target": "6.5° ± 3.0°",
+          "similarity_score": 0.633,
+          "weight_pct": 16.0,
+          "contribution_pct": 10.12
+        },
+        {
+          "id": "surface_roughness_tri",
+          "name": "Rugosidad Superficial (TRI)",
+          "terrestrial_value": "5.18 m",
+          "planetary_target": "2.6 ± 1.2 m",
+          "similarity_score": 0.099,
+          "weight_pct": 14.0,
+          "contribution_pct": 1.39
+        },
+        {
+          "id": "curvature_profile",
+          "name": "Curvatura Topográfica y Sumideros",
+          "terrestrial_value": "-0.0000 m⁻¹",
+          "planetary_target": "Inversión de colapso (-0.04)",
+          "similarity_score": 0.2,
+          "weight_pct": 10.0,
+          "contribution_pct": 2.0
+        },
+        {
+          "id": "lava_tubes_cavities",
+          "name": "Tubos de Lava y Cavidades",
+          "terrestrial_value": "Evidencia: 95% (Contexto volcánico: 94%)",
+          "planetary_target": "Claraboyas intactas / Pit Craters",
+          "similarity_score": 0.946,
+          "weight_pct": 20.0,
+          "contribution_pct": 18.91
+        },
+        {
+          "id": "crater_morphology",
+          "name": "Morfología de Conos / Cráteres",
+          "terrestrial_value": "Índice: 60%",
+          "planetary_target": "Cráteres de impacto / conos piroclásticos",
+          "similarity_score": 0.6,
+          "weight_pct": 8.0,
+          "contribution_pct": 4.8
+        },
+        {
+          "id": "spectral_mineralogy",
+          "name": "Composición Espectral y Mineralógica",
+          "terrestrial_value": "Concordancia: 89%",
+          "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
+          "similarity_score": 0.89,
+          "weight_pct": 12.0,
+          "contribution_pct": 10.68
+        },
+        {
+          "id": "environmental_aridity",
+          "name": "Extremos Ambientales e Hiperaridez",
+          "terrestrial_value": "Proxy Aridez: 75%",
+          "planetary_target": "Desierto poliextremo / Vacío",
+          "similarity_score": 0.75,
+          "weight_pct": 8.0,
+          "contribution_pct": 6.0
+        }
+      ]
+    },
+    {
+      "rank": 6,
+      "id": "IN_LONAR_CRATER",
+      "name": "Lonar Impact Crater (Maharashtra, India)",
+      "target_body": "Moon",
+      "pairing": "Lunar Maria Impact Craters (e.g. Tycho/Copernicus in basalt) (Moon)",
+      "country": "India",
+      "lat": 19.976,
+      "lon": 76.507,
+      "elevation_range_m": [
+        480.0,
+        610.0
+      ],
+      "local_utm_epsg": "EPSG:32643",
+      "score_pct": 59.07,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Uno de los únicos cuatro cráteres de impacto hiperveloz en roca puramente basáltica del planeta (Deccan Traps).",
+        "Presencia documentada de maskelynita (plagioclasa transformada en vidrio por presión de choque), microbrechas de fundido y esférulas vidriosas idénticas a las del regolito lunar.",
+        "Morfología de cuenco con borde elevado e inversión de coladas basálticas en las paredes."
+      ],
+      "analogy_limitations": [
+        "Lago alcalino-salino permanente en el fondo del cráter generado por el monzón tropical.",
+        "Vegetación boscosa densa en el exterior y paredes del cráter."
+      ],
+      "mission_training_value": "Calibración espectral e identificación de firmas de metamorfismo de choque en basaltos lunares; diferenciación entre basaltos magmáticos vírgenes y basaltos chocados por meteoritos.",
+      "metrics_table": [
+        {
+          "id": "elevation_relief",
+          "name": "Rango Altimétrico y Relieve",
+          "terrestrial_value": "130.0 m (cota 480-610 m)",
+          "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
+          "similarity_score": 0.495,
+          "weight_pct": 12.0,
+          "contribution_pct": 5.95
+        },
+        {
+          "id": "slope_morphometry",
+          "name": "Gradiente de Pendiente (Horn)",
+          "terrestrial_value": "2.49° (máx 2.5°)",
+          "planetary_target": "6.5° ± 3.0°",
+          "similarity_score": 0.408,
+          "weight_pct": 16.0,
+          "contribution_pct": 6.54
+        },
+        {
+          "id": "surface_roughness_tri",
+          "name": "Rugosidad Superficial (TRI)",
+          "terrestrial_value": "3.54 m",
+          "planetary_target": "2.6 ± 1.2 m",
+          "similarity_score": 0.734,
+          "weight_pct": 14.0,
+          "contribution_pct": 10.27
+        },
+        {
+          "id": "curvature_profile",
+          "name": "Curvatura Topográfica y Sumideros",
+          "terrestrial_value": "0.0000 m⁻¹",
+          "planetary_target": "Inversión de colapso (-0.04)",
+          "similarity_score": 0.2,
+          "weight_pct": 10.0,
+          "contribution_pct": 2.0
+        },
+        {
+          "id": "lava_tubes_cavities",
+          "name": "Tubos de Lava y Cavidades",
+          "terrestrial_value": "Evidencia: 30% (Contexto volcánico: 85%)",
+          "planetary_target": "Claraboyas intactas / Pit Craters",
+          "similarity_score": 0.547,
+          "weight_pct": 20.0,
+          "contribution_pct": 10.95
+        },
+        {
+          "id": "crater_morphology",
+          "name": "Morfología de Conos / Cráteres",
+          "terrestrial_value": "Índice: 96%",
+          "planetary_target": "Cráteres de impacto / conos piroclásticos",
+          "similarity_score": 0.96,
+          "weight_pct": 8.0,
+          "contribution_pct": 7.68
+        },
+        {
+          "id": "spectral_mineralogy",
+          "name": "Composición Espectral y Mineralógica",
+          "terrestrial_value": "Concordancia: 94%",
+          "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
+          "similarity_score": 0.94,
+          "weight_pct": 12.0,
+          "contribution_pct": 11.28
+        },
+        {
+          "id": "environmental_aridity",
+          "name": "Extremos Ambientales e Hiperaridez",
+          "terrestrial_value": "Proxy Aridez: 55%",
+          "planetary_target": "Desierto poliextremo / Vacío",
+          "similarity_score": 0.55,
+          "weight_pct": 8.0,
+          "contribution_pct": 4.4
+        }
+      ]
+    },
+    {
+      "rank": 7,
       "id": "ES_LANZAROTE_CORONA",
       "name": "Volcán de la Corona & Tubo de Lava de los Verdes (Lanzarote, Islas Canarias, España)",
       "target_body": "Moon",
@@ -583,12 +620,23 @@
         609.0
       ],
       "local_utm_epsg": "EPSG:32628",
-      "score_pct": 54.63,
+      "score_pct": 58.46,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Tubo volcánico basáltico de 7.6 km con claraboyas de colapso ('Jameos') morfológicamente idénticas a los pit craters de Marius Hills.",
+        "Basaltos toleíticos cuaternarios sin meteorización química profunda debido a la aridez insular.",
+        "Atenuación total de radiación y estabilidad térmica en el interior de la cavidad (~18°C constante)."
+      ],
+      "analogy_limitations": [
+        "Gravedad terrestre (1 g frente a 0.166 g lunar); los tubos lunares pueden alcanzar diámetros de cientos de metros.",
+        "Presencia de atmósfera respirable y biota ausente en el vacío lunar."
+      ],
+      "mission_training_value": "Sede oficial del programa ESA PANGAEA de espeleología y geología para astronautas; ensayos de navegación LiDAR autónoma subterránea.",
       "metrics_table": [
         {
           "id": "elevation_relief",
           "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "609.0 m (cota -0-609 m)",
+          "terrestrial_value": "609.0 m (cota 0-609 m)",
           "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
           "similarity_score": 0.841,
           "weight_pct": 12.0,
@@ -597,16 +645,16 @@
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "15.56° (máx 26.2°)",
+          "terrestrial_value": "11.49° (máx 11.5°)",
           "planetary_target": "6.5° ± 3.0°",
-          "similarity_score": 0.011,
+          "similarity_score": 0.25,
           "weight_pct": 16.0,
-          "contribution_pct": 0.17
+          "contribution_pct": 4.0
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "23.00 m",
+          "terrestrial_value": "16.60 m",
           "planetary_target": "2.6 ± 1.2 m",
           "similarity_score": 0.0,
           "weight_pct": 14.0,
@@ -657,148 +705,10 @@
           "weight_pct": 8.0,
           "contribution_pct": 7.04
         }
-      ],
-      "strong_analogies": [
-        "Tubo volcánico basáltico de 7.6 km con claraboyas de colapso ('Jameos') morfológicamente idénticas a los pit craters de Marius Hills.",
-        "Basaltos toleíticos cuaternarios sin meteorización química profunda debido a la aridez insular.",
-        "Atenuación total de radiación y estabilidad térmica en el interior de la cavidad (~18°C constante)."
-      ],
-      "analogy_limitations": [
-        "Gravedad terrestre (1 g frente a 0.166 g lunar); los tubos lunares pueden alcanzar diámetros de cientos de metros.",
-        "Presencia de atmósfera respirable y biota ausente en el vacío lunar."
-      ],
-      "mission_training_value": "Sede oficial del programa ESA PANGAEA de espeleología y geología para astronautas; ensayos de navegación LiDAR autónoma subterránea.",
-      "sources": [
-        "ESA_PANGAEA_2017_2024",
-        "Sauro_et_al_2020_Earth_Sci_Rev",
-        "IGN_PNOA_LiDAR_2024"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.95,
-        "cave_accessibility_evidence": 0.98,
-        "slope_mean_deg": 6.8,
-        "roughness_tri_m": 2.4,
-        "spectral_basaltic_match": 0.9,
-        "crater_morphology_proxy": 0.65,
-        "surface_aridity_proxy": 0.88,
-        "subsurface_thermal_stability": 0.92
-      }
+      ]
     },
     {
-      "id": "IN_LONAR_CRATER",
-      "name": "Lonar Impact Crater (Maharashtra, India)",
-      "target_body": "Moon",
-      "pairing": "Lunar Maria Impact Craters (e.g. Tycho/Copernicus in basalt) (Moon)",
-      "country": "India",
-      "lat": 19.976,
-      "lon": 76.507,
-      "elevation_range_m": [
-        480.0,
-        610.0
-      ],
-      "local_utm_epsg": "EPSG:32643",
-      "score_pct": 53.94,
-      "metrics_table": [
-        {
-          "id": "elevation_relief",
-          "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "130.0 m (cota 480-610 m)",
-          "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
-          "similarity_score": 0.495,
-          "weight_pct": 12.0,
-          "contribution_pct": 5.95
-        },
-        {
-          "id": "slope_morphometry",
-          "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "3.43° (máx 6.0°)",
-          "planetary_target": "6.5° ± 3.0°",
-          "similarity_score": 0.593,
-          "weight_pct": 16.0,
-          "contribution_pct": 9.48
-        },
-        {
-          "id": "surface_roughness_tri",
-          "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "4.91 m",
-          "planetary_target": "2.6 ± 1.2 m",
-          "similarity_score": 0.157,
-          "weight_pct": 14.0,
-          "contribution_pct": 2.2
-        },
-        {
-          "id": "curvature_profile",
-          "name": "Curvatura Topográfica y Sumideros",
-          "terrestrial_value": "-0.0000 m⁻¹",
-          "planetary_target": "Inversión de colapso (-0.04)",
-          "similarity_score": 0.2,
-          "weight_pct": 10.0,
-          "contribution_pct": 2.0
-        },
-        {
-          "id": "lava_tubes_cavities",
-          "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 30% (Contexto volcánico: 85%)",
-          "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.547,
-          "weight_pct": 20.0,
-          "contribution_pct": 10.95
-        },
-        {
-          "id": "crater_morphology",
-          "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 96%",
-          "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.96,
-          "weight_pct": 8.0,
-          "contribution_pct": 7.68
-        },
-        {
-          "id": "spectral_mineralogy",
-          "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 94%",
-          "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-          "similarity_score": 0.94,
-          "weight_pct": 12.0,
-          "contribution_pct": 11.28
-        },
-        {
-          "id": "environmental_aridity",
-          "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 55%",
-          "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.55,
-          "weight_pct": 8.0,
-          "contribution_pct": 4.4
-        }
-      ],
-      "strong_analogies": [
-        "Uno de los únicos cuatro cráteres de impacto hiperveloz en roca puramente basáltica del planeta (Deccan Traps).",
-        "Presencia documentada de maskelynita (plagioclasa transformada en vidrio por presión de choque), microbrechas de fundido y esférulas vidriosas idénticas a las del regolito lunar.",
-        "Morfología de cuenco con borde elevado e inversión de coladas basálticas en las paredes."
-      ],
-      "analogy_limitations": [
-        "Lago alcalino-salino permanente en el fondo del cráter generado por el monzón tropical.",
-        "Vegetación boscosa densa en el exterior y paredes del cráter."
-      ],
-      "mission_training_value": "Calibración espectral e identificación de firmas de metamorfismo de choque en basaltos lunares; diferenciación entre basaltos magmáticos vírgenes y basaltos chocados por meteoritos.",
-      "sources": [
-        "Fredriksson_1973_Lonar_Basaltic_Crater",
-        "Kiefer_2004_Lonar_Gravity_Analogy",
-        "Copernicus_DEM_GLO30"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.85,
-        "cave_accessibility_evidence": 0.3,
-        "slope_mean_deg": 19.5,
-        "roughness_tri_m": 4.2,
-        "spectral_basaltic_match": 0.94,
-        "crater_morphology_proxy": 0.96,
-        "surface_aridity_proxy": 0.55,
-        "subsurface_thermal_stability": 0.72
-      }
-    },
-    {
+      "rank": 8,
       "id": "US_ARIZONA_METEOR_CRATER",
       "name": "Meteor Crater / Barringer Meteorite Crater (Arizona, EE.UU.)",
       "target_body": "Moon",
@@ -811,7 +721,18 @@
         1740.0
       ],
       "local_utm_epsg": "EPSG:32612",
-      "score_pct": 50.96,
+      "score_pct": 49.17,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Cráter de impacto simple por hipervelocidad mejor preservado de la Tierra (1.2 km diámetro, 170 m profundidad).",
+        "Estratigrafía invertida en los bordes levantados, mantos de eyección con brechas polimícticas y fases minerales de choque (coesita, stishovita).",
+        "Morfología en cuenco de transición simple idéntica a los cráteres lunares Linné y Cone Crater."
+      ],
+      "analogy_limitations": [
+        "Roca diana sedimentaria (caliza Kaibab y arenisca Coconino) en lugar de basalto/anortosita lunar pura.",
+        "Erosión eólica y fluvial moderada durante 50,000 años terrestres."
+      ],
+      "mission_training_value": "Campo de entrenamiento canónico para las misiones Apolo 11 a 17; calibración de protocolos EVA geológicos de Artemis y trajes xEMU.",
       "metrics_table": [
         {
           "id": "elevation_relief",
@@ -825,20 +746,20 @@
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "4.74° (máx 8.3°)",
+          "terrestrial_value": "3.44° (máx 3.4°)",
           "planetary_target": "6.5° ± 3.0°",
-          "similarity_score": 0.843,
+          "similarity_score": 0.594,
           "weight_pct": 16.0,
-          "contribution_pct": 13.48
+          "contribution_pct": 9.51
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "6.80 m",
+          "terrestrial_value": "4.91 m",
           "planetary_target": "2.6 ± 1.2 m",
-          "similarity_score": 0.002,
+          "similarity_score": 0.158,
           "weight_pct": 14.0,
-          "contribution_pct": 0.03
+          "contribution_pct": 2.21
         },
         {
           "id": "curvature_profile",
@@ -885,34 +806,10 @@
           "weight_pct": 8.0,
           "contribution_pct": 6.8
         }
-      ],
-      "strong_analogies": [
-        "Cráter de impacto simple por hipervelocidad mejor preservado de la Tierra (1.2 km diámetro, 170 m profundidad).",
-        "Estratigrafía invertida en los bordes levantados, mantos de eyección con brechas polimícticas y fases minerales de choque (coesita, stishovita).",
-        "Morfología en cuenco de transición simple idéntica a los cráteres lunares Linné y Cone Crater."
-      ],
-      "analogy_limitations": [
-        "Roca diana sedimentaria (caliza Kaibab y arenisca Coconino) en lugar de basalto/anortosita lunar pura.",
-        "Erosión eólica y fluvial moderada durante 50,000 años terrestres."
-      ],
-      "mission_training_value": "Campo de entrenamiento canónico para las misiones Apolo 11 a 17; calibración de protocolos EVA geológicos de Artemis y trajes xEMU.",
-      "sources": [
-        "Shoemaker_1960_Meteor_Crater",
-        "Kring_2017_Lunar_Planetary_Institute",
-        "USGS_3DEP_LiDAR_1m"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.2,
-        "cave_accessibility_evidence": 0.35,
-        "slope_mean_deg": 18.2,
-        "roughness_tri_m": 4.5,
-        "spectral_basaltic_match": 0.65,
-        "crater_morphology_proxy": 0.99,
-        "surface_aridity_proxy": 0.85,
-        "subsurface_thermal_stability": 0.7
-      }
+      ]
     },
     {
+      "rank": 9,
       "id": "CA_SUDBURY_BASIN",
       "name": "Estructura de Impacto de Sudbury / Formación Onaping (Ontario, Canadá)",
       "target_body": "Moon",
@@ -925,7 +822,18 @@
         450.0
       ],
       "local_utm_epsg": "EPSG:32617",
-      "score_pct": 47.57,
+      "score_pct": 46.94,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Estructura de impacto gigante de 200 km de diámetro que preserva la mayor lámina de fundido diferenciada de la Tierra.",
+        "Brechas de impacto polimícticas masivas (Formación Onaping), pseudotaquilitas y conos astillados (*shatter cones*).",
+        "Análogo estructural de las mega-cuencas lunares que fundieron la corteza anortosítica primitiva."
+      ],
+      "analogy_limitations": [
+        "Estructura profundamente erosionada por glaciaciones pleistocénicas y deformación tectónica orogénica.",
+        "Clima templado-húmedo canadiense con vegetación y lagos glaciares."
+      ],
+      "mission_training_value": "Sede de entrenamiento de campo para las misiones Apolo 16 y 17 para reconocer litologías de fundido de impacto; modelos para muestreo de la cuenca South Pole-Aitken en Artemis.",
       "metrics_table": [
         {
           "id": "elevation_relief",
@@ -939,20 +847,20 @@
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "4.48° (máx 7.8°)",
+          "terrestrial_value": "3.25° (máx 3.2°)",
           "planetary_target": "6.5° ± 3.0°",
-          "similarity_score": 0.798,
+          "similarity_score": 0.556,
           "weight_pct": 16.0,
-          "contribution_pct": 12.76
+          "contribution_pct": 8.89
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "6.42 m",
+          "terrestrial_value": "4.63 m",
           "planetary_target": "2.6 ± 1.2 m",
-          "similarity_score": 0.006,
+          "similarity_score": 0.238,
           "weight_pct": 14.0,
-          "contribution_pct": 0.09
+          "contribution_pct": 3.33
         },
         {
           "id": "curvature_profile",
@@ -999,34 +907,10 @@
           "weight_pct": 8.0,
           "contribution_pct": 3.6
         }
-      ],
-      "strong_analogies": [
-        "Estructura de impacto gigante de 200 km de diámetro que preserva la mayor lámina de fundido diferenciada de la Tierra.",
-        "Brechas de impacto polimícticas masivas (Formación Onaping), pseudotaquilitas y conos astillados (*shatter cones*).",
-        "Análogo estructural de las mega-cuencas lunares que fundieron la corteza anortosítica primitiva."
-      ],
-      "analogy_limitations": [
-        "Estructura profundamente erosionada por glaciaciones pleistocénicas y deformación tectónica orogénica.",
-        "Clima templado-húmedo canadiense con vegetación y lagos glaciares."
-      ],
-      "mission_training_value": "Sede de entrenamiento de campo para las misiones Apolo 16 y 17 para reconocer litologías de fundido de impacto; modelos para muestreo de la cuenca South Pole-Aitken en Artemis.",
-      "sources": [
-        "Grieve_1991_Sudbury_Structure",
-        "Apollo_16_17_Training_Manuals",
-        "Canadian_HRDEM_1m"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.4,
-        "cave_accessibility_evidence": 0.25,
-        "slope_mean_deg": 8.5,
-        "roughness_tri_m": 3.0,
-        "spectral_basaltic_match": 0.7,
-        "crater_morphology_proxy": 0.92,
-        "surface_aridity_proxy": 0.45,
-        "subsurface_thermal_stability": 0.85
-      }
+      ]
     },
     {
+      "rank": 10,
       "id": "IS_ASKJA_HOLUHRAUN",
       "name": "Caldera de Askja & Campo de Lava Holuhraun (Tierras Altas de Islandia)",
       "target_body": "Moon",
@@ -1039,7 +923,18 @@
         1510.0
       ],
       "local_utm_epsg": "EPSG:32628",
-      "score_pct": 45.23,
+      "score_pct": 45.8,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Extenso desierto de arena basáltica negra y coladas de inundación fisural reciente (Holuhraun 2014) sin rastro de vegetación.",
+        "Llanuras de lava basáltica toleítica con superficies 'pāhoehoe' y 'aa' análogas a los mares lunares.",
+        "Textura abrasiva del regolito volcánico superficial que reproduce el desgaste por fricción de los trajes y sellos Apolo."
+      ],
+      "analogy_limitations": [
+        "Clima subártico con precipitaciones estacionales en forma de nieve y hielo.",
+        "Presencia de aguas subterráneas glaciovolcánicas activas."
+      ],
+      "mission_training_value": "Campo histórico de entrenamiento de las tripulaciones de Apolo 11 y 12 (Armstrong, Aldrin, Bean); ensayos actuales de rovers polares lunares ESA.",
       "metrics_table": [
         {
           "id": "elevation_relief",
@@ -1053,16 +948,16 @@
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "19.07° (máx 31.5°)",
+          "terrestrial_value": "14.24° (máx 14.2°)",
           "planetary_target": "6.5° ± 3.0°",
-          "similarity_score": 0.0,
+          "similarity_score": 0.036,
           "weight_pct": 16.0,
-          "contribution_pct": 0.0
+          "contribution_pct": 0.57
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "28.70 m",
+          "terrestrial_value": "20.72 m",
           "planetary_target": "2.6 ± 1.2 m",
           "similarity_score": 0.0,
           "weight_pct": 14.0,
@@ -1071,7 +966,7 @@
         {
           "id": "curvature_profile",
           "name": "Curvatura Topográfica y Sumideros",
-          "terrestrial_value": "0.0000 m⁻¹",
+          "terrestrial_value": "-0.0000 m⁻¹",
           "planetary_target": "Inversión de colapso (-0.04)",
           "similarity_score": 0.2,
           "weight_pct": 10.0,
@@ -1113,36 +1008,12 @@
           "weight_pct": 8.0,
           "contribution_pct": 6.8
         }
-      ],
-      "strong_analogies": [
-        "Extenso desierto de arena basáltica negra y coladas de inundación fisural reciente (Holuhraun 2014) sin rastro de vegetación.",
-        "Llanuras de lava basáltica toleítica con superficies 'pāhoehoe' y 'aa' análogas a los mares lunares.",
-        "Textura abrasiva del regolito volcánico superficial que reproduce el desgaste por fricción de los trajes y sellos Apolo."
-      ],
-      "analogy_limitations": [
-        "Clima subártico con precipitaciones estacionales en forma de nieve y hielo.",
-        "Presencia de aguas subterráneas glaciovolcánicas activas."
-      ],
-      "mission_training_value": "Campo histórico de entrenamiento de las tripulaciones de Apolo 11 y 12 (Armstrong, Aldrin, Bean); ensayos actuales de rovers polares lunares ESA.",
-      "sources": [
-        "Thorarinsson_1967_Apollo_Iceland",
-        "Sigmarsson_2015_Holuhraun_Eruption",
-        "ArcticDEM_Copernicus"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.98,
-        "cave_accessibility_evidence": 0.4,
-        "slope_mean_deg": 6.2,
-        "roughness_tri_m": 4.8,
-        "spectral_basaltic_match": 0.95,
-        "crater_morphology_proxy": 0.7,
-        "surface_aridity_proxy": 0.85,
-        "subsurface_thermal_stability": 0.75
-      }
+      ]
     }
   ],
   "martian_ranking": [
     {
+      "rank": 1,
       "id": "IS_KRAFLA_COLD",
       "name": "Caldera de Krafla & Campos Solfatáricos de Námafjall (Tierras Altas de Islandia)",
       "target_body": "Mars",
@@ -1155,7 +1026,18 @@
         818.0
       ],
       "local_utm_epsg": "EPSG:32628",
-      "score_pct": 66.0,
+      "score_pct": 66.7,
+      "status": "candidate",
+      "strong_analogies": [
+        "Interacción hidrotermal activa entre fluidos ácidos calientes y roca basáltica, produciendo palagonita, sílice opalina y sulfatos de hierro.",
+        "Pozas de lodo hirviente y solfataras que emiten sulfuro de hidrógeno ($H_2S$) y dióxido de azufre ($SO_2$).",
+        "Análogo mineralógico directo de los depósitos hidrotermales detectados por el instrumento CRISM en Nili Fossae y Columbia Hills (Gusev)."
+      ],
+      "analogy_limitations": [
+        "Precipitaciones de lluvia y nieve frecuentes; humedad ambiental moderada a alta.",
+        "Planta geotérmica industrial cercana en la caldera de Krafla."
+      ],
+      "mission_training_value": "Calibración del espectrómetro Raman y de fluorescencia SHERLOC del rover Perseverance; entrenamiento en reconocimiento de facies de alteración hidrotermal.",
       "metrics_table": [
         {
           "id": "elevation_relief",
@@ -1169,16 +1051,16 @@
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "9.60° (máx 16.5°)",
+          "terrestrial_value": "7.00° (máx 7.0°)",
           "planetary_target": "8.0° ± 4.0°",
-          "similarity_score": 0.923,
+          "similarity_score": 0.97,
           "weight_pct": 15.0,
-          "contribution_pct": 13.84
+          "contribution_pct": 14.54
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "13.90 m",
+          "terrestrial_value": "10.03 m",
           "planetary_target": "3.0 ± 1.5 m",
           "similarity_score": 0.0,
           "weight_pct": 12.0,
@@ -1187,7 +1069,7 @@
         {
           "id": "curvature_profile",
           "name": "Curvatura Topográfica y Sumideros",
-          "terrestrial_value": "0.0000 m⁻¹",
+          "terrestrial_value": "-0.0000 m⁻¹",
           "planetary_target": "Inversión de colapso (-0.05)",
           "similarity_score": 0.2,
           "weight_pct": 8.0,
@@ -1229,262 +1111,10 @@
           "weight_pct": 10.0,
           "contribution_pct": 6.0
         }
-      ],
-      "strong_analogies": [
-        "Interacción hidrotermal activa entre fluidos ácidos calientes y roca basáltica, produciendo palagonita, sílice opalina y sulfatos de hierro.",
-        "Pozas de lodo hirviente y solfataras que emiten sulfuro de hidrógeno ($H_2S$) y dióxido de azufre ($SO_2$).",
-        "Análogo mineralógico directo de los depósitos hidrotermales detectados por el instrumento CRISM en Nili Fossae y Columbia Hills (Gusev)."
-      ],
-      "analogy_limitations": [
-        "Precipitaciones de lluvia y nieve frecuentes; humedad ambiental moderada a alta.",
-        "Planta geotérmica industrial cercana en la caldera de Krafla."
-      ],
-      "mission_training_value": "Calibración del espectrómetro Raman y de fluorescencia SHERLOC del rover Perseverance; entrenamiento en reconocimiento de facies de alteración hidrotermal.",
-      "sources": [
-        "Thorarinsson_1979_Krafla_Eruptions",
-        "Warner_Farmer_2010_Astrobiology",
-        "ArcticDEM"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.95,
-        "cave_accessibility_evidence": 0.5,
-        "slope_mean_deg": 9.2,
-        "roughness_tri_m": 3.6,
-        "spectral_iron_sulfate_match": 0.92,
-        "crater_morphology_proxy": 0.75,
-        "surface_aridity_proxy": 0.6,
-        "subsurface_thermal_stability": 0.78
-      }
+      ]
     },
     {
-      "id": "CA_DEVON_HAUGHTON",
-      "name": "Cráter de Impacto Haughton, Devon Island (Nunavut, Ártico Canadiense)",
-      "target_body": "Mars",
-      "pairing": "Subpolar Impact Craters with Permafrost / Lyot Crater (Mars)",
-      "country": "Canadá",
-      "lat": 75.367,
-      "lon": -89.683,
-      "elevation_range_m": [
-        120.0,
-        360.0
-      ],
-      "local_utm_epsg": "EPSG:32615",
-      "score_pct": 62.22,
-      "metrics_table": [
-        {
-          "id": "elevation_relief",
-          "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "240.0 m (cota 120-360 m)",
-          "planetary_target": "~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))",
-          "similarity_score": 0.607,
-          "weight_pct": 10.0,
-          "contribution_pct": 6.07
-        },
-        {
-          "id": "slope_morphometry",
-          "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "6.31° (máx 11.0°)",
-          "planetary_target": "8.0° ± 4.0°",
-          "similarity_score": 0.915,
-          "weight_pct": 15.0,
-          "contribution_pct": 13.72
-        },
-        {
-          "id": "surface_roughness_tri",
-          "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "9.06 m",
-          "planetary_target": "3.0 ± 1.5 m",
-          "similarity_score": 0.0,
-          "weight_pct": 12.0,
-          "contribution_pct": 0.0
-        },
-        {
-          "id": "curvature_profile",
-          "name": "Curvatura Topográfica y Sumideros",
-          "terrestrial_value": "-0.0000 m⁻¹",
-          "planetary_target": "Inversión de colapso (-0.05)",
-          "similarity_score": 0.2,
-          "weight_pct": 8.0,
-          "contribution_pct": 1.6
-        },
-        {
-          "id": "lava_tubes_cavities",
-          "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 40% (Contexto volcánico: 30%)",
-          "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.355,
-          "weight_pct": 15.0,
-          "contribution_pct": 5.33
-        },
-        {
-          "id": "crater_morphology",
-          "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 95%",
-          "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.95,
-          "weight_pct": 10.0,
-          "contribution_pct": 9.5
-        },
-        {
-          "id": "spectral_mineralogy",
-          "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 85%",
-          "planetary_target": "Ferric Oxides (Hematite / Goethite), Jarosite sulfates & Smectite clays",
-          "similarity_score": 0.85,
-          "weight_pct": 20.0,
-          "contribution_pct": 17.0
-        },
-        {
-          "id": "environmental_aridity",
-          "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 90%",
-          "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.9,
-          "weight_pct": 10.0,
-          "contribution_pct": 9.0
-        }
-      ],
-      "strong_analogies": [
-        "Cráter de impacto de 23 km en un desierto polar periglaciar con permafrost continuo profundo (>400 m).",
-        "Sistemas hidrotermales fósiles inducidos por el impacto con alteración en arcillas, calcita y depósitos de sílice que preservan biofirmas microbianas.",
-        "Redes de valles secos y canales de escorrentía formados bajo régimen periglaciar que replican los valles fluviales marcianos."
-      ],
-      "analogy_limitations": [
-        "Litología diana predominantemente carbonatada (dolomía/caliza) más común en la Tierra que en la corteza basáltica marciana.",
-        "Luz solar continua en verano e invierno polar extremo de varios meses."
-      ],
-      "mission_training_value": "Sede del NASA Haughton-Mars Project (HMP) y la estación FMARS; ensayos de vehículos autónomos todoterreno, perforación en permafrost y protocolos de exploración humana.",
-      "sources": [
-        "Lee_2000_Haughton_Mars_Project",
-        "Osinski_2005_Hydrothermal_Systems_Haughton",
-        "Canadian_HRDEM"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.3,
-        "cave_accessibility_evidence": 0.4,
-        "slope_mean_deg": 10.5,
-        "roughness_tri_m": 3.6,
-        "spectral_iron_sulfate_match": 0.85,
-        "crater_morphology_proxy": 0.95,
-        "surface_aridity_proxy": 0.9,
-        "subsurface_thermal_stability": 0.92
-      }
-    },
-    {
-      "id": "AR_PUNA_ATACAMA",
-      "name": "Salar de Antofalla & Lagunas de la Puna Catamarqueña (Catamarca, Argentina)",
-      "target_body": "Mars",
-      "pairing": "Noachian-Hesperian Evaporite Basins / Eberswalde & Gale (Mars)",
-      "country": "Argentina",
-      "lat": -25.68,
-      "lon": -67.82,
-      "elevation_range_m": [
-        3900.0,
-        4250.0
-      ],
-      "local_utm_epsg": "EPSG:32719",
-      "score_pct": 61.7,
-      "metrics_table": [
-        {
-          "id": "elevation_relief",
-          "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "350.0 m (cota 3900-4250 m)",
-          "planetary_target": "~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))",
-          "similarity_score": 0.786,
-          "weight_pct": 10.0,
-          "contribution_pct": 7.86
-        },
-        {
-          "id": "slope_morphometry",
-          "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "9.15° (máx 15.8°)",
-          "planetary_target": "8.0° ± 4.0°",
-          "similarity_score": 0.96,
-          "weight_pct": 15.0,
-          "contribution_pct": 14.4
-        },
-        {
-          "id": "surface_roughness_tri",
-          "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "13.22 m",
-          "planetary_target": "3.0 ± 1.5 m",
-          "similarity_score": 0.0,
-          "weight_pct": 12.0,
-          "contribution_pct": 0.0
-        },
-        {
-          "id": "curvature_profile",
-          "name": "Curvatura Topográfica y Sumideros",
-          "terrestrial_value": "-0.0000 m⁻¹",
-          "planetary_target": "Inversión de colapso (-0.05)",
-          "similarity_score": 0.2,
-          "weight_pct": 8.0,
-          "contribution_pct": 1.6
-        },
-        {
-          "id": "lava_tubes_cavities",
-          "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 20% (Contexto volcánico: 65%)",
-          "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.403,
-          "weight_pct": 15.0,
-          "contribution_pct": 6.04
-        },
-        {
-          "id": "crater_morphology",
-          "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 35%",
-          "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.35,
-          "weight_pct": 10.0,
-          "contribution_pct": 3.5
-        },
-        {
-          "id": "spectral_mineralogy",
-          "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 94%",
-          "planetary_target": "Ferric Oxides (Hematite / Goethite), Jarosite sulfates & Smectite clays",
-          "similarity_score": 0.94,
-          "weight_pct": 20.0,
-          "contribution_pct": 18.8
-        },
-        {
-          "id": "environmental_aridity",
-          "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 95%",
-          "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.95,
-          "weight_pct": 10.0,
-          "contribution_pct": 9.5
-        }
-      ],
-      "strong_analogies": [
-        "Cuenca evaporítica endorreica a 3,920 m de altitud con salmueras hipersalinas ricas en sulfatos, boratos y arsénico.",
-        "Tasa de radiación UV extrema similar a la del ecuador marciano debido a la altitud y baja densidad de la columna atmosférica.",
-        "Presencia de microbialitas y tapetes estromatolíticos vivos adaptados a la hipersalinidad y radiación UV letal."
-      ],
-      "analogy_limitations": [
-        "Precipitación convectiva estival esporádica durante el invierno altiplánico.",
-        "Presencia de oxígeno libre disuelto en los estratos superficiales de agua."
-      ],
-      "mission_training_value": "Búsqueda de biofirmas microbianas en sales fosilizadas; calibración de instrumentos de detección molecular para la misión ExoMars y Mars Sample Return.",
-      "sources": [
-        "Farias_2013_Stromatolites_Puna_Andes",
-        "Alonso_1991_Andean_Salars",
-        "Copernicus_DEM_GLO30"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.65,
-        "cave_accessibility_evidence": 0.2,
-        "slope_mean_deg": 4.5,
-        "roughness_tri_m": 2.1,
-        "spectral_iron_sulfate_match": 0.94,
-        "crater_morphology_proxy": 0.35,
-        "surface_aridity_proxy": 0.95,
-        "subsurface_thermal_stability": 0.85
-      }
-    },
-    {
+      "rank": 2,
       "id": "US_DEATH_VALLEY",
       "name": "Badwater Basin & Zabriskie Point, Valle de la Muerte (California, EE.UU.)",
       "target_body": "Mars",
@@ -1497,7 +1127,18 @@
         350.0
       ],
       "local_utm_epsg": "EPSG:32611",
-      "score_pct": 59.55,
+      "score_pct": 63.88,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Depresión hiperárida con evaporitas masivas (yeso, halita, boratos) y arcillas esmectíticas análogas a los estratos de Mount Sharp en Gale Crater.",
+        "Paisaje fuertemente disectado en *badlands* y yardangs esculpidos por el viento y flujos de lodo torrenciales episódicos.",
+        "Régimen térmico con temperaturas de superficie superiores a 50°C y desecación química intensa."
+      ],
+      "analogy_limitations": [
+        "Cota por debajo del nivel del mar con la presión atmosférica más alta de Norteamérica (~1020 mbar).",
+        "Altas temperaturas estivales opuestas a las temperaturas bajo cero promedio de Marte."
+      ],
+      "mission_training_value": "Calibración instrumental para los rovers Curiosity y Perseverance (espectrometría ChemCam/SuperCam y cámaras Mastcam); estudio de la transición lacustre a evaporítica.",
       "metrics_table": [
         {
           "id": "elevation_relief",
@@ -1511,16 +1152,16 @@
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "11.32° (máx 19.4°)",
+          "terrestrial_value": "8.28° (máx 8.3°)",
           "planetary_target": "8.0° ± 4.0°",
-          "similarity_score": 0.709,
+          "similarity_score": 0.998,
           "weight_pct": 15.0,
-          "contribution_pct": 10.63
+          "contribution_pct": 14.96
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "16.46 m",
+          "terrestrial_value": "11.89 m",
           "planetary_target": "3.0 ± 1.5 m",
           "similarity_score": 0.0,
           "weight_pct": 12.0,
@@ -1571,34 +1212,313 @@
           "weight_pct": 10.0,
           "contribution_pct": 9.4
         }
-      ],
-      "strong_analogies": [
-        "Depresión hiperárida con evaporitas masivas (yeso, halita, boratos) y arcillas esmectíticas análogas a los estratos de Mount Sharp en Gale Crater.",
-        "Paisaje fuertemente disectado en *badlands* y yardangs esculpidos por el viento y flujos de lodo torrenciales episódicos.",
-        "Régimen térmico con temperaturas de superficie superiores a 50°C y desecación química intensa."
-      ],
-      "analogy_limitations": [
-        "Cota por debajo del nivel del mar con la presión atmosférica más alta de Norteamérica (~1020 mbar).",
-        "Altas temperaturas estivales opuestas a las temperaturas bajo cero promedio de Marte."
-      ],
-      "mission_training_value": "Calibración instrumental para los rovers Curiosity y Perseverance (espectrometría ChemCam/SuperCam y cámaras Mastcam); estudio de la transición lacustre a evaporítica.",
-      "sources": [
-        "Hunt_1975_Death_Valley_Geology",
-        "NASA_MSL_Analogs_Death_Valley",
-        "USGS_3DEP_LiDAR_1m"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.45,
-        "cave_accessibility_evidence": 0.3,
-        "slope_mean_deg": 14.0,
-        "roughness_tri_m": 4.1,
-        "spectral_iron_sulfate_match": 0.92,
-        "crater_morphology_proxy": 0.5,
-        "surface_aridity_proxy": 0.94,
-        "subsurface_thermal_stability": 0.7
-      }
+      ]
     },
     {
+      "rank": 3,
+      "id": "AZ_GOBUSTAN_MUD_VOLCANO",
+      "name": "Volcanes de Lodo de Gobustán (Región de Bakú, Azerbaiyán)",
+      "target_body": "Mars",
+      "pairing": "Sedimentary Volcanism & Methane Seeps / Chryse & Acidalia Planitiae (Mars)",
+      "country": "Azerbaiyán",
+      "lat": 39.998,
+      "lon": 49.405,
+      "elevation_range_m": [
+        80.0,
+        240.0
+      ],
+      "local_utm_epsg": "EPSG:32639",
+      "score_pct": 61.66,
+      "status": "candidate",
+      "strong_analogies": [
+        "Mayor concentración mundial de volcanes de lodo fríos activos (más de 300 edificios cónicos y calderas de lodo).",
+        "Extrusión continua de lodos arcillosos salinos y emisión de metano ($CH_4$), dióxido de carbono y nitrógeno desde acuíferos profundos sin magmatismo térmico.",
+        "Estructuras morfológicas idénticas a los montículos cónicos y cráteres con foso observados en Acidalia Planitia y Utopia Planitia en Marte."
+      ],
+      "analogy_limitations": [
+        "Los hidrocarburos terrestres proceden principalmente de roca madre biogénica del Terciario/Cretácico.",
+        "Presión atmosférica normal y vientos suaves del Mar Caspio."
+      ],
+      "mission_training_value": "Estudio de los mecanismos geológicos de liberación episódica de metano en Marte detectados por ExoMars TGO y Curiosity; muestreo de fluidos subsuperficiales profundos sin perforación mecánica.",
+      "metrics_table": [
+        {
+          "id": "elevation_relief",
+          "name": "Rango Altimétrico y Relieve",
+          "terrestrial_value": "160.0 m (cota 80-240 m)",
+          "planetary_target": "~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))",
+          "similarity_score": 0.474,
+          "weight_pct": 10.0,
+          "contribution_pct": 4.74
+        },
+        {
+          "id": "slope_morphometry",
+          "name": "Gradiente de Pendiente (Horn)",
+          "terrestrial_value": "3.06° (máx 3.1°)",
+          "planetary_target": "8.0° ± 4.0°",
+          "similarity_score": 0.466,
+          "weight_pct": 15.0,
+          "contribution_pct": 6.99
+        },
+        {
+          "id": "surface_roughness_tri",
+          "name": "Rugosidad Superficial (TRI)",
+          "terrestrial_value": "4.36 m",
+          "planetary_target": "3.0 ± 1.5 m",
+          "similarity_score": 0.662,
+          "weight_pct": 12.0,
+          "contribution_pct": 7.95
+        },
+        {
+          "id": "curvature_profile",
+          "name": "Curvatura Topográfica y Sumideros",
+          "terrestrial_value": "-0.0000 m⁻¹",
+          "planetary_target": "Inversión de colapso (-0.05)",
+          "similarity_score": 0.2,
+          "weight_pct": 8.0,
+          "contribution_pct": 1.6
+        },
+        {
+          "id": "lava_tubes_cavities",
+          "name": "Tubos de Lava y Cavidades",
+          "terrestrial_value": "Evidencia: 20% (Contexto volcánico: 70%)",
+          "planetary_target": "Claraboyas intactas / Pit Craters",
+          "similarity_score": 0.425,
+          "weight_pct": 15.0,
+          "contribution_pct": 6.38
+        },
+        {
+          "id": "crater_morphology",
+          "name": "Morfología de Conos / Cráteres",
+          "terrestrial_value": "Índice: 88%",
+          "planetary_target": "Cráteres de impacto / conos piroclásticos",
+          "similarity_score": 0.88,
+          "weight_pct": 10.0,
+          "contribution_pct": 8.8
+        },
+        {
+          "id": "spectral_mineralogy",
+          "name": "Composición Espectral y Mineralógica",
+          "terrestrial_value": "Concordancia: 82%",
+          "planetary_target": "Ferric Oxides (Hematite / Goethite), Jarosite sulfates & Smectite clays",
+          "similarity_score": 0.82,
+          "weight_pct": 20.0,
+          "contribution_pct": 16.4
+        },
+        {
+          "id": "environmental_aridity",
+          "name": "Extremos Ambientales e Hiperaridez",
+          "terrestrial_value": "Proxy Aridez: 88%",
+          "planetary_target": "Desierto poliextremo / Vacío",
+          "similarity_score": 0.88,
+          "weight_pct": 10.0,
+          "contribution_pct": 8.8
+        }
+      ]
+    },
+    {
+      "rank": 4,
+      "id": "AR_PUNA_ATACAMA",
+      "name": "Salar de Antofalla & Lagunas de la Puna Catamarqueña (Catamarca, Argentina)",
+      "target_body": "Mars",
+      "pairing": "Noachian-Hesperian Evaporite Basins / Eberswalde & Gale (Mars)",
+      "country": "Argentina",
+      "lat": -25.68,
+      "lon": -67.82,
+      "elevation_range_m": [
+        3900.0,
+        4250.0
+      ],
+      "local_utm_epsg": "EPSG:32719",
+      "score_pct": 61.49,
+      "status": "candidate",
+      "strong_analogies": [
+        "Cuenca evaporítica endorreica a 3,920 m de altitud con salmueras hipersalinas ricas en sulfatos, boratos y arsénico.",
+        "Tasa de radiación UV extrema similar a la del ecuador marciano debido a la altitud y baja densidad de la columna atmosférica.",
+        "Presencia de microbialitas y tapetes estromatolíticos vivos adaptados a la hipersalinidad y radiación UV letal."
+      ],
+      "analogy_limitations": [
+        "Precipitación convectiva estival esporádica durante el invierno altiplánico.",
+        "Presencia de oxígeno libre disuelto en los estratos superficiales de agua."
+      ],
+      "mission_training_value": "Búsqueda de biofirmas microbianas en sales fosilizadas; calibración de instrumentos de detección molecular para la misión ExoMars y Mars Sample Return.",
+      "metrics_table": [
+        {
+          "id": "elevation_relief",
+          "name": "Rango Altimétrico y Relieve",
+          "terrestrial_value": "350.0 m (cota 3900-4250 m)",
+          "planetary_target": "~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))",
+          "similarity_score": 0.786,
+          "weight_pct": 10.0,
+          "contribution_pct": 7.86
+        },
+        {
+          "id": "slope_morphometry",
+          "name": "Gradiente de Pendiente (Horn)",
+          "terrestrial_value": "6.67° (máx 6.7°)",
+          "planetary_target": "8.0° ± 4.0°",
+          "similarity_score": 0.946,
+          "weight_pct": 15.0,
+          "contribution_pct": 14.19
+        },
+        {
+          "id": "surface_roughness_tri",
+          "name": "Rugosidad Superficial (TRI)",
+          "terrestrial_value": "9.54 m",
+          "planetary_target": "3.0 ± 1.5 m",
+          "similarity_score": 0.0,
+          "weight_pct": 12.0,
+          "contribution_pct": 0.0
+        },
+        {
+          "id": "curvature_profile",
+          "name": "Curvatura Topográfica y Sumideros",
+          "terrestrial_value": "-0.0000 m⁻¹",
+          "planetary_target": "Inversión de colapso (-0.05)",
+          "similarity_score": 0.2,
+          "weight_pct": 8.0,
+          "contribution_pct": 1.6
+        },
+        {
+          "id": "lava_tubes_cavities",
+          "name": "Tubos de Lava y Cavidades",
+          "terrestrial_value": "Evidencia: 20% (Contexto volcánico: 65%)",
+          "planetary_target": "Claraboyas intactas / Pit Craters",
+          "similarity_score": 0.403,
+          "weight_pct": 15.0,
+          "contribution_pct": 6.04
+        },
+        {
+          "id": "crater_morphology",
+          "name": "Morfología de Conos / Cráteres",
+          "terrestrial_value": "Índice: 35%",
+          "planetary_target": "Cráteres de impacto / conos piroclásticos",
+          "similarity_score": 0.35,
+          "weight_pct": 10.0,
+          "contribution_pct": 3.5
+        },
+        {
+          "id": "spectral_mineralogy",
+          "name": "Composición Espectral y Mineralógica",
+          "terrestrial_value": "Concordancia: 94%",
+          "planetary_target": "Ferric Oxides (Hematite / Goethite), Jarosite sulfates & Smectite clays",
+          "similarity_score": 0.94,
+          "weight_pct": 20.0,
+          "contribution_pct": 18.8
+        },
+        {
+          "id": "environmental_aridity",
+          "name": "Extremos Ambientales e Hiperaridez",
+          "terrestrial_value": "Proxy Aridez: 95%",
+          "planetary_target": "Desierto poliextremo / Vacío",
+          "similarity_score": 0.95,
+          "weight_pct": 10.0,
+          "contribution_pct": 9.5
+        }
+      ]
+    },
+    {
+      "rank": 5,
+      "id": "CA_DEVON_HAUGHTON",
+      "name": "Cráter de Impacto Haughton, Devon Island (Nunavut, Ártico Canadiense)",
+      "target_body": "Mars",
+      "pairing": "Subpolar Impact Craters with Permafrost / Lyot Crater (Mars)",
+      "country": "Canadá",
+      "lat": 75.367,
+      "lon": -89.683,
+      "elevation_range_m": [
+        120.0,
+        360.0
+      ],
+      "local_utm_epsg": "EPSG:32615",
+      "score_pct": 59.65,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Cráter de impacto de 23 km en un desierto polar periglaciar con permafrost continuo profundo (>400 m).",
+        "Sistemas hidrotermales fósiles inducidos por el impacto con alteración en arcillas, calcita y depósitos de sílice que preservan biofirmas microbianas.",
+        "Redes de valles secos y canales de escorrentía formados bajo régimen periglaciar que replican los valles fluviales marcianos."
+      ],
+      "analogy_limitations": [
+        "Litología diana predominantemente carbonatada (dolomía/caliza) más común en la Tierra que en la corteza basáltica marciana.",
+        "Luz solar continua en verano e invierno polar extremo de varios meses."
+      ],
+      "mission_training_value": "Sede del NASA Haughton-Mars Project (HMP) y la estación FMARS; ensayos de vehículos autónomos todoterreno, perforación en permafrost y protocolos de exploración humana.",
+      "metrics_table": [
+        {
+          "id": "elevation_relief",
+          "name": "Rango Altimétrico y Relieve",
+          "terrestrial_value": "240.0 m (cota 120-360 m)",
+          "planetary_target": "~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))",
+          "similarity_score": 0.607,
+          "weight_pct": 10.0,
+          "contribution_pct": 6.07
+        },
+        {
+          "id": "slope_morphometry",
+          "name": "Gradiente de Pendiente (Horn)",
+          "terrestrial_value": "4.58° (máx 4.6°)",
+          "planetary_target": "8.0° ± 4.0°",
+          "similarity_score": 0.694,
+          "weight_pct": 15.0,
+          "contribution_pct": 10.41
+        },
+        {
+          "id": "surface_roughness_tri",
+          "name": "Rugosidad Superficial (TRI)",
+          "terrestrial_value": "6.54 m",
+          "planetary_target": "3.0 ± 1.5 m",
+          "similarity_score": 0.061,
+          "weight_pct": 12.0,
+          "contribution_pct": 0.74
+        },
+        {
+          "id": "curvature_profile",
+          "name": "Curvatura Topográfica y Sumideros",
+          "terrestrial_value": "0.0000 m⁻¹",
+          "planetary_target": "Inversión de colapso (-0.05)",
+          "similarity_score": 0.2,
+          "weight_pct": 8.0,
+          "contribution_pct": 1.6
+        },
+        {
+          "id": "lava_tubes_cavities",
+          "name": "Tubos de Lava y Cavidades",
+          "terrestrial_value": "Evidencia: 40% (Contexto volcánico: 30%)",
+          "planetary_target": "Claraboyas intactas / Pit Craters",
+          "similarity_score": 0.355,
+          "weight_pct": 15.0,
+          "contribution_pct": 5.33
+        },
+        {
+          "id": "crater_morphology",
+          "name": "Morfología de Conos / Cráteres",
+          "terrestrial_value": "Índice: 95%",
+          "planetary_target": "Cráteres de impacto / conos piroclásticos",
+          "similarity_score": 0.95,
+          "weight_pct": 10.0,
+          "contribution_pct": 9.5
+        },
+        {
+          "id": "spectral_mineralogy",
+          "name": "Composición Espectral y Mineralógica",
+          "terrestrial_value": "Concordancia: 85%",
+          "planetary_target": "Ferric Oxides (Hematite / Goethite), Jarosite sulfates & Smectite clays",
+          "similarity_score": 0.85,
+          "weight_pct": 20.0,
+          "contribution_pct": 17.0
+        },
+        {
+          "id": "environmental_aridity",
+          "name": "Extremos Ambientales e Hiperaridez",
+          "terrestrial_value": "Proxy Aridez: 90%",
+          "planetary_target": "Desierto poliextremo / Vacío",
+          "similarity_score": 0.9,
+          "weight_pct": 10.0,
+          "contribution_pct": 9.0
+        }
+      ]
+    },
+    {
+      "rank": 6,
       "id": "ES_RIO_TINTO",
       "name": "Cuenca Minera y Cañón de Río Tinto (Huelva, Andalucía, España)",
       "target_body": "Mars",
@@ -1611,7 +1531,18 @@
         480.0
       ],
       "local_utm_epsg": "EPSG:32629",
-      "score_pct": 58.79,
+      "score_pct": 55.99,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Mayor análogo geoquímico y mineralógico terrestre de los depósitos de sulfatos de hierro marcianos (jarosita, goethita, hematita).",
+        "Concreciones esferoidales de óxidos de hierro idénticas en tamaño, composición y morfología a las 'blueberries' descubiertas por el rover Opportunity en Meridiani Planum.",
+        "Biosfera subterránea quimiolitótrofa extrema basada en la oxidación biológica de pirita ($FeS_2$) sin dependencia de luz solar."
+      ],
+      "analogy_limitations": [
+        "Abundante agua líquida en superficie y actividad biológica aerobia templada terrestre.",
+        "Antropización y explotación minera histórica que modifica parcialmente las terrazas aluviales."
+      ],
+      "mission_training_value": "Sede del proyecto NASA MARTE de perforación robótica profunda de 10 metros; calibración de espectrómetros Mössbauer, Raman y APXS de rovers marcianos.",
       "metrics_table": [
         {
           "id": "elevation_relief",
@@ -1625,20 +1556,20 @@
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "7.09° (máx 12.3°)",
+          "terrestrial_value": "5.15° (máx 5.2°)",
           "planetary_target": "8.0° ± 4.0°",
-          "similarity_score": 0.974,
+          "similarity_score": 0.776,
           "weight_pct": 15.0,
-          "contribution_pct": 14.62
+          "contribution_pct": 11.64
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "10.20 m",
+          "terrestrial_value": "7.36 m",
           "planetary_target": "3.0 ± 1.5 m",
-          "similarity_score": 0.0,
+          "similarity_score": 0.015,
           "weight_pct": 12.0,
-          "contribution_pct": 0.0
+          "contribution_pct": 0.18
         },
         {
           "id": "curvature_profile",
@@ -1685,79 +1616,66 @@
           "weight_pct": 10.0,
           "contribution_pct": 7.0
         }
-      ],
-      "strong_analogies": [
-        "Mayor análogo geoquímico y mineralógico terrestre de los depósitos de sulfatos de hierro marcianos (jarosita, goethita, hematita).",
-        "Concreciones esferoidales de óxidos de hierro idénticas en tamaño, composición y morfología a las 'blueberries' descubiertas por el rover Opportunity en Meridiani Planum.",
-        "Biosfera subterránea quimiolitótrofa extrema basada en la oxidación biológica de pirita ($FeS_2$) sin dependencia de luz solar."
-      ],
-      "analogy_limitations": [
-        "Abundante agua líquida en superficie y actividad biológica aerobia templada terrestre.",
-        "Antropización y explotación minera histórica que modifica parcialmente las terrazas aluviales."
-      ],
-      "mission_training_value": "Sede del proyecto NASA MARTE de perforación robótica profunda de 10 metros; calibración de espectrómetros Mössbauer, Raman y APXS de rovers marcianos.",
-      "sources": [
-        "Fernandez_Remolar_2005_Rio_Tinto_Mars",
-        "Amils_2007_Nature_Biohydrometallurgy",
-        "IGN_PNOA_LiDAR_MDT05"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.25,
-        "cave_accessibility_evidence": 0.45,
-        "slope_mean_deg": 12.8,
-        "roughness_tri_m": 3.2,
-        "spectral_iron_sulfate_match": 0.98,
-        "crater_morphology_proxy": 0.4,
-        "surface_aridity_proxy": 0.7,
-        "subsurface_thermal_stability": 0.8
-      }
+      ]
     },
     {
-      "id": "AZ_GOBUSTAN_MUD_VOLCANO",
-      "name": "Volcanes de Lodo de Gobustán (Región de Bakú, Azerbaiyán)",
+      "rank": 7,
+      "id": "JO_WADI_RUM",
+      "name": "Cañones de Wadi Rum & Jabal Umm Ishrin (Gobernación de Áqaba, Jordania)",
       "target_body": "Mars",
-      "pairing": "Sedimentary Volcanism & Methane Seeps / Chryse & Acidalia Planitiae (Mars)",
-      "country": "Azerbaiyán",
-      "lat": 39.998,
-      "lon": 49.405,
+      "pairing": "Valles Marineris Chasmata & Martian Eolian Dune Corridors (Mars)",
+      "country": "Jordania",
+      "lat": 29.573,
+      "lon": 35.42,
       "elevation_range_m": [
-        80.0,
-        240.0
+        950.0,
+        1750.0
       ],
-      "local_utm_epsg": "EPSG:32639",
-      "score_pct": 57.85,
+      "local_utm_epsg": "EPSG:32636",
+      "score_pct": 49.39,
+      "status": "candidate",
+      "strong_analogies": [
+        "Paredes escarpadas de areniscas paleozoicas teñidas intensamente de rojo por recubrimientos de hematita y goethita que replican el cañón de Valles Marineris.",
+        "Corredores de transporte eólico, mega-yardangs esculpidos por el viento y mantos de dunas activas análogas a los ergs marcianos.",
+        "Cañones estrechos (*siqs*) con sombras permanentes y microclimas de atenuación térmica."
+      ],
+      "analogy_limitations": [
+        "Roca sedimentaria cuarcítica en lugar del basalto volcánico que compone la mayoría de las paredes de los cañones marcianos.",
+        "Turismo activo y pistas de vehículos todoterreno."
+      ],
+      "mission_training_value": "Pruebas de navegación visual para aterrizajes de precisión planetaria; análisis de la dinámica de saltación de polvo fino en cañones profundos.",
       "metrics_table": [
         {
           "id": "elevation_relief",
           "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "160.0 m (cota 80-240 m)",
+          "terrestrial_value": "800.0 m (cota 950-1750 m)",
           "planetary_target": "~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))",
-          "similarity_score": 0.474,
+          "similarity_score": 0.857,
           "weight_pct": 10.0,
-          "contribution_pct": 4.74
+          "contribution_pct": 8.57
         },
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "4.22° (máx 7.4°)",
+          "terrestrial_value": "14.96° (máx 15.0°)",
           "planetary_target": "8.0° ± 4.0°",
-          "similarity_score": 0.64,
+          "similarity_score": 0.221,
           "weight_pct": 15.0,
-          "contribution_pct": 9.6
+          "contribution_pct": 3.31
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "6.04 m",
+          "terrestrial_value": "21.81 m",
           "planetary_target": "3.0 ± 1.5 m",
-          "similarity_score": 0.128,
+          "similarity_score": 0.0,
           "weight_pct": 12.0,
-          "contribution_pct": 1.53
+          "contribution_pct": 0.0
         },
         {
           "id": "curvature_profile",
           "name": "Curvatura Topográfica y Sumideros",
-          "terrestrial_value": "0.0000 m⁻¹",
+          "terrestrial_value": "-0.0000 m⁻¹",
           "planetary_target": "Inversión de colapso (-0.05)",
           "similarity_score": 0.2,
           "weight_pct": 8.0,
@@ -1766,67 +1684,43 @@
         {
           "id": "lava_tubes_cavities",
           "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 20% (Contexto volcánico: 70%)",
+          "terrestrial_value": "Evidencia: 55% (Contexto volcánico: 10%)",
           "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.425,
+          "similarity_score": 0.348,
           "weight_pct": 15.0,
-          "contribution_pct": 6.38
+          "contribution_pct": 5.21
         },
         {
           "id": "crater_morphology",
           "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 88%",
+          "terrestrial_value": "Índice: 45%",
           "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.88,
+          "similarity_score": 0.45,
           "weight_pct": 10.0,
-          "contribution_pct": 8.8
+          "contribution_pct": 4.5
         },
         {
           "id": "spectral_mineralogy",
           "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 82%",
+          "terrestrial_value": "Concordancia: 85%",
           "planetary_target": "Ferric Oxides (Hematite / Goethite), Jarosite sulfates & Smectite clays",
-          "similarity_score": 0.82,
+          "similarity_score": 0.85,
           "weight_pct": 20.0,
-          "contribution_pct": 16.4
+          "contribution_pct": 17.0
         },
         {
           "id": "environmental_aridity",
           "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 88%",
+          "terrestrial_value": "Proxy Aridez: 92%",
           "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.88,
+          "similarity_score": 0.92,
           "weight_pct": 10.0,
-          "contribution_pct": 8.8
+          "contribution_pct": 9.2
         }
-      ],
-      "strong_analogies": [
-        "Mayor concentración mundial de volcanes de lodo fríos activos (más de 300 edificios cónicos y calderas de lodo).",
-        "Extrusión continua de lodos arcillosos salinos y emisión de metano ($CH_4$), dióxido de carbono y nitrógeno desde acuíferos profundos sin magmatismo térmico.",
-        "Estructuras morfológicas idénticas a los montículos cónicos y cráteres con foso observados en Acidalia Planitia y Utopia Planitia en Marte."
-      ],
-      "analogy_limitations": [
-        "Los hidrocarburos terrestres proceden principalmente de roca madre biogénica del Terciario/Cretácico.",
-        "Presión atmosférica normal y vientos suaves del Mar Caspio."
-      ],
-      "mission_training_value": "Estudio de los mecanismos geológicos de liberación episódica de metano en Marte detectados por ExoMars TGO y Curiosity; muestreo de fluidos subsuperficiales profundos sin perforación mecánica.",
-      "sources": [
-        "Mazzini_2009_Mud_Volcanoes_Azerbaijan",
-        "Komatsu_2016_Mars_Mud_Volcanism_Analogy",
-        "Copernicus_DEM_GLO30"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.7,
-        "cave_accessibility_evidence": 0.2,
-        "slope_mean_deg": 6.8,
-        "roughness_tri_m": 2.5,
-        "spectral_iron_sulfate_match": 0.82,
-        "crater_morphology_proxy": 0.88,
-        "surface_aridity_proxy": 0.88,
-        "subsurface_thermal_stability": 0.8
-      }
+      ]
     },
     {
+      "rank": 8,
       "id": "MX_CUATRO_CIENEGAS_GYPSUM",
       "name": "Dunas de Yeso y Humedales de Cuatro Ciénegas (Coahuila, México)",
       "target_body": "Mars",
@@ -1839,7 +1733,18 @@
         780.0
       ],
       "local_utm_epsg": "EPSG:32614",
-      "score_pct": 52.16,
+      "score_pct": 48.76,
+      "status": "candidate",
+      "strong_analogies": [
+        "Extenso campo de dunas eólicas compuestas casi en su totalidad por sulfato de calcio dihidratado ($CaSO_4 \\cdot 2H_2O$, yeso puro).",
+        "Análogo mineralógico directo de las dunas de yeso de Olympia Undae que rodean el casquete polar norte marciano (detectadas por Mars Express OMEGA y MRO CRISM).",
+        "Manantiales adyacentes con estromatolitos y comunidades bacterianas que sobreviven en proporciones estequiométricas anómalas de fósforo y azufre, análogas al Marte primitivo."
+      ],
+      "analogy_limitations": [
+        "Cuenca desértica cálida norteamericana con temperaturas estivales de hasta 45°C en contraste con el frío polar de Olympia Undae.",
+        "Zona de reserva biológica protegida con restricciones estrictas de ensayo."
+      ],
+      "mission_training_value": "Calibración de la movilidad de rovers sobre arena de yeso de baja cohesión y fricción interna; validación de la estabilidad espectral de sulfatos hidratados bajo radiación solar intensa.",
       "metrics_table": [
         {
           "id": "elevation_relief",
@@ -1853,20 +1758,20 @@
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "1.59° (máx 2.8°)",
+          "terrestrial_value": "1.15° (máx 1.1°)",
           "planetary_target": "8.0° ± 4.0°",
-          "similarity_score": 0.276,
+          "similarity_score": 0.231,
           "weight_pct": 15.0,
-          "contribution_pct": 4.15
+          "contribution_pct": 3.46
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "2.27 m",
+          "terrestrial_value": "1.64 m",
           "planetary_target": "3.0 ± 1.5 m",
-          "similarity_score": 0.887,
+          "similarity_score": 0.661,
           "weight_pct": 12.0,
-          "contribution_pct": 10.65
+          "contribution_pct": 7.94
         },
         {
           "id": "curvature_profile",
@@ -1913,34 +1818,10 @@
           "weight_pct": 10.0,
           "contribution_pct": 9.1
         }
-      ],
-      "strong_analogies": [
-        "Extenso campo de dunas eólicas compuestas casi en su totalidad por sulfato de calcio dihidratado ($CaSO_4 \\cdot 2H_2O$, yeso puro).",
-        "Análogo mineralógico directo de las dunas de yeso de Olympia Undae que rodean el casquete polar norte marciano (detectadas por Mars Express OMEGA y MRO CRISM).",
-        "Manantiales adyacentes con estromatolitos y comunidades bacterianas que sobreviven en proporciones estequiométricas anómalas de fósforo y azufre, análogas al Marte primitivo."
-      ],
-      "analogy_limitations": [
-        "Cuenca desértica cálida norteamericana con temperaturas estivales de hasta 45°C en contraste con el frío polar de Olympia Undae.",
-        "Zona de reserva biológica protegida con restricciones estrictas de ensayo."
-      ],
-      "mission_training_value": "Calibración de la movilidad de rovers sobre arena de yeso de baja cohesión y fricción interna; validación de la estabilidad espectral de sulfatos hidratados bajo radiación solar intensa.",
-      "sources": [
-        "Souza_2006_Cuatro_Cienegas_Analogue",
-        "Langevin_2005_Science_Gypsum_Mars",
-        "INEGI_CEM_5m_Copernicus"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.1,
-        "cave_accessibility_evidence": 0.15,
-        "slope_mean_deg": 5.2,
-        "roughness_tri_m": 1.8,
-        "spectral_iron_sulfate_match": 0.95,
-        "crater_morphology_proxy": 0.25,
-        "surface_aridity_proxy": 0.91,
-        "subsurface_thermal_stability": 0.82
-      }
+      ]
     },
     {
+      "rank": 9,
       "id": "CL_ATACAMA_YUNGAY",
       "name": "Núcleo Hiperárido de Yungay, Desierto de Atacama (Antofagasta, Chile)",
       "target_body": "Mars",
@@ -1953,7 +1834,18 @@
         1150.0
       ],
       "local_utm_epsg": "EPSG:32719",
-      "score_pct": 49.95,
+      "score_pct": 47.72,
+      "status": "negative_control",
+      "strong_analogies": [
+        "Punto más seco y estéril de la Tierra no polar; precipitaciones < 1 mm/década y humedad relativa media del 5-8%.",
+        "Suelo enriquecido en sales percloradas ($ClO_4^-$), nitratos y sulfatos altamente oxidantes idénticos al regolito de Phoenix y Curiosity.",
+        "Límite extremo de biomasa orgánica detectable (ausencia de bacterias cultivables en los primeros 10-20 cm de suelo)."
+      ],
+      "analogy_limitations": [
+        "Presión atmosférica terrestre de ~900 mbar (frente a 6 mbar en Marte) y ausencia de heladas de dióxido de carbono.",
+        "Filtro de ozono atmosférico que bloquea la radiación UVC (aunque recibe la mayor radiación UVA/B de la Tierra)."
+      ],
+      "mission_training_value": "Calibración histórica del experimento Labeled Release de las sondas Viking; ensayos de detección de vida de NASA Spaceward Bound y rover ExoMars Rosalind Franklin.",
       "metrics_table": [
         {
           "id": "elevation_relief",
@@ -1967,25 +1859,25 @@
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "6.05° (máx 10.5°)",
+          "terrestrial_value": "4.39° (máx 4.4°)",
           "planetary_target": "8.0° ± 4.0°",
-          "similarity_score": 0.888,
+          "similarity_score": 0.666,
           "weight_pct": 15.0,
-          "contribution_pct": 13.32
+          "contribution_pct": 9.99
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "8.69 m",
+          "terrestrial_value": "6.27 m",
           "planetary_target": "3.0 ± 1.5 m",
-          "similarity_score": 0.001,
+          "similarity_score": 0.093,
           "weight_pct": 12.0,
-          "contribution_pct": 0.01
+          "contribution_pct": 1.11
         },
         {
           "id": "curvature_profile",
           "name": "Curvatura Topográfica y Sumideros",
-          "terrestrial_value": "0.0000 m⁻¹",
+          "terrestrial_value": "-0.0000 m⁻¹",
           "planetary_target": "Inversión de colapso (-0.05)",
           "similarity_score": 0.2,
           "weight_pct": 8.0,
@@ -2027,148 +1919,10 @@
           "weight_pct": 10.0,
           "contribution_pct": 9.9
         }
-      ],
-      "strong_analogies": [
-        "Punto más seco y estéril de la Tierra no polar; precipitaciones < 1 mm/década y humedad relativa media del 5-8%.",
-        "Suelo enriquecido en sales percloradas ($ClO_4^-$), nitratos y sulfatos altamente oxidantes idénticos al regolito de Phoenix y Curiosity.",
-        "Límite extremo de biomasa orgánica detectable (ausencia de bacterias cultivables en los primeros 10-20 cm de suelo)."
-      ],
-      "analogy_limitations": [
-        "Presión atmosférica terrestre de ~900 mbar (frente a 6 mbar en Marte) y ausencia de heladas de dióxido de carbono.",
-        "Filtro de ozono atmosférico que bloquea la radiación UVC (aunque recibe la mayor radiación UVA/B de la Tierra)."
-      ],
-      "mission_training_value": "Calibración histórica del experimento Labeled Release de las sondas Viking; ensayos de detección de vida de NASA Spaceward Bound y rover ExoMars Rosalind Franklin.",
-      "sources": [
-        "Navarro_Gonzalez_2003_Science_Atacama",
-        "McKay_2003_Astrobiology",
-        "Copernicus_DEM_GLO30"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.02,
-        "cave_accessibility_evidence": 0.01,
-        "slope_mean_deg": 18.5,
-        "roughness_tri_m": 7.2,
-        "spectral_iron_sulfate_match": 0.9,
-        "crater_morphology_proxy": 0.1,
-        "surface_aridity_proxy": 0.99,
-        "subsurface_thermal_stability": 0.1
-      }
+      ]
     },
     {
-      "id": "JO_WADI_RUM",
-      "name": "Cañones de Wadi Rum & Jabal Umm Ishrin (Gobernación de Áqaba, Jordania)",
-      "target_body": "Mars",
-      "pairing": "Valles Marineris Chasmata & Martian Eolian Dune Corridors (Mars)",
-      "country": "Jordania",
-      "lat": 29.573,
-      "lon": 35.42,
-      "elevation_range_m": [
-        950.0,
-        1750.0
-      ],
-      "local_utm_epsg": "EPSG:32636",
-      "score_pct": 46.25,
-      "metrics_table": [
-        {
-          "id": "elevation_relief",
-          "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "800.0 m (cota 950-1750 m)",
-          "planetary_target": "~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))",
-          "similarity_score": 0.857,
-          "weight_pct": 10.0,
-          "contribution_pct": 8.57
-        },
-        {
-          "id": "slope_morphometry",
-          "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "19.97° (máx 32.9°)",
-          "planetary_target": "8.0° ± 4.0°",
-          "similarity_score": 0.011,
-          "weight_pct": 15.0,
-          "contribution_pct": 0.17
-        },
-        {
-          "id": "surface_roughness_tri",
-          "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "30.21 m",
-          "planetary_target": "3.0 ± 1.5 m",
-          "similarity_score": 0.0,
-          "weight_pct": 12.0,
-          "contribution_pct": 0.0
-        },
-        {
-          "id": "curvature_profile",
-          "name": "Curvatura Topográfica y Sumideros",
-          "terrestrial_value": "0.0000 m⁻¹",
-          "planetary_target": "Inversión de colapso (-0.05)",
-          "similarity_score": 0.2,
-          "weight_pct": 8.0,
-          "contribution_pct": 1.6
-        },
-        {
-          "id": "lava_tubes_cavities",
-          "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 55% (Contexto volcánico: 10%)",
-          "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.348,
-          "weight_pct": 15.0,
-          "contribution_pct": 5.21
-        },
-        {
-          "id": "crater_morphology",
-          "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 45%",
-          "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.45,
-          "weight_pct": 10.0,
-          "contribution_pct": 4.5
-        },
-        {
-          "id": "spectral_mineralogy",
-          "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 85%",
-          "planetary_target": "Ferric Oxides (Hematite / Goethite), Jarosite sulfates & Smectite clays",
-          "similarity_score": 0.85,
-          "weight_pct": 20.0,
-          "contribution_pct": 17.0
-        },
-        {
-          "id": "environmental_aridity",
-          "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 92%",
-          "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.92,
-          "weight_pct": 10.0,
-          "contribution_pct": 9.2
-        }
-      ],
-      "strong_analogies": [
-        "Paredes escarpadas de areniscas paleozoicas teñidas intensamente de rojo por recubrimientos de hematita y goethita que replican el cañón de Valles Marineris.",
-        "Corredores de transporte eólico, mega-yardangs esculpidos por el viento y mantos de dunas activas análogas a los ergs marcianos.",
-        "Cañones estrechos (*siqs*) con sombras permanentes y microclimas de atenuación térmica."
-      ],
-      "analogy_limitations": [
-        "Roca sedimentaria cuarcítica en lugar del basalto volcánico que compone la mayoría de las paredes de los cañones marcianos.",
-        "Turismo activo y pistas de vehículos todoterreno."
-      ],
-      "mission_training_value": "Pruebas de navegación visual para aterrizajes de precisión planetaria; análisis de la dinámica de saltación de polvo fino en cañones profundos.",
-      "sources": [
-        "Osborn_1985_Wadi_Rum_Geomorphology",
-        "Copernicus_DEM_GLO30",
-        "Sentinel2_MSI_2024"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.1,
-        "cave_accessibility_evidence": 0.55,
-        "slope_mean_deg": 24.0,
-        "roughness_tri_m": 5.8,
-        "spectral_iron_sulfate_match": 0.85,
-        "crater_morphology_proxy": 0.45,
-        "surface_aridity_proxy": 0.92,
-        "subsurface_thermal_stability": 0.75
-      }
-    },
-    {
+      "rank": 10,
       "id": "AQ_MCMURDO_DRY_VALLEYS",
       "name": "Valles Secos de McMurdo / Beacon Valley & Taylor Valley (Tierra Victoria, Antártida)",
       "target_body": "Mars",
@@ -2182,6 +1936,17 @@
       ],
       "local_utm_epsg": "EPSG:3031",
       "score_pct": 38.15,
+      "status": "positive_control",
+      "strong_analogies": [
+        "El desierto más frío y seco de la Tierra; temperaturas permanentemente bajo cero y humedad absoluta ínfima regulada por vientos catabáticos.",
+        "Suelos poligonales por contracción térmica con hielo masivo subsuperficial a solo centímetros de profundidad, idéntico a las zanjas excavadas por la sonda Phoenix en Marte.",
+        "Ecosistemas criptoendolíticos (líquenes y cianobacterias que sobreviven dentro de los poros de areniscas cuarcíticas)."
+      ],
+      "analogy_limitations": [
+        "Acceso logístico extremo regulado por el Tratado Antártico.",
+        "La gravedad sigue siendo 1 g y la presión atmosférica es de ~980 mbar."
+      ],
+      "mission_training_value": "Análogo canónico del lugar de aterrizaje de la misión Phoenix de NASA; desarrollo de sensores de conductividad térmica y perforadoras de suelo congelado.",
       "metrics_table": [
         {
           "id": "elevation_relief",
@@ -2195,7 +1960,7 @@
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "30.98° (máx 47.5°)",
+          "terrestrial_value": "24.26° (máx 24.3°)",
           "planetary_target": "8.0° ± 4.0°",
           "similarity_score": 0.0,
           "weight_pct": 15.0,
@@ -2204,7 +1969,7 @@
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "50.98 m",
+          "terrestrial_value": "36.80 m",
           "planetary_target": "3.0 ± 1.5 m",
           "similarity_score": 0.0,
           "weight_pct": 12.0,
@@ -2255,32 +2020,7 @@
           "weight_pct": 10.0,
           "contribution_pct": 9.8
         }
-      ],
-      "strong_analogies": [
-        "El desierto más frío y seco de la Tierra; temperaturas permanentemente bajo cero y humedad absoluta ínfima regulada por vientos catabáticos.",
-        "Suelos poligonales por contracción térmica con hielo masivo subsuperficial a solo centímetros de profundidad, idéntico a las zanjas excavadas por la sonda Phoenix en Marte.",
-        "Ecosistemas criptoendolíticos (líquenes y cianobacterias que sobreviven dentro de los poros de areniscas cuarcíticas)."
-      ],
-      "analogy_limitations": [
-        "Acceso logístico extremo regulado por el Tratado Antártico.",
-        "La gravedad sigue siendo 1 g y la presión atmosférica es de ~980 mbar."
-      ],
-      "mission_training_value": "Análogo canónico del lugar de aterrizaje de la misión Phoenix de NASA; desarrollo de sensores de conductividad térmica y perforadoras de suelo congelado.",
-      "sources": [
-        "Marchant_2002_Dry_Valleys_Mars",
-        "Doran_2002_Antarctic_Paleolakes",
-        "REMA_Antarctica_LiDAR_2m"
-      ],
-      "feature_values": {
-        "volcanic_context": 0.35,
-        "cave_accessibility_evidence": 0.2,
-        "slope_mean_deg": 12.0,
-        "roughness_tri_m": 3.8,
-        "spectral_iron_sulfate_match": 0.88,
-        "crater_morphology_proxy": 0.4,
-        "surface_aridity_proxy": 0.98,
-        "subsurface_thermal_stability": 0.96
-      }
+      ]
     }
   ]
 }

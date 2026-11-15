@@ -1,6 +1,6 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { AnalogSite, CavityCandidate, CelestialBody, PlanetaryLayerMode, PlanetaryPOI, Terrain3DResponse } from '../types';
+import { AnalogSite, CavityCandidate, CelestialBody, PlanetaryLayerMode, PlanetaryPOI, Terrain3DResponse, AnalogCandidateItem } from '../types';
 import { NASA_TREK_LAYERS, VERIFIED_PLANETARY_POIS, formatPlanetaryCoordinates } from '../nasa/trekProviders';
 import { sound } from '../audio';
 
@@ -14,10 +14,13 @@ export class AnalogMap2DManager {
   private poiMarkers: L.Marker[] = [];
   private radiusCircle: L.Circle | null = null;
   private activeTargetSite: AnalogSite | null = null;
+  private currentCandidates: AnalogCandidateItem[] = [];
   private onReturnToOrbitCallback?: (lat?: number, lon?: number, body?: CelestialBody) => void;
   private isReturning = false;
   private isTransitioning = false;
   private is3DPanelOpen = true;
+  private isCandidatesDrawerOpen = true;
+  private onMainPyRegenCallback?: (body: 'Moon' | 'Mars') => void;
   private currentLat = 29.0380;
   private currentLon = -13.7190;
   private currentRadiusKm = 0.1;
@@ -29,10 +32,15 @@ export class AnalogMap2DManager {
   constructor(mapContainerId: string) {
     this.mapContainer = document.getElementById(mapContainerId) as HTMLElement;
     this.setup3DPanelControls();
+    this.setupCandidatesDrawerControls();
   }
 
   public setOnReturnToOrbit(callback: (lat?: number, lon?: number, body?: CelestialBody) => void) {
     this.onReturnToOrbitCallback = callback;
+  }
+
+  public setOnMainPyRegen(callback: (body: 'Moon' | 'Mars') => void) {
+    this.onMainPyRegenCallback = callback;
   }
 
   /**
@@ -97,12 +105,17 @@ export class AnalogMap2DManager {
    * - NO abre ventanas emergentes invasivas.
    * - Permite explorar toda la región con libertad.
    */
-  public triggerSeamlessZoomDive(site: AnalogSite, zoomLevel = 5) {
+  public triggerSeamlessZoomDive(site: AnalogSite, zoomLevel = 5, candidates?: AnalogCandidateItem[]) {
     if (this.isTransitioning) return;
     this.isTransitioning = true;
     this.isReturning = false;
 
     this.activeTargetSite = site;
+    if (candidates && candidates.length > 0) {
+      this.currentCandidates = candidates;
+    } else if (site.candidates && site.candidates.length > 0) {
+      this.currentCandidates = site.candidates;
+    }
     const lat = site.coordinates.latitude;
     const lon = site.coordinates.longitude;
 
@@ -119,7 +132,7 @@ export class AnalogMap2DManager {
 
     // Dibujar la baliza en el mapa (pero sin abrir ningún popup invasivo)
     this.renderSiteMarkers(site);
-    this.setupTargetExplorationHUD(site);
+    this.setupTargetExplorationHUD(site, this.currentCandidates);
 
     // Cargar la previsualización 3D del radio de 100 m alrededor de la ubicación analógica
     this.loadTerrain3DPreview(lat, lon, 0.1);
@@ -292,9 +305,27 @@ export class AnalogMap2DManager {
     const badgeEl = document.getElementById('mapTargetBadge');
     const btnCenter = document.getElementById('btnCenterTarget');
     const scoreChip = document.getElementById('mapSiteScore')?.parentElement;
+    const candidatesBar = document.getElementById('mapCandidatesBar');
 
     if (btnCenter) btnCenter.style.display = 'none';
     if (scoreChip) scoreChip.style.display = 'none';
+    if (candidatesBar) candidatesBar.style.display = 'none';
+
+    const btnMainPyRegenText = document.getElementById('btnMainPyRegenText');
+    const btnMainPy = document.getElementById('btnMainPyRegen');
+    const btnTopNavMainPyText = document.getElementById('btnTopNavMainPyText');
+    const btnTopNavMainPy = document.getElementById('btnTopNavMainPyRegen');
+    const regenLabel = body === 'Mars' ? '⚡ Generar Lista Marte (main.py)' : '⚡ Generar Lista Luna (main.py)';
+    if (btnMainPyRegenText) btnMainPyRegenText.textContent = regenLabel;
+    if (btnTopNavMainPyText) btnTopNavMainPyText.textContent = regenLabel;
+    if (btnMainPy) {
+      if (body === 'Mars') btnMainPy.classList.add('mars-mode');
+      else btnMainPy.classList.remove('mars-mode');
+    }
+    if (btnTopNavMainPy) {
+      if (body === 'Mars') btnTopNavMainPy.classList.add('mars-mode');
+      else btnTopNavMainPy.classList.remove('mars-mode');
+    }
 
     if (body === 'Mars') {
       if (badgeEl) {
@@ -485,7 +516,7 @@ export class AnalogMap2DManager {
     this.setupPlanetaryHUD(this.currentBody, this.currentLayerMode, this.currentLat, this.currentLon);
   }
 
-  private setupTargetExplorationHUD(site: AnalogSite) {
+  private setupTargetExplorationHUD(site: AnalogSite, candidates?: AnalogCandidateItem[]) {
     const titleEl = document.getElementById('mapSiteTitle');
     const coordsEl = document.getElementById('mapSiteCoords');
     const badgeEl = document.getElementById('mapTargetBadge');
@@ -493,15 +524,26 @@ export class AnalogMap2DManager {
     const scoreVal = document.getElementById('mapSiteScore');
     const scoreChip = scoreVal?.parentElement;
 
+    if (candidates && candidates.length > 0) {
+      this.currentCandidates = candidates;
+    } else if (site.candidates && site.candidates.length > 0) {
+      this.currentCandidates = site.candidates;
+    }
+
+    // Renderizar tarjetas enriquecidas en el panel lateral derecho desplegable
+    this.renderCandidatesCards(this.currentCandidates, site.id, site.target_body);
+    this.toggleCandidatesDrawer(true);
+
     if (badgeEl) {
-      badgeEl.textContent = `${site.target_body.toUpperCase()} ANALOG SITE`;
+      const rankBadge = site.rank ? ` #${site.rank}` : '';
+      badgeEl.textContent = `${site.target_body.toUpperCase()} ANALOG${rankBadge}`;
       badgeEl.className = `map-hud-badge ${site.target_body.toLowerCase()}-badge`;
     }
     if (titleEl) {
       titleEl.textContent = `Región de ${site.name}`;
     }
     if (coordsEl) {
-      coordsEl.textContent = 'Exploración libre • Haz clic en la baliza para ver detalles científicos';
+      coordsEl.textContent = `${site.coordinates.label} • IGN PNOA-LiDAR & NASA Trek`;
     }
     if (btnCenter) {
       btnCenter.style.display = 'flex';
@@ -512,6 +554,247 @@ export class AnalogMap2DManager {
     if (scoreVal) {
       scoreVal.textContent = `${site.similarity_score}%`;
     }
+  }
+
+  private setupCandidatesDrawerControls() {
+    const btnTab = document.getElementById('btnCandidatesDrawerTab');
+    const btnClose = document.getElementById('btnCloseDrawer');
+    const btnToggleHud = document.getElementById('btnToggleDrawerHud');
+    const btnDrawerRegen = document.getElementById('btnDrawerRegen');
+    const btnMainPyRegen = document.getElementById('btnMainPyRegen');
+    const tabSwitchCandidates = document.getElementById('tabSwitchCandidates');
+    const tabSwitch3D = document.getElementById('tabSwitch3D');
+
+    if (btnTab) {
+      btnTab.addEventListener('click', () => {
+        sound.playClick(500);
+        this.toggleCandidatesDrawer();
+      });
+    }
+
+    if (btnClose) {
+      btnClose.addEventListener('click', () => {
+        sound.playClick(450);
+        this.toggleCandidatesDrawer(false);
+      });
+    }
+
+    if (btnToggleHud) {
+      btnToggleHud.addEventListener('click', () => {
+        sound.playClick(500);
+        this.toggleCandidatesDrawer();
+      });
+    }
+
+    const triggerRegen = () => {
+      sound.playClick(750);
+      const targetBody = (this.currentBody === 'Mars' || (this.activeTargetSite && this.activeTargetSite.target_body === 'Mars')) ? 'Mars' : 'Moon';
+      if (this.onMainPyRegenCallback) {
+        this.onMainPyRegenCallback(targetBody);
+      }
+    };
+
+    if (btnDrawerRegen) {
+      btnDrawerRegen.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerRegen();
+      });
+    }
+
+    if (btnMainPyRegen) {
+      btnMainPyRegen.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerRegen();
+      });
+    }
+
+    if (tabSwitchCandidates) {
+      tabSwitchCandidates.addEventListener('click', () => {
+        sound.playClick(500);
+        tabSwitchCandidates.classList.add('active');
+        tabSwitch3D?.classList.remove('active');
+        this.toggleCandidatesDrawer(true);
+      });
+    }
+
+    if (tabSwitch3D) {
+      tabSwitch3D.addEventListener('click', () => {
+        sound.playClick(500);
+        tabSwitch3D.classList.add('active');
+        tabSwitchCandidates?.classList.remove('active');
+        this.toggle3DPanel(true);
+      });
+    }
+  }
+
+  public toggleCandidatesDrawer(open?: boolean) {
+    const drawer = document.getElementById('candidatesDrawerPanel');
+    const btnToggleHud = document.getElementById('btnToggleDrawerHud');
+    const tabArrow = document.getElementById('drawerTabArrow');
+    const wrapper = this.mapContainer;
+    if (!drawer) return;
+
+    if (open !== undefined) {
+      this.isCandidatesDrawerOpen = open;
+    } else {
+      this.isCandidatesDrawerOpen = !this.isCandidatesDrawerOpen;
+    }
+
+    if (this.isCandidatesDrawerOpen) {
+      drawer.classList.remove('collapsed');
+      btnToggleHud?.classList.add('active');
+      wrapper.classList.remove('drawer-collapsed');
+      if (tabArrow) tabArrow.textContent = '❯';
+    } else {
+      drawer.classList.add('collapsed');
+      btnToggleHud?.classList.remove('active');
+      wrapper.classList.add('drawer-collapsed');
+      if (tabArrow) tabArrow.textContent = '❮';
+    }
+  }
+
+  public setCandidates(candidates: AnalogCandidateItem[], targetBody: CelestialBody) {
+    this.currentCandidates = candidates;
+    this.renderCandidatesCards(candidates, this.activeTargetSite?.id, targetBody);
+  }
+
+  public renderCandidatesCards(candidates: AnalogCandidateItem[], activeCandidateId?: string, targetBody?: CelestialBody) {
+    const listEl = document.getElementById('candidatesCardsList');
+    const badgeEl = document.getElementById('candidatesTargetBadge');
+    const subtitleEl = document.getElementById('candidatesSubtitle');
+    const badgeTabEl = document.getElementById('drawerBadgeTab');
+    const hudCountEl = document.getElementById('hudCandidatesCount');
+    const btnMainPyRegenText = document.getElementById('btnMainPyRegenText');
+    const btnMainPy = document.getElementById('btnMainPyRegen');
+    const btnTopNavMainPyText = document.getElementById('btnTopNavMainPyText');
+    const btnTopNavMainPy = document.getElementById('btnTopNavMainPyRegen');
+
+    const bodyName = (targetBody === 'Mars' || (this.activeTargetSite && this.activeTargetSite.target_body === 'Mars')) ? 'Mars' : 'Moon';
+    const isMars = bodyName === 'Mars';
+    const regenLabel = isMars ? '⚡ Generar Lista Marte (main.py)' : '⚡ Generar Lista Luna (main.py)';
+
+    if (badgeEl) {
+      badgeEl.textContent = isMars ? 'MARTE • 10 UBICACIONES EVALUADAS' : 'LUNA • 10 UBICACIONES EVALUADAS';
+      badgeEl.className = `drawer-badge ${isMars ? 'mars-badge' : ''}`;
+    }
+    if (subtitleEl) {
+      subtitleEl.textContent = `Ranking multivariable de ${bodyName} con NASA Trek, IGN LiDAR y DEM`;
+    }
+    if (badgeTabEl) {
+      badgeTabEl.textContent = `${candidates.length}`;
+    }
+    if (hudCountEl) {
+      hudCountEl.textContent = `${candidates.length}`;
+    }
+    if (btnMainPyRegenText) {
+      btnMainPyRegenText.textContent = regenLabel;
+    }
+    if (btnTopNavMainPyText) {
+      btnTopNavMainPyText.textContent = regenLabel;
+    }
+    if (btnMainPy) {
+      if (isMars) btnMainPy.classList.add('mars-mode');
+      else btnMainPy.classList.remove('mars-mode');
+    }
+    if (btnTopNavMainPy) {
+      if (isMars) btnTopNavMainPy.classList.add('mars-mode');
+      else btnTopNavMainPy.classList.remove('mars-mode');
+    }
+
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    candidates.forEach((cand) => {
+      const card = document.createElement('div');
+      const isCurrent = activeCandidateId ? cand.id === activeCandidateId : (this.activeTargetSite ? cand.id === this.activeTargetSite.id : cand.rank === 1);
+      const marsClass = isMars ? 'mars-active' : '';
+      card.className = `candidate-card ${isCurrent ? `active ${marsClass}` : ''}`;
+      card.setAttribute('data-id', cand.id);
+
+      const latDir = cand.lat >= 0 ? 'N' : 'S';
+      const lonDir = cand.lon >= 0 ? 'E' : 'W';
+      const coordsFmt = `${Math.abs(cand.lat).toFixed(4)}° ${latDir}, ${Math.abs(cand.lon).toFixed(4)}° ${lonDir}`;
+      const shortName = cand.name.split('(')[0].trim();
+      const primaryAnalogy = cand.strong_analogies && cand.strong_analogies.length > 0
+        ? cand.strong_analogies[0]
+        : (cand.pairing || 'Análogo geomorfológico y litológico certificado.');
+
+      card.innerHTML = `
+        <div class="card-top-row">
+          <span class="card-rank-badge">#${cand.rank}</span>
+          <span class="card-country-tag">${cand.country || 'Análogo'}</span>
+          <span class="card-score-pill">${cand.score_pct}%</span>
+        </div>
+        <div class="card-site-name" title="${cand.name}">${shortName}</div>
+        <div class="card-coords-row">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          <span>${coordsFmt}</span>
+        </div>
+        ${cand.pairing ? `
+          <div class="card-pairing-row">
+            <span>🎯 ${cand.pairing}</span>
+          </div>
+        ` : ''}
+        <div class="card-analogy-snippet" title="${primaryAnalogy}">
+          ${primaryAnalogy}
+        </div>
+      `;
+
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sound.playClick(650);
+        this.switchToCandidate(cand);
+      });
+
+      listEl.appendChild(card);
+    });
+  }
+
+  /**
+   * Cambia activamente al análogo seleccionado de los 10 candidatos sin salir del mapa 2D,
+   * actualizando coordenadas, marcadores y recalculando el modelo 3D con generate_terrain_3D.py.
+   */
+  public switchToCandidate(cand: AnalogCandidateItem) {
+    const latDir = cand.lat >= 0 ? 'N' : 'S';
+    const lonDir = cand.lon >= 0 ? 'E' : 'W';
+    const newSite: AnalogSite = {
+      id: cand.id,
+      name: cand.name,
+      target_body: cand.target_body,
+      coordinates: {
+        latitude: cand.lat,
+        longitude: cand.lon,
+        label: `${Math.abs(cand.lat).toFixed(4)}° ${latDir}, ${Math.abs(cand.lon).toFixed(4)}° ${lonDir}`
+      },
+      region: cand.pairing || 'Región Análoga',
+      country: cand.country,
+      geological_features: cand.strong_analogies || ['Basalt Flow', 'Cavity Access'],
+      scientific_justification: cand.strong_analogies && cand.strong_analogies.length > 0 ? cand.strong_analogies[0] : 'Análogo de alta fidelidad.',
+      similarity_score: cand.score_pct,
+      coverage_percentage: 100,
+      sources: ['IGN PNOA-LiDAR', 'NASA Trek', 'Copernicus DEM'],
+      status: (cand.status as any) || 'validated',
+      rank: cand.rank,
+      candidates: this.currentCandidates
+    };
+
+    this.activeTargetSite = newSite;
+    this.currentLat = cand.lat;
+    this.currentLon = cand.lon;
+
+    if (this.map) {
+      this.map.flyTo([cand.lat, cand.lon], 6, {
+        animate: true,
+        duration: 1.2
+      });
+    }
+
+    this.renderSiteMarkers(newSite);
+    this.setupTargetExplorationHUD(newSite, this.currentCandidates);
+    this.loadTerrain3DPreview(cand.lat, cand.lon, 0.1, false);
   }
 
   /**

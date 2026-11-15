@@ -638,43 +638,82 @@ class RealisticTerrainComparisonEngine:
         }
 
 
-def print_analog_ranking(target_body: str = "Moon"):
+def print_analog_ranking(target_body: str = "Moon", save_json: bool = True):
     """
     Computes and displays an objective, comparative ranking of candidate sites
     for the selected celestial body without hardcoded prejudice.
+    Saves the 10 generated candidate locations with coordinates to global_analog_catalog_20.json.
     """
     body_key = target_body.capitalize()
     candidates = get_sites_by_target_body(body_key)
 
-    print(f"\n{'='*90}")
-    print(f" TERRAIN-X SCIENTIFIC RANKING ENGINE : CANDIDATE SITES FOR {body_key.upper()}")
-    print(f"{'='*90}")
-    print(f"{'Rank':<5} | {'Site Identifier':<28} | {'Region / Country':<20} | {'Score':<8} | {'Primary Analogy'}")
-    print(f"{'-'*90}")
+    print(f"\n{'='*110}")
+    print(f" TERRAIN-X SCIENTIFIC RANKING ENGINE : 10 CANDIDATE LOCATIONS FOR {body_key.upper()}")
+    print(f"{'='*110}")
+    print(f"{'Rank':<5} | {'Site Identifier':<26} | {'Coordinates (Lat, Lon)':<22} | {'Country':<10} | {'Score':<7} | {'Primary Analogy'}")
+    print(f"{'-'*110}")
 
     scored_sites = []
     bench = ScientificAnalogyEngine.BENCHMARKS[body_key]
     weights = bench["weights"]
 
     for s in candidates:
-        # Create a sample DEM grid with site elevation range
         elev_min, elev_max = s.elevation_range_m[0], s.elevation_range_m[1]
         sample_dem = np.linspace(elev_min, elev_max, 900).reshape((30, 30))
         eval_res = ScientificAnalogyEngine.evaluate_analog_metrics(
             dem_grid=sample_dem, target_body=body_key, site_features=s.feature_values
         )
         score = eval_res["total_similarity_pct"]
-        scored_sites.append((score, s))
+        scored_sites.append((score, s, eval_res))
 
     # Sort descending
     scored_sites.sort(key=lambda x: x[0], reverse=True)
 
-    for rank, (score, s) in enumerate(scored_sites, 1):
+    json_records = []
+    for rank, (score, s, eval_res) in enumerate(scored_sites, 1):
         status_star = "★" if s.status == "positive_control" else " "
-        first_analogy = s.strong_analogies[0][:50] + "..." if s.strong_analogies else "N/A"
-        print(f"{rank:<3} {status_star} | {s.id:<28} | {s.country:<20} | {score:>5.1f}% | {first_analogy}")
+        coords_str = f"[{s.center_lat:+.4f}°, {s.center_lon:+.4f}°]"
+        first_analogy = s.strong_analogies[0][:40] + "..." if s.strong_analogies else "N/A"
+        print(f"{rank:<3} {status_star} | {s.id:<26} | {coords_str:<22} | {s.country:<10} | {score:>5.1f}% | {first_analogy}")
 
-    print(f"{'='*90}\n")
+        json_records.append({
+            "rank": rank,
+            "id": s.id,
+            "name": s.name,
+            "target_body": s.target_body,
+            "pairing": s.target_site_pairing,
+            "country": s.country,
+            "lat": round(s.center_lat, 5),
+            "lon": round(s.center_lon, 5),
+            "elevation_range_m": s.elevation_range_m,
+            "local_utm_epsg": s.local_utm_epsg,
+            "score_pct": round(score, 2),
+            "status": s.status,
+            "strong_analogies": s.strong_analogies,
+            "analogy_limitations": s.analogy_limitations,
+            "mission_training_value": s.mission_training_value,
+            "metrics_table": eval_res.get("metrics_table", [])
+        })
+
+    print(f"{'='*110}")
+
+    if save_json:
+        outdir = os.path.join(_DATA_ROOT, "output_3d")
+        os.makedirs(outdir, exist_ok=True)
+        catalog_path = os.path.join(outdir, "global_analog_catalog_20.json")
+        try:
+            existing_data = {}
+            if os.path.exists(catalog_path):
+                with open(catalog_path, "r", encoding="utf-8") as f:
+                    existing_data = json.load(f)
+            ranking_key = "lunar_ranking" if body_key == "Moon" else "martian_ranking"
+            existing_data[ranking_key] = json_records
+            with open(catalog_path, "w", encoding="utf-8") as f:
+                json.dump(existing_data, f, indent=2, ensure_ascii=False)
+            print(f"[✓] 10 {body_key} candidate locations saved to: {catalog_path}\n")
+        except Exception as e:
+            print(f"[!] Notice saving catalog ranking: {e}\n")
+
     return scored_sites
 
 

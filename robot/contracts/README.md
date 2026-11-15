@@ -39,7 +39,8 @@ Los estados del dossier (§6.4) se conservan, repartidos en dos máquinas de est
 | `geometry.units_verification` / `axes_verification` | `unverified` · `verified` | Unidades y ejes pendientes de verificación física |
 | `capture.*` | ventana de captura, frames usados y rechazados con sus motivos, hora original de adquisición | Trazabilidad de cómo se formó la nube |
 | `files.ply` | `path`, `sha256`, `bytes`, `format` | Integridad (dossier §6.5) |
-| `files.glb` (solo `voxel_mesh`) | `path`, `sha256`, `bytes`, `format` | El mismo mapa en glTF 2.0 binario con el aspecto del visor del dashboard: material sin luz (`KHR_materials_unlit`), textura con la paleta de altura y aristas grises, **Y arriba** (`(x, y, z)` del robot → `(x, z, −y)`). BabylonJS lo carga directamente. La clase de evidencia va también en `asset.extras` |
+| `files.glb` (solo `voxel_mesh`) | `path`, `sha256`, `bytes`, `format` | El mismo mapa en glTF 2.0 binario con el aspecto del visor del dashboard: material sin luz (`KHR_materials_unlit`), textura con la paleta de altura y aristas grises, **Y arriba** (`(x, y, z)` del robot → `(x, z, −y)`). BabylonJS lo carga directamente. El `scan_id` y la clase de evidencia van también en `asset.extras` |
+| `files.coords` (solo `voxel_mesh`) | `path`, `sha256`, `bytes`, `format` | El mismo mapa como **array de coordenadas** (JSON): `points = [[x, y, z], …]` en m, el **centro de cada cubo** (uno por vóxel, también los interiores), en los ejes del robot como el PLY. Delante lleva `scan_id`, `evidence_class`, `delivery_mode`, `demo`, `frame_id`, `unit`, `units_verification`, `cube_size_m` y `count` |
 | `provenance`, `quality_flag`, `caveats[]` | versiones de software, sesión de origen, advertencias legibles | Lo que la interfaz debe mostrar junto a la nube |
 
 ## 3. Archivos que produce el módulo
@@ -49,13 +50,15 @@ scans/<id>/<id>.ply             PLY binary_little_endian, vértices x y z float3
                                 con comentarios de cabecera (frame, unidad, evidencia, demo)
 scans/<id>/<id>.glb             solo el mapa SLAM del dashboard (voxel_mesh): glTF 2.0
                                 binario que se ve como el visor (ver files.glb)
+scans/<id>/<id>.coords.json     solo el mapa SLAM del dashboard (voxel_mesh): array de
+                                coordenadas [x, y, z] (ver files.coords)
 scans/<id>/<id>.metadata.json   ScanMetadata (schemas/scan_metadata.schema.json)
 scans/<id>/SHA256SUMS           formato sha256sum: verificable con herramientas estándar
 ```
 
 `file_url` es una ruta **relativa** a la carpeta de datos del módulo (`scans/<id>/<id>.ply`). Plataforma decide cómo exponerla por HTTP.
 
-Además: `CapabilityReport` (sondeo), `RobotStatus` (estado y telemetría resumida, apto para `GET /api/v1/robot/status`) y `SessionInfo` (sesiones grabadas).
+Además: `CapabilityReport` (sondeo), `RobotStatus` (estado y telemetría resumida, apto para `GET /api/v1/robot/status`). `SessionInfo` (sesiones grabadas para replay) se retiró el 2026-11-14 junto con el modo replay.
 
 ## 4. Qué necesitamos de cada especialista
 

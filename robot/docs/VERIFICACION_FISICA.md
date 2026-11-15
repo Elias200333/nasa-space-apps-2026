@@ -31,7 +31,7 @@ Todo debe salir `OK`. En `info`, la clave debe aparecer solo como `"configurada"
 ## 2. Sondeo de capacidades (robot quieto, 1 min)
 
 ```powershell
-.\.venv\Scripts\python.exe -m terrainx_robot probe --source go2 --window 15 --record-session
+.\.venv\Scripts\python.exe -m terrainx_robot probe --window 15
 ```
 
 Anote en la tabla de resultados (sección 7):
@@ -53,7 +53,7 @@ Si el resultado es `failed`, el informe indica `error_code` y una sugerencia (RE
 2. Capture:
 
    ```powershell
-   .\.venv\Scripts\python.exe -m terrainx_robot capture --source go2 --duration 5 --mode last --record-session
+   .\.venv\Scripts\python.exe -m terrainx_robot capture --duration 5 --mode last
    .\.venv\Scripts\python.exe -m terrainx_robot inspect <scan_id>
    ```
 
@@ -75,7 +75,7 @@ Si el resultado es `failed`, el informe indica `error_code` y una sugerencia (RE
    - ¿qué eje crece hacia delante?
    - ¿cuál hacia la izquierda?
    - ¿Z apunta hacia arriba?
-3. Capture dos veces con el robot quieto y compare `origin` en las sesiones grabadas (`messages.jsonl`). ¿El origen del mapa es fijo o se mueve?
+3. Capture dos veces con el robot quieto (`capture --mode last`) y compare con `inspect` las coordenadas de la misma pared o caja: si coinciden, el marco es estable. (El `origin` de cada mapa ya no queda grabado: iba en las sesiones de replay, retiradas el 2026-11-14.)
 4. (Opcional, solo con el mando oficial y el operador) Desplace el robot 1 m. ¿Cambia el `origin`? ¿Se mueven las paredes en la nube?
 
    Esto indica si el frame es fijo al mundo (tipo odometría) o al robot.
@@ -86,17 +86,7 @@ Si el resultado es `failed`, el informe indica `error_code` y una sugerencia (RE
    - Resultado esperado: error `conexión perdida` y salida con código 1, sin bloqueo.
    - El robot no se ve afectado: no recibe órdenes.
 2. **Robot ocupado.** Abra la app oficial y repita `probe`. Resultado esperado: `robot_busy` con su sugerencia.
-3. **Grabación larga.** Ejecute:
-
-   ```powershell
-   .\.venv\Scripts\python.exe -m terrainx_robot record --source go2 --duration 60 --notes "pasillo, robot quieto"
-   ```
-
-   Compruebe después que la sesión se reproduce:
-
-   ```powershell
-   .\.venv\Scripts\python.exe -m terrainx_robot capture --source replay --input latest
-   ```
+3. **Captura larga.** Ejecute `capture --duration 60` con el robot quieto y compruebe que termina sin cortes y que `verify-scan <id>` da OK.
 
 ## 7. Tabla de resultados (rellenar y guardar como `docs/RESULTADOS_VERIFICACION_<fecha>.md`)
 

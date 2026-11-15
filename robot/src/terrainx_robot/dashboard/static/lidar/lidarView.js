@@ -9,10 +9,11 @@
 //     solo; este dashboard solo permite conducción WASD con hombre muerto.
 //   · El modelo 3D del Go2 (go2Model, archivo GLB): se usa el perro de bloques del original.
 //   · La capa de ruta (routeLayer) y los stores de React (aquí, un objeto `ui`).
-// Cambiado (TERRAIN-X): el botón de descarga GUARDA el mapa SLAM acumulado en el dashboard
-// (POST /api/slam/save: PLY malla + GLB + metadatos + SHA-256) y baja el .glb, que se ve igual
-// que este visor. La pausa también congela el acumulado en el dashboard (no suma mapas): así lo
-// que se ve es lo que se guarda. Sustituyen al antiguo panel «Capturas y datos».
+// Cambiado (TERRAIN-X): el botón de descarga abre un menú (modelo 3D .glb, que se ve igual que
+// este visor, o array de coordenadas .json) y GUARDA el mapa SLAM acumulado en el dashboard
+// (POST /api/slam/save: PLY malla + GLB + coordenadas + metadatos + SHA-256). La pausa también
+// congela el acumulado en el dashboard (no suma mapas): así lo que se ve es lo que se guarda, y
+// las dos descargas salen del mismo escaneo. Sustituyen al antiguo panel «Capturas y datos».
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { getLidarEngine } from './LidarMapEngine.js'
@@ -203,7 +204,7 @@ export function mountLidarView(mount, { onStats } = {}) {
     return { b, id: m.id }
   })
 
-  // Arriba a la derecha: borrar el acumulado (con confirmación), congelar, descargar .ply (malla)
+  // Arriba a la derecha: borrar el acumulado (con confirmación), congelar, guardar y descargar
   const top = el('div', 'lv-top', mount)
   let confirmClear = false, confirmTimer = null
   const clearBtn = darkButton(top, 'Borrar el mapa acumulado', 'trash', () => {
@@ -227,9 +228,11 @@ export function mountLidarView(mount, { onStats } = {}) {
     source.setPaused(ui.paused)
     render()
   })
-  // TERRAIN-X: guarda el mapa ACUMULADO en el dashboard (PLY malla + GLB + metadatos, en
-  // runtime/scans) y baja el .glb, que se ve como este visor. Se pasa a «Acumulado» para que
-  // lo que se ve sea lo que se guarda.
+  // TERRAIN-X: el botón de descarga abre un menú: modelo 3D (.glb, se ve como este visor) o array
+  // de coordenadas (.json, centro de cada cubo). Las dos opciones guardan el mapa ACUMULADO en el
+  // dashboard (PLY malla + GLB + coordenadas + metadatos, en runtime/scans); si el mapa no ha
+  // cambiado desde el último guardado, el dashboard devuelve ese mismo escaneo. Se pasa a
+  // «Acumulado» para que lo que se ve sea lo que se guarda.
   const toastEl = el('div', 'lv-toast', mount)
   toastEl.style.display = 'none'
   let toastTimer = null, saving = false
@@ -240,7 +243,39 @@ export function mountLidarView(mount, { onStats } = {}) {
     toastEl.style.display = ''
     if (ms) toastTimer = setTimeout(() => { toastEl.style.display = 'none' }, ms)
   }
-  darkButton(top, 'Guardar el mapa acumulado y descargar el .glb (se ve como aquí; copia con metadatos en runtime/scans)', 'download', async () => {
+  const DOWNLOADS = [
+    { format: 'glb', ext: '.glb', doing: 'Se descarga el .glb', label: 'Modelo 3D (.glb)', hint: 'se ve como aquí' },
+    { format: 'coords', ext: '.coords.json', doing: 'Se descargan las coordenadas', label: 'Coordenadas (.json)',
+      hint: '[x, y, z] en m del centro de cada cubo' },
+  ]
+  const menu = el('div', 'lv-menu', mount)
+  menu.style.display = 'none'
+  menu.setAttribute('role', 'menu')
+  for (const d of DOWNLOADS) {
+    const item = el('button', 'lv-menu-item', menu)
+    item.type = 'button'
+    item.setAttribute('role', 'menuitem')
+    item.innerHTML = `${d.label}<small>${d.hint}</small>`
+    item.addEventListener('click', () => { item.blur(); showMenu(false); saveAndDownload(d) })
+  }
+  el('div', 'lv-menu-note', menu).textContent =
+    'Se guarda todo en runtime/scans. Con el mapa en pausa, las dos descargas salen del mismo escaneo.'
+  const downloadBtn = darkButton(top, 'Guardar el mapa acumulado y descargar: modelo 3D (.glb) o coordenadas (.json)',
+    'download', () => showMenu(menu.style.display === 'none'))
+  function showMenu(on) {
+    menu.style.display = on ? '' : 'none'
+    downloadBtn.classList.toggle('active', on)
+    if (on) toastEl.style.display = 'none'
+  }
+  // El menú se cierra al pulsar fuera o con Escape
+  const onDocDown = (e) => {
+    if (menu.style.display !== 'none' && !menu.contains(e.target) && !downloadBtn.contains(e.target)) showMenu(false)
+  }
+  const onDocKey = (e) => { if (e.key === 'Escape') showMenu(false) }
+  document.addEventListener('pointerdown', onDocDown)
+  document.addEventListener('keydown', onDocKey)
+
+  async function saveAndDownload(d) {
     if (saving) return
     if (ui.mode !== 'slam') { ui.mode = 'slam'; stream(); render() }
     saving = true
@@ -250,19 +285,21 @@ export function mountLidarView(mount, { onStats } = {}) {
       const m = await r.json().catch(() => ({}))
       if (!r.ok) { toast(typeof m.detail === 'string' ? m.detail : 'No se pudo guardar el mapa.', true); return }
       const a = Object.assign(document.createElement('a'), {
-        href: `/api/scans/${encodeURIComponent(m.id)}/download?format=glb`,
-        download: `${m.id}.glb`,
+        href: `/api/scans/${encodeURIComponent(m.id)}/download?format=${d.format}`,
+        download: `${m.id}${d.ext}`,
       })
       a.click()
-      const n = m.provenance?.mesh?.voxels ?? 0
-      toast(`Guardado ${m.id}: ${n.toLocaleString('es-ES')} vóxeles. Se descarga el .glb; el .ply y los ` +
-        'metadatos quedan en runtime/scans.')
+      const n = (m.provenance?.mesh?.voxels ?? 0).toLocaleString('es-ES')
+      toast(m.reused
+        ? `Sin cambios desde el último guardado: ${d.doing.toLowerCase()} de ese mismo escaneo (${m.id}).`
+        : `Guardado ${m.id}: ${n} vóxeles. ${d.doing}; el .ply, el .glb, las coordenadas y los ` +
+          'metadatos quedan en runtime/scans.')
     } catch (e) {
       toast('Sin respuesta del dashboard: no se pudo guardar.', true)
     } finally {
       saving = false
     }
-  })
+  }
 
   // Abajo a la derecha: acercar, alejar, seguir al robot
   const zoomBox = el('div', 'lv-zoom', mount)
@@ -344,6 +381,8 @@ export function mountLidarView(mount, { onStats } = {}) {
     clearInterval(statsTimer)
     clearTimeout(confirmTimer)
     clearTimeout(toastTimer)
+    document.removeEventListener('pointerdown', onDocDown)
+    document.removeEventListener('keydown', onDocKey)
     source.disconnect()
     offCloud(); offPose(); offSlam(); offInfo()
     ro.disconnect()
@@ -370,33 +409,25 @@ if (host) {
     slam: 'Acumulado: unión filtrada de los mapas del robot (un vóxel cuenta si sale en varios mapas). '
       + 'Dato DERIVADO, sin cierre de bucles: la deriva de la odometría puede desplazar paredes.',
   }
-  // El origen de los datos lo pone app.js (window.terrainxStatus, de /api/status): el visor no
-  // debe llamar «medido» a una sesión SINTÉTICA reproducida.
+  // La clase de evidencia del acumulado la pone app.js (window.terrainxStatus, de /api/status).
   const EVIDENCE = { robot_measured: 'medido', synthetic_test: 'SINTÉTICO (demo)', derived: 'derivado' }
   mountLidarView(host, {
     onStats: ({ mode, voxels, fps, receiving }) => {
       const st = window.terrainxStatus || {}
-      const src = st.source || {}
-      const replay = src.kind === 'replay'
       const slamEv = st.slam?.evidence_class
       $('lidar-count').textContent = receiving
         ? `${voxels.toLocaleString('es-ES')} vóxeles · ${fps} fps` : 'sin datos'
       let badge, cls
       if (mode === 'slam') {
-        badge = `acumulado · ${EVIDENCE[slamEv] || 'derivado'}${replay ? ' · replay' : ''}`
+        badge = `acumulado · ${EVIDENCE[slamEv] || 'derivado'}`
         cls = slamEv === 'synthetic_test' ? 'demo' : 'warn'
-      } else if (replay) {
-        badge = `replay · ${EVIDENCE[src.evidence_class] || src.evidence_class}`
-        cls = src.demo ? 'demo' : 'replay'
       } else {
         badge = 'en vivo · medido'
         cls = 'live'
       }
       $('lidar-badge').textContent = badge
       $('lidar-badge').className = 'badge ' + cls
-      $('lidar-note').textContent = replay
-        ? `REPLAY de la sesión ${src.session_id}: los mapas se reproducen tal como se grabaron. ` + NOTE[mode]
-        : NOTE[mode]
+      $('lidar-note').textContent = NOTE[mode]
     },
   })
 }

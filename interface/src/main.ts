@@ -2,10 +2,11 @@ import './styles.css';
 import { EarthSceneManager } from './babylon/earthScene';
 import { MiniPlanetViewer } from './babylon/miniPlanets';
 import { AnalogMap2DManager } from './map/analogMap2D';
-import { generateRandomAnalogCoordinates, PLANET_METRICS } from './data/analogs';
+import { generateRandomAnalogCoordinates, PLANET_METRICS, getCandidatesForBody } from './data/analogs';
 import { sound } from './audio';
-import { CelestialBody, AnalogSite, PlanetaryLayerMode } from './types';
+import { CelestialBody, AnalogSite, PlanetaryLayerMode, AnalogCandidateItem } from './types';
 import { formatPlanetaryCoordinates, VERIFIED_PLANETARY_POIS } from './nasa/trekProviders';
+import { XRDetector } from './xr/xrDetector';
 
 // Estado global de la aplicación
 let activeBody: CelestialBody = 'Earth';
@@ -15,6 +16,7 @@ let earthScene: EarthSceneManager;
 let miniMoon: MiniPlanetViewer;
 let miniMars: MiniPlanetViewer;
 let map2DManager: AnalogMap2DManager;
+let isVRModeActive = false;
 
 /**
  * Coordinador de carga en tiempo real para el splash screen:
@@ -144,6 +146,11 @@ class SplashLoadingCoordinator {
         setTimeout(() => {
           this.splashEl?.remove();
           cancelAnimationFrame(this.animId);
+
+          // Si se detectó o solicitó Realidad Virtual, abrir el modal de bienvenida
+          if (isVRModeActive) {
+            showVRWelcomeModal();
+          }
         }, 750);
       }
     }, 380);
@@ -158,8 +165,44 @@ class SplashLoadingCoordinator {
   }
 }
 
+function showVRWelcomeModal() {
+  const modal = document.getElementById('vrWelcomeModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+  }
+
+  const btnStartVR = document.getElementById('btnStartVR');
+  if (btnStartVR) {
+    btnStartVR.onclick = () => {
+      sound.playClick(900);
+      modal?.classList.add('hidden');
+      document.body.classList.add('vr-mode');
+      earthScene.enterXREnvironment((switchedPlanet) => {
+        selectCelestialTarget(switchedPlanet);
+      });
+    };
+  }
+
+  const btnExitVRMode = document.getElementById('btnExitVRMode');
+  if (btnExitVRMode) {
+    btnExitVRMode.onclick = () => {
+      sound.playClick(500);
+      modal?.classList.add('hidden');
+      isVRModeActive = false;
+      document.body.classList.remove('vr-mode');
+      earthScene.exitXREnvironment();
+    };
+  }
+}
+
 async function initApp() {
   const coordinator = new SplashLoadingCoordinator();
+
+  // Detección proactiva de Realidad Virtual (Meta Quest, Pico, VisionPro o ?vr=1)
+  isVRModeActive = await XRDetector.isVRDeviceOrRequested();
+  if (isVRModeActive) {
+    document.body.classList.add('vr-mode');
+  }
 
   // Transición suave del círculo mientras avanza el loadbar
   setTimeout(() => {
@@ -295,12 +338,26 @@ function init2DMapManager() {
       map2DManager.centerOnTarget();
     });
   }
+
+  // Listener del callback de regeneración con main.py
+  map2DManager.setOnMainPyRegen((targetBody) => {
+    generateListFromMainPy(targetBody);
+  });
 }
 
 /**
  * Configuración de eventos de interacción y botones del panel
  */
 function setupUIEventListeners() {
+  // Botón superior en barra principal para ejecutar main.py
+  const btnTopNavMainPyRegen = document.getElementById('btnTopNavMainPyRegen');
+  if (btnTopNavMainPyRegen) {
+    btnTopNavMainPyRegen.addEventListener('click', () => {
+      const target = (activeBody === 'Mars') ? 'Mars' : 'Moon';
+      generateListFromMainPy(target);
+    });
+  }
+
   // 1. Selector Superior Central (Moon / Earth / Mars)
   const selectorOptions = document.querySelectorAll('.selector-option');
   selectorOptions.forEach(btn => {
@@ -428,7 +485,24 @@ function setupUIEventListeners() {
     });
   }
 
-  // 6. Pestañas de subcategoría en las tarjetas
+  // 6. Botón de activación de Realidad Virtual (WebXR)
+  const btnToggleXR = document.getElementById('btnToggleXR');
+  if (btnToggleXR) {
+    btnToggleXR.addEventListener('click', () => {
+      sound.playClick(750);
+      if (!earthScene.getIsXRActive()) {
+        isVRModeActive = true;
+        document.body.classList.add('vr-mode');
+        showVRWelcomeModal();
+      } else {
+        isVRModeActive = false;
+        document.body.classList.remove('vr-mode');
+        earthScene.exitXREnvironment();
+      }
+    });
+  }
+
+  // 7. Pestañas de subcategoría en las tarjetas
   setupCardSubtabs('moonCard', 'Moon');
   setupCardSubtabs('marsCard', 'Mars');
 }
@@ -456,6 +530,26 @@ export function selectCelestialTarget(body: CelestialBody) {
   marsCard?.classList.remove('card-selected', 'mars-selected');
 
   updateBottomDockHighlight(body);
+
+  // Actualizar textos y temas del botón generador de main.py
+  const btnTopNavMainPyText = document.getElementById('btnTopNavMainPyText');
+  const btnTopNavMainPy = document.getElementById('btnTopNavMainPyRegen');
+  const btnMainPyRegenText = document.getElementById('btnMainPyRegenText');
+  const btnMainPy = document.getElementById('btnMainPyRegen');
+  const targetBodyName = body === 'Mars' ? 'Marte' : 'Luna';
+  const regenLabel = `⚡ Generar Lista ${targetBodyName} (main.py)`;
+
+  if (btnTopNavMainPyText) btnTopNavMainPyText.textContent = regenLabel;
+  if (btnMainPyRegenText) btnMainPyRegenText.textContent = regenLabel;
+
+  if (btnTopNavMainPy) {
+    if (body === 'Mars') btnTopNavMainPy.classList.add('mars-mode');
+    else btnTopNavMainPy.classList.remove('mars-mode');
+  }
+  if (btnMainPy) {
+    if (body === 'Mars') btnMainPy.classList.add('mars-mode');
+    else btnMainPy.classList.remove('mars-mode');
+  }
 
   if (body === 'Moon') {
     moonCard?.classList.add('card-selected');
@@ -587,20 +681,102 @@ function showTargetCardLoading(body: 'Moon' | 'Mars') {
 }
 
 /**
+ * Ejecuta el cálculo científico del ranking de 10 candidatos con main.py:
+ * - Si body es 'Moon', envía la petición de la Luna.
+ * - Si body es 'Mars', actualiza el ranking de Marte.
+ * - Sincroniza la lista en el panel lateral derecho desplegable y selecciona el candidato #1.
+ */
+async function generateListFromMainPy(body: 'Moon' | 'Mars') {
+  const hudBtn = document.getElementById('btnMainPyRegen');
+  const hudBtnText = document.getElementById('btnMainPyRegenText');
+  const topNavBtn = document.getElementById('btnTopNavMainPyRegen');
+  const topNavBtnText = document.getElementById('btnTopNavMainPyText');
+  const drawerRegenBtn = document.getElementById('btnDrawerRegen');
+
+  hudBtn?.classList.add('loading');
+  topNavBtn?.classList.add('loading');
+  drawerRegenBtn?.classList.add('loading');
+
+  const loadingLabel = `Ejecutando main.py (${body})...`;
+  if (hudBtnText) hudBtnText.textContent = loadingLabel;
+  if (topNavBtnText) topNavBtnText.textContent = loadingLabel;
+
+  try {
+    sound.playClick(800);
+    const resp = await fetch(`/api/candidates/generate?body=${body.toLowerCase()}&regenerate=true`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: body.toLowerCase(), regenerate: true })
+    });
+
+    let candidates: AnalogCandidateItem[] = [];
+    if (resp.ok) {
+      const data = await resp.json();
+      candidates = data.candidates || [];
+    }
+
+    if (!candidates || candidates.length === 0) {
+      const local = getCandidatesForBody(body);
+      candidates = local.map((s, idx) => ({
+        rank: s.rank || (idx + 1),
+        id: s.id,
+        name: s.name,
+        target_body: s.target_body,
+        pairing: s.pairing || s.region,
+        country: s.country,
+        lat: s.coordinates.latitude,
+        lon: s.coordinates.longitude,
+        score_pct: s.similarity_score,
+        strong_analogies: s.geological_features
+      }));
+    }
+
+    // Si aún estamos en la vista orbital o el mapa 2D no está activo, buceamos hacia el candidato #1
+    if (!map2DManager || !map2DManager.isMapActive()) {
+      await generateAndDiveToAnalog(body, candidates[0]?.id);
+    } else {
+      map2DManager.setCandidates(candidates, body);
+      if (candidates.length > 0) {
+        map2DManager.switchToCandidate(candidates[0]);
+      }
+      map2DManager.toggleCandidatesDrawer(true);
+    }
+
+    sound.playSuccess();
+  } catch (err) {
+    console.error('Error al generar candidatos con main.py:', err);
+    sound.playError();
+  } finally {
+    hudBtn?.classList.remove('loading');
+    topNavBtn?.classList.remove('loading');
+    drawerRegenBtn?.classList.remove('loading');
+    const finalLabel = body === 'Mars' ? '⚡ Generar Lista Marte (main.py)' : '⚡ Generar Lista Luna (main.py)';
+    if (hudBtnText) hudBtnText.textContent = finalLabel;
+    if (topNavBtnText) topNavBtnText.textContent = finalLabel;
+  }
+}
+
+/**
  * Transición cinematográfica fotorrealista y sin cortes:
- * 1. Obtiene las coordenadas científicas del análogo planetario directamente del backend main.py.
+ * 1. Obtiene las coordenadas científicas del análogo planetario directamente del backend main.py
+ *    y del catálogo global de 10 candidatos (global_analog_catalog_20.json).
  * 2. La Tierra 3D rota suavemente y la cámara desciende en zoom continuo.
  * 3. Al alcanzar baja órbita, transiciona de forma imperceptible hacia el mapa satelital 2D de alta resolución.
  * 4. Activa la previsualización 3D del radio alrededor de la ubicación generada por generate_terrain_3D.py.
  */
-async function generateAndDiveToAnalog(body: 'Moon' | 'Mars') {
+async function generateAndDiveToAnalog(body: 'Moon' | 'Mars', specificSiteId?: string) {
   showTargetCardLoading(body);
 
   try {
-    // 1. Llamada a la API backend impulsada por main.py / analyze_analog.py
-    const resp = await fetch(`/api/analog?body=${body.toLowerCase()}`);
+    // 1. Llamada a la API backend impulsada por main.py / analyze_analog.py y global_analog_catalog_20.json
+    const queryUrl = specificSiteId
+      ? `/api/analog?body=${body.toLowerCase()}&site=${encodeURIComponent(specificSiteId)}`
+      : `/api/analog?body=${body.toLowerCase()}`;
+    const resp = await fetch(queryUrl);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
+
+    const candidates: AnalogCandidateItem[] = data.candidates || [];
 
     const site: AnalogSite = {
       id: data.site.id,
@@ -609,41 +785,60 @@ async function generateAndDiveToAnalog(body: 'Moon' | 'Mars') {
       coordinates: {
         latitude: data.site.coordinates.latitude,
         longitude: data.site.coordinates.longitude,
-        label: `${Math.abs(data.site.coordinates.latitude).toFixed(3)}° ${data.site.coordinates.latitude >= 0 ? 'N' : 'S'}, ${Math.abs(data.site.coordinates.longitude).toFixed(3)}° ${data.site.coordinates.longitude >= 0 ? 'E' : 'W'}`
+        label: `${Math.abs(data.site.coordinates.latitude).toFixed(4)}° ${data.site.coordinates.latitude >= 0 ? 'N' : 'S'}, ${Math.abs(data.site.coordinates.longitude).toFixed(4)}° ${data.site.coordinates.longitude >= 0 ? 'E' : 'W'}`
       },
-      region: data.primary_region || 'Región Análoga',
-      country: siteCountryLookup(data.site.id),
-      geological_features: ['Lava Tube Skylights', 'Basalt Flows', 'Subsurface Cavity'],
+      region: data.site.pairing || data.primary_region || 'Región Análoga',
+      country: data.site.country || siteCountryLookup(data.site.id),
+      geological_features: data.site.strong_analogies || ['Lava Tube Skylights', 'Basalt Flows', 'Subsurface Cavity'],
       scientific_justification: data.site.scientific_justification,
       similarity_score: data.site.similarity_score,
       coverage_percentage: 100,
-      sources: data.site.sources || ['NASA CMR', 'NASA POWER', 'USGS'],
-      status: 'validated'
+      sources: data.site.sources || ['NASA CMR', 'NASA POWER', 'IGN PNOA-LiDAR'],
+      status: (data.site.status as any) || 'validated',
+      rank: data.site.rank || 1,
+      candidates
     };
 
     currentSelectedSite = site;
-    showTargetCard(site, body);
+    showTargetCard(site, body, candidates);
 
     const lat = site.coordinates.latitude;
     const lon = site.coordinates.longitude;
 
     // 2. Animación cinematográfica de rotación y zoom hacia la superficie
     earthScene.animateToCoordinatesAndDive(lat, lon, () => {
-      // Al alcanzar baja órbita, transiciona al mapa satelital 2D y activa el entorno 3D
-      map2DManager.triggerSeamlessZoomDive(site);
+      // Al alcanzar baja órbita, transiciona al mapa satelital 2D y activa el entorno 3D con los 10 candidatos sincronizados
+      map2DManager.triggerSeamlessZoomDive(site, 5, candidates);
     });
   } catch (err) {
-    console.warn('Backend /api/analog no disponible, usando fallback local:', err);
-    const result = generateRandomAnalogCoordinates(body);
-    currentSelectedSite = result.site;
-    showTargetCard(result.site, body);
-    earthScene.animateToCoordinatesAndDive(result.coordinates.latitude, result.coordinates.longitude, () => {
-      map2DManager.triggerSeamlessZoomDive(result.site);
+    console.warn('Backend /api/analog no disponible, usando fallback local de 10 candidatos:', err);
+    const localCandidates = getCandidatesForBody(body);
+    const baseCandidate = specificSiteId
+      ? (localCandidates.find(s => s.id === specificSiteId) || localCandidates[0])
+      : localCandidates[0];
+
+    const localCandidatesMapped: AnalogCandidateItem[] = localCandidates.map((s, idx) => ({
+      rank: s.rank || (idx + 1),
+      id: s.id,
+      name: s.name,
+      target_body: s.target_body,
+      pairing: s.pairing || s.region,
+      country: s.country,
+      lat: s.coordinates.latitude,
+      lon: s.coordinates.longitude,
+      score_pct: s.similarity_score
+    }));
+
+    baseCandidate.candidates = localCandidatesMapped;
+    currentSelectedSite = baseCandidate;
+    showTargetCard(baseCandidate, body, localCandidatesMapped);
+    earthScene.animateToCoordinatesAndDive(baseCandidate.coordinates.latitude, baseCandidate.coordinates.longitude, () => {
+      map2DManager.triggerSeamlessZoomDive(baseCandidate, 5, localCandidatesMapped);
     });
   }
 }
 
-function showTargetCard(site: AnalogSite, body: 'Moon' | 'Mars') {
+function showTargetCard(site: AnalogSite, body: 'Moon' | 'Mars', candidates?: AnalogCandidateItem[]) {
   let card = document.getElementById('targetSiteCard');
   if (!card) {
     card = document.createElement('div');
@@ -653,19 +848,57 @@ function showTargetCard(site: AnalogSite, body: 'Moon' | 'Mars') {
   }
 
   const badgeClass = body === 'Moon' ? 'moon-badge' : 'mars-badge';
+  const rankNum = site.rank || 1;
+  const cands = (candidates && candidates.length > 0) ? candidates : (site.candidates || []);
+
+  let candidatesStripHtml = '';
+  if (cands && cands.length > 0) {
+    const pillsHtml = cands.map(c => {
+      const isAct = c.id === site.id ? 'active' : '';
+      const shortName = c.name.split('(')[0].trim();
+      return `<button class="card-candidate-btn ${isAct}" data-site-id="${c.id}" title="${c.name} (${c.score_pct}%)">
+        <span>#${c.rank} ${shortName}</span>
+        <span class="cand-score">${c.score_pct}%</span>
+      </button>`;
+    }).join('');
+
+    candidatesStripHtml = `
+      <div class="target-candidates-strip">
+        ${pillsHtml}
+      </div>
+    `;
+  }
+
   card.innerHTML = `
-    <div class="site-badge ${badgeClass}">${body} Analog</div>
-    <div class="site-info-text">
-      <h4>${site.name}</h4>
-      <p>📍 ${site.region}, ${site.country} — <span style="color:var(--cyan-glow);">${site.coordinates.label}</span></p>
-      <p style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">🔬 ${site.scientific_justification}</p>
+    <div style="display:flex; align-items:center; gap:16px; width:100%;">
+      <div class="site-badge ${badgeClass}">${body} Analog #${rankNum}</div>
+      <div class="site-info-text" style="flex:1;">
+        <h4>${site.name}</h4>
+        <p>📍 ${site.region}, ${site.country} — <span style="color:var(--cyan-glow);">${site.coordinates.label}</span></p>
+        <p style="font-size:0.72rem; color:var(--text-dim); margin-top:2px;">🔬 ${site.scientific_justification}</p>
+      </div>
+      <div class="site-score-pill">
+        <span class="score-num">${site.similarity_score}%</span>
+        <span class="score-lbl">Similitud</span>
+      </div>
     </div>
-    <div class="site-score-pill">
-      <span class="score-num">${site.similarity_score}%</span>
-      <span class="score-lbl">Similitud</span>
-    </div>
+    ${candidatesStripHtml}
   `;
   card.style.display = 'flex';
+  card.style.flexDirection = 'column';
+
+  // Configurar listeners de clic para alternar instantáneamente entre los 10 candidatos
+  const candBtns = card.querySelectorAll('.card-candidate-btn');
+  candBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const siteId = btn.getAttribute('data-site-id');
+      if (siteId && siteId !== site.id) {
+        sound.playClick(650);
+        generateAndDiveToAnalog(body, siteId);
+      }
+    });
+  });
 }
 
 function hideTargetCard() {

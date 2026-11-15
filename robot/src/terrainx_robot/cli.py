@@ -6,9 +6,7 @@ Uso (PowerShell, desde la carpeta robot/):
 Comandos
     info            configuración efectiva (sin secretos) y versiones
     check-library   verifica la API de unitree_webrtc_connect instalada
-    demo-session    genera una sesión SINTÉTICA para probar sin robot
-    probe           sondeo de capacidades (go2 o replay)
-    record          graba una sesión cruda del robot para replay posterior
+    probe           sondeo de capacidades del robot
     capture         captura LiDAR -> PLY + metadatos JSON + SHA-256
     list-scans      lista escaneos guardados
     verify-scan     recalcula los SHA-256 de un escaneo
@@ -34,14 +32,11 @@ from .auth.aes_key_manager import DEFAULT_STORE, AesKeyManager, AuthError
 from .config import ConfigError, Settings, load_settings
 from .models import (
     CapabilityReport,
-    EvidenceClass,
     RobotStatus,
     ScanContext,
     ScanMetadata,
-    SessionInfo,
 )
 from .storage.scan_store import ScanStore, ScanStoreError
-from .storage.session_log import SessionError
 from .util import software_versions, write_json_atomic
 
 log = logging.getLogger("terrainx_robot")
@@ -98,46 +93,20 @@ def _print_json(data) -> None:
     print(json.dumps(data, indent=2, ensure_ascii=False, default=str))
 
 
-def _latest_session(data_dir: Path) -> Path:
-    sessions = data_dir / "sessions"
-    candidates = [p for p in sessions.glob("*") if (p / "session.json").is_file()] if sessions.is_dir() else []
-    if not candidates:
-        raise SessionError(
-            f"no hay sesiones en {sessions}. Genere una con: python -m terrainx_robot demo-session"
-        )
-    return max(candidates, key=lambda p: (p / "session.json").stat().st_mtime)
-
-
 def _build_adapter(args, settings: Settings, store: ScanStore) -> RobotAdapter:
-    if args.source == "go2":
-        from .adapters.go2_webrtc import Go2WebRTCAdapter
+    from .adapters.go2_webrtc import Go2WebRTCAdapter
 
-        return Go2WebRTCAdapter(
-            settings,
-            store,
-            scan_context=ScanContext(getattr(args, "context", "controlled_test")),
-            explore=getattr(args, "explore", False),
-        )
-    from .adapters.replay import ReplayAdapter
-
-    if not args.input:
-        raise ValueError("--source replay necesita --input <sesión | archivo.ply | latest>")
-    source = _latest_session(settings.data_dir) if args.input == "latest" else Path(args.input)
-    evidence = EvidenceClass(args.evidence_class) if getattr(args, "evidence_class", None) else None
-    return ReplayAdapter(source, store, speed=args.speed, evidence_class=evidence)
+    return Go2WebRTCAdapter(
+        settings,
+        store,
+        scan_context=ScanContext(getattr(args, "context", "controlled_test")),
+        explore=getattr(args, "explore", False),
+    )
 
 
-def _add_source_args(parser: argparse.ArgumentParser, *, replay: bool = True) -> None:
-    choices = ["go2", "replay"] if replay else ["go2"]
-    parser.add_argument("--source", choices=choices, required=True, help="go2 = robot real; replay = offline")
-    if replay:
-        parser.add_argument("--input", help="replay: carpeta de sesión, archivo .ply o 'latest'")
-        parser.add_argument("--speed", type=float, default=0.0, help="replay: 0 = lo más rápido; 1 = tiempo real")
-        parser.add_argument(
-            "--evidence-class",
-            choices=[e.value for e in EvidenceClass if e is not EvidenceClass.ORBITAL_NASA],
-            help="replay de un PLY SIN metadatos: origen declarado por el operador",
-        )
+def _add_source_args(parser: argparse.ArgumentParser) -> None:
+    # Solo hay una fuente: el robot real. Se acepta «--source go2» para no romper los comandos de siempre.
+    parser.add_argument("--source", choices=["go2"], default="go2", help="go2 = robot real (única fuente)")
     parser.add_argument(
         "--context",
         choices=[ScanContext.CONTROLLED_TEST.value, ScanContext.FIELD_CAMPAIGN.value],
@@ -233,30 +202,17 @@ def cmd_check_library(args, settings: Settings) -> int:
     return 0 if all(ok for _, ok, _ in results) else 1
 
 
-def cmd_demo_session(args, settings: Settings) -> int:
-    from .fixtures.synthetic import write_synthetic_session
-
-    info: SessionInfo = write_synthetic_session(settings.data_dir / "sessions", n_frames=args.frames, seed=args.seed)
-    print(f"Sesión SINTÉTICA creada (evidence_class=synthetic_test, demo=true): {info.session_id}")
-    print(f"  carpeta : {settings.data_dir / 'sessions' / info.session_id}")
-    print(f"  mensajes: {info.record_count} ({info.lidar_records} LiDAR, {info.json_records} telemetría)")
-    return 0
-
-
 async def _probe(args, settings: Settings, store: ScanStore) -> CapabilityReport:
     from .probe.capability_probe import run_probe
     from .probe.network import LOCAL_AP_IP, signaling_preflight
 
     preflight = None
-    if args.source == "go2" and not args.skip_preflight:
+    if not args.skip_preflight:
         ip = settings.go2.ip or (LOCAL_AP_IP if settings.go2.method == "LocalAP" else None)
         preflight = signaling_preflight(ip) if ip else {"skipped": "sin IP configurada (descubrimiento por serie)"}
     adapter = _build_adapter(args, settings, store)
-    # go2: 10 s por defecto. replay: sin --window se reproduce la fuente completa (None).
-    window = args.window if args.window is not None else (10.0 if args.source == "go2" else None)
-    return await run_probe(
-        adapter, window_s=window, network_preflight=preflight, record_session=args.record_session
-    )
+    window = args.window if args.window is not None else 10.0
+    return await run_probe(adapter, window_s=window, network_preflight=preflight)
 
 
 def cmd_probe(args, settings: Settings) -> int:
@@ -275,37 +231,17 @@ def cmd_probe(args, settings: Settings) -> int:
     return {"ok": 0, "degraded": 2, "failed": 1}[report.overall_status]
 
 
-def cmd_record(args, settings: Settings) -> int:
-    store = ScanStore(settings.data_dir)
-    adapter = _build_adapter(args, settings, store)
-
-    async def run() -> SessionInfo | None:
-        await adapter.connect()
-        try:
-            return await adapter.observe(args.duration, record_session=True, notes=args.notes)
-        finally:
-            await adapter.disconnect()
-
-    info = asyncio.run(run())
-    print(f"Sesión grabada ({info.evidence_class.value}): {info.session_id}")
-    print(f"  mensajes: {info.record_count} ({info.lidar_records} LiDAR, {info.json_records} telemetría)")
-    print(f"  carpeta : {settings.data_dir / 'sessions' / info.session_id}")
-    return 0 if info.lidar_records else 2
-
-
 def cmd_capture(args, settings: Settings) -> int:
     store = ScanStore(settings.data_dir)
     adapter = _build_adapter(args, settings, store)
     duration = args.duration
-    if args.source == "go2" and (duration is None or duration <= 0):
+    if duration is None or duration <= 0:
         raise ValueError("--duration (s) es obligatorio con el robot real")
 
     async def run() -> tuple[ScanMetadata, RobotStatus]:
         await adapter.connect()
         try:
-            meta = await adapter.capture(
-                duration, mode=args.mode, record_session=args.record_session, binary_ply=not args.ascii
-            )
+            meta = await adapter.capture(duration, mode=args.mode, binary_ply=not args.ascii)
             return meta, adapter.get_status()
         finally:
             await adapter.disconnect()
@@ -389,7 +325,6 @@ def cmd_export_schemas(args, settings: Settings) -> int:
         ("scan_metadata", ScanMetadata),
         ("capability_report", CapabilityReport),
         ("robot_status", RobotStatus),
-        ("session_info", SessionInfo),
     ):
         # Modo "serialization": describe el JSON que PRODUCE el módulo (lo que consumen los demás).
         write_json_atomic(out / f"{name}.schema.json", model.model_json_schema(mode="serialization"))
@@ -421,26 +356,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--from-file", help="archivo con la clave; si se omite, se pega por teclado")
     p.add_argument("--serial", help="SN asociado (opcional, solo informativo)")
 
-    p = sub.add_parser("demo-session", help="genera una sesión SINTÉTICA")
-    p.add_argument("--frames", type=int, default=8)
-    p.add_argument("--seed", type=int, default=7)
-
     p = sub.add_parser("probe", help="sondeo de capacidades")
     _add_source_args(p)
-    p.add_argument("--window", type=float, help="segundos de escucha (go2: 10 por defecto; replay: toda la fuente)")
-    p.add_argument("--record-session", action="store_true", help="grabar lo recibido como sesión")
-    p.add_argument("--skip-preflight", action="store_true", help="go2: no comprobar puertos 9991/8081")
-
-    p = sub.add_parser("record", help="graba una sesión cruda del robot")
-    _add_source_args(p, replay=False)
-    p.add_argument("--duration", type=float, required=True)
-    p.add_argument("--notes", help="descripción de la escena/ensayo")
+    p.add_argument("--window", type=float, help="segundos de escucha (10 por defecto)")
+    p.add_argument("--skip-preflight", action="store_true", help="no comprobar puertos 9991/8081")
 
     p = sub.add_parser("capture", help="captura LiDAR -> PLY + metadatos")
     _add_source_args(p)
-    p.add_argument("--duration", type=float, help="segundos (obligatorio con go2; replay: toda la fuente)")
+    p.add_argument("--duration", type=float, help="segundos de captura (obligatorio)")
     p.add_argument("--mode", choices=["accumulate", "last"], default="accumulate")
-    p.add_argument("--record-session", action="store_true", help="grabar también los datos crudos")
     p.add_argument("--ascii", action="store_true", help="PLY ascii en vez de binario")
 
     p = sub.add_parser("list-scans", help="lista escaneos")
@@ -468,9 +392,7 @@ COMMANDS = {
     "unitree-devices": cmd_unitree_devices,
     "unitree-fetch-key": cmd_unitree_fetch_key,
     "import-aes-key": cmd_import_aes_key,
-    "demo-session": cmd_demo_session,
     "probe": cmd_probe,
-    "record": cmd_record,
     "capture": cmd_capture,
     "list-scans": cmd_list_scans,
     "verify-scan": cmd_verify_scan,
@@ -500,7 +422,7 @@ def main(argv: list[str] | None = None) -> int:
     except AuthError as exc:
         print(f"Error de autenticación: {exc}", file=sys.stderr)
         return 1
-    except (CaptureError, ScanStoreError, SessionError, ValueError) as exc:
+    except (CaptureError, ScanStoreError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:

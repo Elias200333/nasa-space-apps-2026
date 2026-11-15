@@ -30,21 +30,6 @@
       <div class="cam-meta"><span id="cam-fps">FPS: —</span> · <span id="cam-frames">fotogramas: 0</span></div>
     </section>
 
-    <!-- TELEMETRÍA -->
-    <section class="panel telemetry">
-      <h2>Telemetría</h2>
-      <table id="telemetry">
-        <tr><td>Conexión</td><td id="t-conn">—</td></tr>
-        <tr><td>Batería (SOC)</td><td id="t-batt">—</td></tr>
-        <tr><td>Voltaje</td><td id="t-volt">—</td></tr>
-        <tr><td>IMU (RPY)</td><td id="t-imu">—</td></tr>
-        <tr><td>Posición</td><td id="t-pos">—</td></tr>
-        <tr><td>LiDAR</td><td id="t-lidar">—</td></tr>
-        <tr><td>Vídeo</td><td id="t-video">—</td></tr>
-      </table>
-      <p class="note">Un valor "no disponible" significa que el robot no lo publica. No se muestran datos inventados.</p>
-    </section>
-
     <!-- CONTROL WASD -->
     <section class="panel control">
       <h2>Conducción (WASD) <span id="ctrl-badge" class="badge">sin robot</span></h2>
@@ -88,8 +73,8 @@
       <p class="note" id="lidar-note">Vóxeles ocupados del mapa del robot (no retornos crudos). Ejes en metros (asumido).</p>
       <p class="note">Arriba a la derecha: <b>papelera</b> = empezar un mapa nuevo · <b>pausa</b> = dejar de sumar
         (lo que ves es lo que se guarda) · <b>descarga</b> = guardar el mapa acumulado y bajar el <b>.glb</b>, que se
-        ve como aquí (en Blender: «Vista previa del material»). También queda guardado, con metadatos, el .ply y
-        el .glb en runtime/scans.</p>
+        ve como aquí (en Blender: «Vista previa del material»), o las <b>coordenadas</b> (.json: [x, y, z] del centro
+        de cada cubo). Todo queda guardado, con metadatos, en runtime/scans: .ply, .glb y .coords.json.</p>
       <div class="ctrl-row slam-row">
         <span id="slam-info" class="note">Acumulado: —</span>
       </div>
@@ -129,38 +114,26 @@
         son nuestros, no de Unitree. "no disponible" = el robot no lo publica.</p>
     </section>
 
-    <!-- REPLAY -->
-    <section class="panel replay">
-      <h2>Replay · demo sin robot <span id="replay-badge" class="badge">—</span></h2>
-      <p class="note">Reproduce una sesión grabada por el mismo camino que el robot real: mapa, posición y
-        telemetría. Sin control y sin cámara (las sesiones no graban vídeo). Una sesión sintética se muestra
-        siempre como DEMO.</p>
-      <div class="ctrl-row">
-        <button id="btn-record" class="small" disabled>● Grabar sesión</button>
-        <span id="record-status" class="note">Para grabar, conecta el robot.</span>
-      </div>
-      <div class="ctrl-row">
-        <button id="btn-sessions" class="secondary small">Actualizar lista</button>
-        <label class="chk"><input type="checkbox" id="replay-loop" checked /> en bucle</label>
-        <button id="btn-replay-stop" class="secondary small" disabled>■ Parar replay</button>
-      </div>
-      <table id="sessions"><thead><tr><th>Sesión</th><th>Origen</th><th>Datos</th><th></th></tr></thead><tbody></tbody></table>
-      <div id="replay-status" class="note">—</div>
-    </section>
-
     <!-- AUTENTICACIÓN UNITREE -->
     <section class="panel auth">
       <h2>Unitree — Conexión y autenticación</h2>
       <div id="auth-status" class="note">Clave AES: —</div>
-      <div class="auth-form">
-        <input id="au-email" type="email" placeholder="correo de la cuenta Unitree" autocomplete="username" />
-        <input id="au-pass" type="password" placeholder="contraseña" autocomplete="current-password" />
-        <button id="btn-devices">Vincular cuenta</button>
-      </div>
-      <div id="dev-list"></div>
-      <button id="btn-fetch" disabled>Recuperar y guardar clave del robot seleccionado</button>
-      <p class="note">La contraseña no se guarda. La clave se almacena fuera del repositorio y nunca se muestra:
-        solo verás "Clave configurada" y una huella corta.</p>
+      <!-- Con la clave ya guardada, el formulario queda plegado: para conectar solo se usan la IP
+           y la clave; el correo y la contraseña solo sirven para recuperarla de la nube. -->
+      <details id="auth-renew">
+        <summary id="auth-summary">Vincular la cuenta y recuperar la clave</summary>
+        <div class="auth-form">
+          <input id="au-email" type="email" placeholder="correo de la cuenta Unitree" autocomplete="username" />
+          <input id="au-pass" type="password" placeholder="contraseña" autocomplete="current-password" />
+          <button id="btn-devices">Vincular cuenta</button>
+        </div>
+        <div id="dev-list"></div>
+        <button id="btn-fetch" disabled>Recuperar y guardar clave del robot seleccionado</button>
+        <div id="auth-msg" class="note"></div>
+        <p class="note">Solo hace falta la primera vez o si el perro rechaza la clave. La contraseña no se
+          guarda (ni ningún token). La clave se almacena fuera del repositorio y nunca se muestra: solo
+          una huella corta. Tras guardar una clave nueva, reinicia el dashboard: la lee al arrancar.</p>
+      </details>
     </section>
 
     <!-- DIAGNÓSTICO -->

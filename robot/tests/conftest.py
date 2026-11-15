@@ -7,8 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from terrainx_robot.fixtures.synthetic import write_synthetic_session
+from terrainx_robot.adapters.base import RobotAdapter
+from terrainx_robot.adapters.go2_topics import LIDAR_VOXEL_COMPRESSED, LOW_STATE
+from terrainx_robot.fixtures.synthetic import generate_frames
+from terrainx_robot.models import DeliveryMode, EvidenceClass, RobotDescriptor, ScanContext
 from terrainx_robot.storage.scan_store import ScanStore
+from terrainx_robot.util import utc_now
 
 
 def run(coro):
@@ -35,10 +39,36 @@ def store(data_dir: Path) -> ScanStore:
     return ScanStore(data_dir)
 
 
-@pytest.fixture
-def synthetic_session(data_dir: Path) -> Path:
-    info = write_synthetic_session(data_dir / "sessions", n_frames=6, seed=11)
-    return data_dir / "sessions" / info.session_id
+class SyntheticAdapter(RobotAdapter):
+    """Adaptador de PRUEBA: entrega mapas SINTÉTICOS (y un lowstate cada dos mapas) por el mismo
+    camino que el robot real (_ingest_lidar_message / _ingest_json). Todo sale synthetic_test."""
+
+    adapter_name = "test_synthetic"
+
+    def __init__(self, store: ScanStore, n_frames: int = 6, seed: int = 11) -> None:
+        super().__init__(
+            descriptor=RobotDescriptor(robot_id="test", platform="synthetic_generator",
+                                       adapter=self.adapter_name, delivery_mode=DeliveryMode.LIVE),
+            store=store, evidence_class=EvidenceClass.SYNTHETIC_TEST, scan_context=ScanContext.SYNTHETIC)
+        self.frames = generate_frames(n_frames, seed=seed)
+
+    async def _open(self) -> None:
+        return None
+
+    async def _close(self) -> None:
+        return None
+
+    async def _run_window(self, duration_s: float | None) -> None:
+        for i, f in enumerate(self.frames):
+            if duration_s is not None and f.t_rel_s > duration_s:
+                break
+            self._ingest_lidar_message(topic=LIDAR_VOXEL_COMPRESSED, meta=f.meta, raw=f.payload,
+                                       host_utc=utc_now())
+            if i % 2 == 0:
+                self._ingest_json(topic=LOW_STATE, host_utc=utc_now(), data={
+                    "_synthetic": True, "imu_state": {"rpy": [0.0, 0.0, 0.0]},
+                    "bms_state": {"soc": 90 - i}, "power_v": 25.0})
+            await asyncio.sleep(0)
 
 
 # --- Librería Go2 FALSA compartida (sin robot ni red) -----------------------

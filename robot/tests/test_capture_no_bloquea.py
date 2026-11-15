@@ -12,8 +12,7 @@ import time
 
 import numpy as np
 
-from conftest import run
-from terrainx_robot.adapters.replay import ReplayAdapter
+from conftest import SyntheticAdapter, run
 from terrainx_robot.cli import _LibraryNoiseFilter
 from terrainx_robot.fixtures.synthetic import generate_frames
 from terrainx_robot.lidar.accumulator import CaptureAccumulator
@@ -82,8 +81,8 @@ def test_captura_del_tamano_de_pluffy_se_cierra_al_instante():
         [base + np.array([k * 0.05, 0, 0]) for k in range(7)]) / 0.05).astype(np.int64), axis=0).shape[0]
 
 
-def test_detener_y_guardar_no_congela_el_bucle(store, synthetic_session, monkeypatch):
-    adapter = ReplayAdapter(synthetic_session, store)
+def test_detener_y_guardar_no_congela_el_bucle(store, monkeypatch):
+    adapter = SyntheticAdapter(store)
     real_save = store.save
 
     def slow_save(*a, **kw):          # guardado lento (disco lento, nube grande…)
@@ -94,7 +93,7 @@ def test_detener_y_guardar_no_congela_el_bucle(store, synthetic_session, monkeyp
 
     async def go():
         await adapter.connect()
-        await adapter.start_capture(record_session=False)
+        await adapter.start_capture()
         await adapter._run_window(None)
         gaps = []
 
@@ -121,7 +120,7 @@ def test_detener_y_guardar_no_congela_el_bucle(store, synthetic_session, monkeyp
 def test_guardar_el_mapa_del_dashboard_no_congela_el_bucle(tmp_path, monkeypatch):
     """Lo mismo para la descarga del visor (mapa SLAM → PLY malla + GLB): la malla, el GLB y los
     archivos se hacen en otro hilo. Robot FALSO, mapas SINTÉTICOS."""
-    from test_dashboard_replay_health import build
+    from test_dashboard_estado import build
 
     app, service, lib, settings = build(tmp_path)
     real_save = service.store.save
@@ -155,7 +154,7 @@ def test_guardar_el_mapa_del_dashboard_no_congela_el_bucle(tmp_path, monkeypatch
         return meta, max(gaps)
 
     meta, worst_gap = run(go())
-    assert meta["geometry"]["point_type"] == "voxel_mesh" and set(meta["files"]) == {"ply", "glb"}
+    assert meta["geometry"]["point_type"] == "voxel_mesh" and set(meta["files"]) == {"ply", "glb", "coords"}
     assert worst_gap < 0.3, f"el bucle se quedó parado {worst_gap:.2f} s mientras se guardaba"
 
 

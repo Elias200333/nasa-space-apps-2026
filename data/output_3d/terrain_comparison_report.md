@@ -29,7 +29,7 @@
 
 ## 3. Desglose Metodológico de Similitud y Contribución de Pesos
 
-| Dimensión Analógica Evaluada | Valor Medido en Tierra | Valor Objetivo de Referencia en Moon | Coeficiente $S_i$ [0-1] | Peso Asignado ($w_i$) | Contribución al Total ($w_i 	imes S_i$) |
+| Dimensión Analógica Evaluada | Valor Medido en Tierra | Valor Objetivo de Referencia en Earth | Coeficiente $S_i$ [0-1] | Peso Asignado ($w_i$) | Contribución al Total ($w_i 	imes S_i$) |
 | :--- | :--- | :--- | :---: | :---: | :---: |
 | **Rango Altimétrico y Relieve** | `162.1 m (cota 1563-1725 m)` | `~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))` | `0.566` | `12.0%` | **`6.8%`** |
 | **Gradiente de Pendiente (Horn)** | `3.07° (máx 11.9°)` | `6.5° ± 3.0°` | `0.52` | `16.0%` | **`8.32%`** |

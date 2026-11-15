@@ -1,1 +1,1 @@
-"""Adaptadores de robot: interfaz común, Go2 por WebRTC y replay offline."""
+"""Adaptadores de robot: interfaz común y Go2 por WebRTC."""

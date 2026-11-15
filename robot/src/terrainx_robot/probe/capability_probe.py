@@ -27,7 +27,6 @@ from ..models import (
     CapabilityItem,
     CapabilityReport,
     CapabilityStatus,
-    DeliveryMode,
     EvidenceClass,
     RobotStatus,
 )
@@ -186,8 +185,6 @@ def _base_caveats(adapter: RobotAdapter) -> list[str]:
         "Modelo y firmware no se obtienen por las vías usadas en Fase 1: solo constan si el "
         "operador los declara.",
     ]
-    if adapter.descriptor.delivery_mode is DeliveryMode.REPLAY:
-        notes.insert(0, "Informe en modo REPLAY: describe la fuente grabada, no un robot conectado.")
     if adapter.evidence_class is EvidenceClass.SYNTHETIC_TEST:
         notes.insert(0, "FUENTE SINTÉTICA: las capacidades son simuladas, no del robot.")
     return notes
@@ -198,7 +195,6 @@ async def run_probe(
     *,
     window_s: float | None = 10.0,
     network_preflight: dict | None = None,
-    record_session: bool = False,
 ) -> CapabilityReport:
     created = utc_now()
     connection: dict[str, Any] = {
@@ -224,11 +220,9 @@ async def run_probe(
             software=software_versions(),
             caveats=_base_caveats(adapter) + ["La conexión falló: no se ha observado ninguna capacidad."],
         )
-    session_id = None
     try:
         try:
-            info = await adapter.observe(window_s, record_session=record_session, notes="sondeo de capacidades")
-            session_id = info.session_id if info else None
+            await adapter.observe(window_s)
         except CaptureError as exc:
             # p. ej. pérdida de conexión a mitad de ventana: se informa, no se oculta.
             connection["window_error"] = str(exc)
@@ -241,8 +235,6 @@ async def run_probe(
     connection["connection_state_at_end_of_window"] = status.connection_state.value
     connection["last_error"] = status.last_error
     connection["readonly_guard"] = status.readonly_guard
-    if session_id:
-        connection["recorded_session_id"] = session_id
     caps = derive_capabilities(adapter, status, window_s)
     return CapabilityReport(
         report_id=new_id("probe", created),

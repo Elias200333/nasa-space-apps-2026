@@ -1,0 +1,25 @@
+# Entorno virtual y artefactos de Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Datos generados en ejecucion (escaneos, informes, logs).
+# Pueden contener datos reales del robot: no se suben sin revision.
+runtime/
+
+# Configuracion local y secretos: NUNCA al repositorio.
+# La clave AES del perro vive FUERA del repo (por defecto %USERPROFILE%\.terrainx\go2_aes_key.txt)
+# y el programa rechaza guardarla dentro; estas reglas son una segunda barrera.
+# Este archivo y .env.example SI se suben: asi la proteccion viaja con el repositorio.
+.env
+.env.*
+!.env.example
+*.aes
+*.key
+*aes_key*.txt
+secrets/
+obtener_clave_perro*.py
