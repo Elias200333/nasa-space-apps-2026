@@ -313,8 +313,7 @@ If you wish to explore the interface without running Python servers or connectin
     <td align="center" width="33%">
       <img src="https://ui-avatars.com/api/?name=Ines+Santana&background=f59e0b&color=0f172a&size=130&bold=true" width="130px;" style="border-radius: 50%; border: 3px solid #f59e0b;" alt="Inés Leticia Santana Agustín"/><br />
       <sub><b>Inés Leticia Santana Agustín</b></sub><br />
-      <small>Planetary Geology & Geomorphology Lead</small><br />
-      <small>Astrobiology & Analog Benchmarking</small><br />
+      <small>Specialist in Data Sciences and Artificial Inteligence</small><br/>
       <a href="https://www.linkedin.com/in/in%C3%A9s-leticia-santana-agust%C3%ADn-ba4ba5291/" target="_blank">
         <img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white" alt="LinkedIn"/>
       </a>

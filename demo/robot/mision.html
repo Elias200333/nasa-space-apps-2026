@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TERRAIN-X · Unidad terrestre · Modo Demo</title>
+  <style>
+    :root {
+      --bg: #070b14; --panel: #0f172a; --panel-2: #16213a; --border: #22314d; --text: #e2e8f0;
+      --muted: #8ea0bb; --accent: #38bdf8; --ok: #34d399; --warn: #fbbf24; --danger: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; height: 100%; background: var(--bg); color: var(--text);
+      font: 14px/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+    .wrap { display: grid; height: 100%; grid-template-rows: auto auto 1fr auto; gap: 8px; padding: 8px; }
+    .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .bar .title { font-weight: 700; letter-spacing: .3px; }
+    .bar .title span { color: var(--muted); font-weight: 400; }
+    .badge { font-size: 12px; padding: 3px 9px; border-radius: 10px; background: #1e293b; color: var(--muted); }
+    .badge.live { background: #04121c; color: var(--accent); }
+    .badge.warn { background: #2a1c05; color: var(--warn); }
+    .badge.ok { background: #052e22; color: var(--ok); }
+    .badge.err { background: #3b0a0a; color: #fca5a5; }
+    .badge.demo { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: 600; }
+    .spacer { flex: 1; }
+    button {
+      font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 8px 14px; cursor: pointer; touch-action: none; user-select: none;
+      transition: all 0.2s ease;
+    }
+    button:hover:not(:disabled) { border-color: var(--accent); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    button.stop { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 800; padding: 10px 22px; }
+
+    .demo-notice-strip {
+      background: linear-gradient(90deg, rgba(14, 165, 233, 0.16), rgba(15, 23, 42, 0.8));
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 11.5px;
+      color: #93c5fd;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .demo-notice-strip strong { color: #38bdf8; }
+
+    .views { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; min-height: 0; }
+    .pane {
+      position: relative; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden; min-height: 0;
+    }
+    #lidar-canvas { position: absolute; inset: 0; }
+    .pane .label { position: absolute; left: 10px; top: 8px; z-index: 5; pointer-events: none; }
+    .pane .foot {
+      position: absolute; left: 10px; bottom: 8px; z-index: 5; color: var(--muted);
+      font-size: 12px; pointer-events: none; max-width: 70%;
+      background: rgba(15, 23, 42, 0.75); padding: 4px 8px; border-radius: 6px; backdrop-filter: blur(4px);
+    }
+    #cam-canvas { width: 100%; height: 100%; object-fit: contain; background: #000; display: block; }
+
+    .pad-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; }
+    .pad { display: grid; grid-template-columns: repeat(3, 72px); grid-template-rows: repeat(2, 60px); gap: 6px; }
+    .pad button { font-size: 20px; font-weight: 800; padding: 0; }
+    .pad button small { display: block; font-size: 10px; font-weight: 500; color: var(--muted); }
+    .pad button.active { background: var(--accent); color: #04121c; border-color: var(--accent); }
+    .group { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .group button.sel { border-color: var(--accent); color: var(--accent); }
+    .note { color: var(--muted); font-size: 12px; max-width: 320px; }
+    @media (max-width: 760px) { .views { grid-template-columns: 1fr; grid-template-rows: 2fr 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="bar">
+      <div class="title">Unidad terrestre <span>· Go2 Pro · Mapeo de zona subterránea</span></div>
+      <span id="conn" class="badge ok">unidad conectada</span>
+      <span id="batt" class="badge ok">batería 94 %</span>
+      <span id="ctrl" class="badge warn">CONTROL ACTIVO</span>
+      <span class="badge demo">DEMO: DATOS REALES</span>
+      <div class="spacer"></div>
+      <button id="btn-stop" class="stop">■ PARAR</button>
+    </div>
+
+    <div class="demo-notice-strip">
+      <span>ℹ️</span>
+      <span><strong>Aviso de Recreación:</strong> Como es una demo y no hay conexión con un robot real en este equipo, se reproduce la última información y nube de puntos recibida de un <strong>Unitree Go2</strong> con LiDAR Livox MID-360 para realizar la recreación 3D automática sin depender del módulo del robot.</span>
+    </div>
+
+    <div class="views">
+      <div class="pane">
+        <span id="lidar-badge" class="badge label live">LiDAR SLAM · Acumulado</span>
+        <div id="lidar-canvas" data-mode="slam"></div>
+        <div class="foot"><span id="lidar-count">Mapeando cueva…</span> · <span id="lidar-note">Escaneo automático en progreso</span></div>
+      </div>
+      <div class="pane">
+        <span class="badge live label">Cámara Estéreo Go2 (Simulada)</span>
+        <canvas id="cam-canvas"></canvas>
+      </div>
+    </div>
+
+    <div class="pad-row">
+      <div class="pad" id="pad">
+        <button data-k="q">Q<small>lateral izq.</small></button>
+        <button data-k="w">▲<small>avanza</small></button>
+        <button data-k="e">E<small>lateral der.</small></button>
+        <button data-k="a">◄<small>gira izq.</small></button>
+        <button data-k="s">▼<small>retrocede</small></button>
+        <button data-k="d">►<small>gira der.</small></button>
+      </div>
+      <div>
+        <div class="group" id="speeds">
+          <span class="note">Velocidad:</span>
+          <button data-level="lento" class="sel">Lento</button>
+          <button data-level="normal">Normal</button>
+          <button data-level="rapido">Rápido</button>
+        </div>
+        <div class="group" style="margin-top:6px">
+          <button class="pbtn" data-cmd="StandUp">Levantar</button>
+          <button class="pbtn" data-cmd="StandDown">Sentar</button>
+          <button class="pbtn" data-cmd="RecoveryStand">Recuperarse</button>
+        </div>
+      </div>
+      <p class="note">Modo interactivo: Mantén pulsado W A S D o los mandos para guiar la unidad por la cueva. Pulsa «■ Terminar recorrido» en la ventana principal para pasar a la recreación 3D volumétrica completa.</p>
+    </div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three.module.min.js",
+        "three/addons/": "./vendor/addons/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // -------------------------------------------------------------
+    // 1. Visor 3D LiDAR con Three.js
+    // -------------------------------------------------------------
+    const mount = document.getElementById('lidar-canvas');
+    const width = mount.clientWidth || 600;
+    const height = mount.clientHeight || 400;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070b14);
+    scene.fog = new THREE.FogExp2(0x070b14, 0.04);
+
+    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 100);
+    camera.position.set(-3.5, -4.5, 3.2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    mount.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(0.5, 0, 0);
+
+    // Iluminación
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
+    dirLight.position.set(5, 5, 8);
+    scene.add(dirLight);
+
+    // Rejilla de referencia en suelo
+    const grid = new THREE.GridHelper(30, 30, 0x1e293b, 0x0f172a);
+    grid.rotation.x = Math.PI / 2;
+    grid.position.z = -0.35;
+    scene.add(grid);
+
+    // Modelo de perro Unitree Go2 (bloques característicos)
+    function createDogModel() {
+      const dog = new THREE.Group();
+      const shellMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.4, metalness: 0.3 });
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
+      const ledMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+
+      // Cuerpo
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.22, 0.12), shellMat);
+      body.position.set(0, 0, 0.22);
+      dog.add(body);
+
+      // Cabeza
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.18, 0.11), shellMat);
+      head.position.set(0.28, 0, 0.26);
+      dog.add(head);
+
+      // Sensor LiDAR Livox MID-360 en el lomo
+      const lidarDome = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.06, 16), ledMat);
+      lidarDome.rotation.x = Math.PI / 2;
+      lidarDome.position.set(0.08, 0, 0.31);
+      dog.add(lidarDome);
+
+      // Patas
+      for (const sx of [0.18, -0.18]) {
+        for (const sy of [0.12, -0.12]) {
+          const upper = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.14), darkMat);
+          upper.position.set(sx, sy, 0.13);
+          dog.add(upper);
+          const lower = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.14), shellMat);
+          lower.position.set(sx + 0.02, sy, 0.01);
+          dog.add(lower);
+        }
+      }
+      return dog;
+    }
+
+    const dog = createDogModel();
+    scene.add(dog);
+
+    // -------------------------------------------------------------
+    // 2. Carga y animación de los 54.915 puntos de la cueva real
+    // -------------------------------------------------------------
+    const MAX_POINTS = 54915;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(MAX_POINTS * 3);
+    const colors = new Float32Array(MAX_POINTS * 3);
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.setDrawRange(0, 0);
+
+    const pointMaterial = new THREE.PointsMaterial({
+      size: 0.045,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.88,
+      sizeAttenuation: true
+    });
+
+    const pointCloud = new THREE.Points(geometry, pointMaterial);
+    scene.add(pointCloud);
+
+    let allPoints = [];
+    let currentRenderCount = 0;
+    const countEl = document.getElementById('lidar-count');
+    const noteEl = document.getElementById('lidar-note');
+
+    // Cargar el scan real
+    fetch('./scans/scan-20261115T181241Z-d17a35/scan-20261115T181241Z-d17a35.mission.json')
+      .then(r => r.json())
+      .then(data => {
+        if (data.points && Array.isArray(data.points)) {
+          allPoints = data.points;
+          console.log(`[Demo Mission] Cargados ${allPoints.length} puntos de cueva real.`);
+        }
+      })
+      .catch(err => {
+        console.warn('Error cargando scan real, generando geometría de cueva sintética:', err);
+        // Fallback procedural
+        for (let i = 0; i < MAX_POINTS; i++) {
+          const t = i / 1000;
+          allPoints.push([
+            (Math.random() - 0.5) * 6 + Math.cos(t) * 1.5,
+            (Math.random() - 0.5) * 6 + Math.sin(t) * 1.5,
+            (Math.random() - 0.5) * 1.2
+          ]);
+        }
+      });
+
+    // Color ramp por altura Z
+    function getColorForZ(z) {
+      // De -0.6m (suelo, azul/cian) a 0.8m (techo, amarillo/rojo)
+      const t = Math.max(0, Math.min(1, (z + 0.6) / 1.4));
+      const col = new THREE.Color();
+      col.setHSL(0.55 - t * 0.55, 0.9, 0.5);
+      return col;
+    }
+
+    // Animación continua de acumulación SLAM
+    let simStep = 0;
+    function addLidarPoints() {
+      if (allPoints.length === 0) return;
+      if (currentRenderCount < allPoints.length) {
+        const batchSize = Math.min(350, allPoints.length - currentRenderCount);
+        const posAttr = geometry.attributes.position;
+        const colAttr = geometry.attributes.color;
+
+        for (let i = 0; i < batchSize; i++) {
+          const idx = currentRenderCount + i;
+          const [x, y, z] = allPoints[idx];
+          // Ejes de la misión (x adelante, y izquierda, z arriba)
+          posAttr.setXYZ(idx, x, y, z);
+          const c = getColorForZ(z);
+          colAttr.setXYZ(idx, c.r, c.g, c.b);
+        }
+
+        currentRenderCount += batchSize;
+        geometry.setDrawRange(0, currentRenderCount);
+        posAttr.needsUpdate = true;
+        colAttr.needsUpdate = true;
+
+        if (countEl) countEl.textContent = `${currentRenderCount.toLocaleString('es-ES')} vóxeles SLAM`;
+        if (noteEl) {
+          const pct = Math.round((currentRenderCount / allPoints.length) * 100);
+          noteEl.textContent = `${pct}% mapeado · Unidad explorando cavidad`;
+        }
+      } else {
+        if (noteEl) noteEl.textContent = `100% mapeado · Escaneo subterráneo listo`;
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 3. Simulación de Cámara Estéreo Frontal del Go2 en la Cueva
+    // -------------------------------------------------------------
+    const camCanvas = document.getElementById('cam-canvas');
+    const camCtx = camCanvas.getContext('2d');
+    camCanvas.width = 480;
+    camCanvas.height = 320;
+
+    let camTime = 0;
+    function drawCamSimulation() {
+      camTime += 0.03;
+      const w = camCanvas.width, h = camCanvas.height;
+
+      // Fondo oscuro de cueva
+      const bgGrad = camCtx.createRadialGradient(
+        w / 2 + Math.sin(camTime * 0.7) * 20, h / 2 + Math.cos(camTime * 0.5) * 15, 20,
+        w / 2, h / 2, w * 0.65
+      );
+      bgGrad.addColorStop(0, '#1c2838');
+      bgGrad.addColorStop(0.4, '#0a101d');
+      bgGrad.addColorStop(1, '#020408');
+      camCtx.fillStyle = bgGrad;
+      camCtx.fillRect(0, 0, w, h);
+
+      // Haz del foco frontal del Go2 proyectado en paredes basálticas
+      camCtx.save();
+      camCtx.beginPath();
+      camCtx.arc(w / 2 + Math.sin(camTime * 0.7) * 20, h / 2 + Math.cos(camTime * 0.5) * 15, 110, 0, Math.PI * 2);
+      camCtx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+      camCtx.fill();
+
+      // Textura rugosa de roca basáltica
+      for (let i = 0; i < 40; i++) {
+        const rx = (i * 37) % w;
+        const ry = (i * 53 + Math.sin(camTime) * 5) % h;
+        camCtx.fillStyle = (i % 2 === 0) ? 'rgba(56, 189, 248, 0.12)' : 'rgba(15, 23, 42, 0.4)';
+        camCtx.fillRect(rx, ry, (i % 5) + 3, (i % 4) + 2);
+      }
+      camCtx.restore();
+
+      // Mira y retícula HUD táctica
+      camCtx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+      camCtx.lineWidth = 1;
+      camCtx.strokeRect(w / 2 - 35, h / 2 - 25, 70, 50);
+      camCtx.beginPath();
+      camCtx.moveTo(w / 2 - 45, h / 2); camCtx.lineTo(w / 2 + 45, h / 2);
+      camCtx.moveTo(w / 2, h / 2 - 35); camCtx.lineTo(w / 2, h / 2 + 35);
+      camCtx.stroke();
+
+      // Superposición de telemetría Go2
+      camCtx.fillStyle = 'rgba(56, 189, 248, 0.9)';
+      camCtx.font = '11px monospace';
+      camCtx.fillText(`[GO2 STEREO CAM] REPLAY DEMO • FPS: 30`, 12, 22);
+      camCtx.fillText(`DEPTH: -16.5m • BATTERY: 94% • IMU: OK`, 12, 38);
+      camCtx.fillText(`LIVOX MID-360: SLAM ACTIVE (54.915 PTS)`, 12, h - 16);
+      camCtx.fillStyle = '#22c55e';
+      camCtx.fillRect(w - 22, 14, 8, 8);
+    }
+
+    // -------------------------------------------------------------
+    // 4. Bucle principal de animación y redimensionado
+    // -------------------------------------------------------------
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Paso de mapeo LiDAR
+      simStep++;
+      if (simStep % 3 === 0) {
+        addLidarPoints();
+      }
+
+      // Movimiento suave del perro en la escena
+      const dogTime = Date.now() * 0.0015;
+      dog.position.x = 0.5 + Math.sin(dogTime * 0.4) * 0.3;
+      dog.position.y = Math.cos(dogTime * 0.3) * 0.2;
+      dog.rotation.z = Math.sin(dogTime * 0.3) * 0.15;
+      dog.position.z = -0.35 + Math.sin(dogTime * 5) * 0.008; // Pasos sutiles
+
+      controls.update();
+      renderer.render(scene, camera);
+      drawCamSimulation();
+    }
+
+    window.addEventListener('resize', () => {
+      const w = mount.clientWidth;
+      const h = mount.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    });
+
+    // Teclado interactivo y botones WASD
+    const pressedKeys = new Set();
+    document.querySelectorAll('#pad button').forEach(b => {
+      const k = b.dataset.k;
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        pressedKeys.add(k);
+        b.classList.add('active');
+      });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => {
+        b.addEventListener(ev, () => {
+          pressedKeys.delete(k);
+          b.classList.remove('active');
+        });
+      });
+    });
+
+    window.addEventListener('keydown', (e) => {
+      const k = e.key.toLowerCase();
+      if (['w', 'a', 's', 'd', 'q', 'e'].includes(k)) {
+        pressedKeys.add(k);
+        document.querySelector(`#pad button[data-k="${k}"]`)?.classList.add('active');
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      const k = e.key.toLowerCase();
+      pressedKeys.delete(k);
+      document.querySelector(`#pad button[data-k="${k}"]`)?.classList.remove('active');
+    });
+
+    document.querySelectorAll('#speeds button').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('#speeds button').forEach(x => x.classList.remove('sel'));
+        b.classList.add('sel');
+      });
+    });
+
+    animate();
+  </script>
+</body>
+</html>

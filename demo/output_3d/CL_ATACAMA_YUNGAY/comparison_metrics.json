@@ -1,0 +1,126 @@
+{
+  "site_id": "CL_ATACAMA_YUNGAY",
+  "site_name": "Custom AOI (-24.08454\u00b0, -69.96724\u00b0)",
+  "center_gps": {
+    "lat": -24.08454,
+    "lon": -69.96724
+  },
+  "exploration_radius_m": 100.0,
+  "target_body": "Mars",
+  "similarity_pct": 50.51,
+  "metrics_100m": {
+    "radius_m": 100.0,
+    "area_sq_m": 31415.926535897932,
+    "area_hectares": 3.14,
+    "elev_min_m": 981.5,
+    "elev_max_m": 988.6,
+    "elev_mean_m": 984.2,
+    "elev_range_m": 7.1,
+    "slope_mean_deg": 2.29,
+    "slope_max_deg": 3.96,
+    "points_sampled": 77
+  },
+  "dem_metadata": {
+    "source": "Copernicus DEM / Mapzen SRTM 30m (Global)",
+    "nominal_resolution_m": 30.0,
+    "crs": "EPSG:4326 (WGS84)",
+    "verified_real_data": true
+  },
+  "deliverables": {
+    "topographic_image": "topographic_map_ign_100m.png",
+    "dem_geotiff": "dem_ign_real.tif",
+    "dem_numpy": "dem_ign_real.npy",
+    "atlas_png": "thematic_comparison_atlas.png",
+    "terrain_3d_html": "terrain_3d.html",
+    "report_md": "terrain_comparison_report.md"
+  },
+  "evaluation": {
+    "target_body": "Mars",
+    "target_benchmark_name": "Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum)",
+    "total_similarity_pct": 50.51,
+    "metrics_table": [
+      {
+        "id": "elevation_relief",
+        "name": "Rango Altim\u00e9trico y Relieve",
+        "terrestrial_value": "26.9 m (cota 979-1006 m)",
+        "planetary_target": "~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))",
+        "similarity_score": 0.282,
+        "weight_pct": 10.0,
+        "contribution_pct": 2.82
+      },
+      {
+        "id": "slope_morphometry",
+        "name": "Gradiente de Pendiente (Horn)",
+        "terrestrial_value": "0.48\u00b0 (m\u00e1x 1.1\u00b0)",
+        "planetary_target": "8.0\u00b0 \u00b1 4.0\u00b0",
+        "similarity_score": 0.17,
+        "weight_pct": 15.0,
+        "contribution_pct": 2.56
+      },
+      {
+        "id": "surface_roughness_tri",
+        "name": "Rugosidad Superficial (TRI)",
+        "terrestrial_value": "0.69 m",
+        "planetary_target": "3.0 \u00b1 1.5 m",
+        "similarity_score": 0.306,
+        "weight_pct": 12.0,
+        "contribution_pct": 3.68
+      },
+      {
+        "id": "curvature_profile",
+        "name": "Curvatura Topogr\u00e1fica y Sumideros",
+        "terrestrial_value": "-0.0000 m\u207b\u00b9",
+        "planetary_target": "Inversi\u00f3n de colapso (-0.05)",
+        "similarity_score": 0.2,
+        "weight_pct": 8.0,
+        "contribution_pct": 1.6
+      },
+      {
+        "id": "lava_tubes_cavities",
+        "name": "Tubos de Lava y Cavidades",
+        "terrestrial_value": "Evidencia: 70% (Contexto volc\u00e1nico: 90%)",
+        "planetary_target": "Claraboyas intactas / Pit Craters",
+        "similarity_score": 0.79,
+        "weight_pct": 15.0,
+        "contribution_pct": 11.85
+      },
+      {
+        "id": "crater_morphology",
+        "name": "Morfolog\u00eda de Conos / Cr\u00e1teres",
+        "terrestrial_value": "\u00cdndice: 60%",
+        "planetary_target": "Cr\u00e1teres de impacto / conos pirocl\u00e1sticos",
+        "similarity_score": 0.6,
+        "weight_pct": 10.0,
+        "contribution_pct": 6.0
+      },
+      {
+        "id": "spectral_mineralogy",
+        "name": "Composici\u00f3n Espectral y Mineral\u00f3gica",
+        "terrestrial_value": "Concordancia: 65%",
+        "planetary_target": "Ferric Oxides (Hematite / Goethite), Jarosite sulfates & Smectite clays",
+        "similarity_score": 0.65,
+        "weight_pct": 20.0,
+        "contribution_pct": 13.0
+      },
+      {
+        "id": "environmental_aridity",
+        "name": "Extremos Ambientales e Hiperaridez",
+        "terrestrial_value": "Proxy Aridez: 90%",
+        "planetary_target": "Desierto poliextremo / Vac\u00edo",
+        "similarity_score": 0.9,
+        "weight_pct": 10.0,
+        "contribution_pct": 9.0
+      }
+    ],
+    "dem_statistics": {
+      "elev_min_m": 979.1,
+      "elev_max_m": 1006.0,
+      "elev_mean_m": 987.5,
+      "elev_range_m": 26.9,
+      "slope_mean_deg": 0.48,
+      "slope_max_deg": 1.14,
+      "tri_mean_m": 0.69,
+      "grid_cells": 1681
+    }
+  }
+}

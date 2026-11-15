@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TERRAIN-X · Go2 AIR</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">TERRAIN-X <span>· Diagnóstico Go2 AIR</span></div>
+    <div id="batt-alert" class="alert" hidden></div>
+    <div class="conn">
+      <span id="src-badge" class="badge">—</span>
+      <span id="dot" class="dot off"></span>
+      <span id="conn-text">desconectado</span>
+      <button id="btn-connect">Conectar</button>
+      <button id="btn-disconnect" class="secondary">Desconectar</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <!-- CÁMARA -->
+    <section class="panel cam">
+      <h2>Cámara en directo <span id="cam-badge" class="badge">—</span></h2>
+      <div class="cam-wrap">
+        <img id="cam" alt="cámara del Go2" />
+        <div id="cam-overlay" class="overlay">Sin señal — conecta el robot</div>
+      </div>
+      <div class="cam-meta"><span id="cam-fps">FPS: —</span> · <span id="cam-frames">fotogramas: 0</span></div>
+    </section>
+
+    <!-- CONTROL WASD -->
+    <section class="panel control">
+      <h2>Conducción (WASD) <span id="ctrl-badge" class="badge">sin robot</span></h2>
+      <p class="warn-text">⚠ Mueve un robot físico: el control está ACTIVO en cuanto el robot está conectado.
+        Un operador debe estar junto al Go2 con el paro de emergencia.
+        El robot solo se mueve mientras mantienes la tecla pulsada (no mientras escribes en un campo de texto).</p>
+      <div class="ctrl-row">
+        <button id="btn-stop" class="stop" disabled>■ PARAR</button>
+      </div>
+      <div class="wasd" id="wasd">
+        <div></div><div class="key" data-k="w">W<small>avanza</small></div><div></div>
+        <div class="key" data-k="a">A<small>gira izq.</small></div>
+        <div class="key" data-k="s">S<small>retrocede</small></div>
+        <div class="key" data-k="d">D<small>gira der.</small></div>
+      </div>
+      <div class="speed">
+        <span>Velocidad:</span>
+        <button class="sbtn" data-level="lento">Lento</button>
+        <button class="sbtn" data-level="normal">Normal</button>
+        <button class="sbtn" data-level="rapido">Rápido</button>
+      </div>
+      <p class="note" id="speed-now">—</p>
+      <div class="ctrl-extra">
+        <span>Lateral: <b>Q</b>/<b>E</b> · Parar: <b>Espacio</b></span>
+        <div class="postures">
+          <button class="pbtn" data-cmd="StandUp" disabled>Levantar</button>
+          <button class="pbtn" data-cmd="StandDown" disabled>Sentar</button>
+          <button class="pbtn" data-cmd="BalanceStand" disabled>Equilibrio</button>
+          <button class="pbtn" data-cmd="Damp" disabled>Amortiguar</button>
+          <button class="pbtn" data-cmd="RecoveryStand" disabled title="Orden RecoveryStand de Unitree: volver a ponerse de pie (p. ej. tras caerse)">Recuperarse</button>
+        </div>
+      </div>
+      <p class="note" id="limits">Topes de velocidad: —</p>
+    </section>
+
+    <!-- LIDAR 3D -->
+    <section class="panel lidar">
+      <h2>LiDAR 3D · mapa SLAM <span id="lidar-badge" class="badge">—</span></h2>
+      <div id="lidar-canvas"></div>
+      <div class="cam-meta"><span id="lidar-count">sin datos</span> · arrastrar = girar · rueda = zoom</div>
+      <p class="note" id="lidar-note">Vóxeles ocupados del mapa del robot (no retornos crudos). Ejes en metros (asumido).</p>
+      <p class="note">Arriba a la derecha: <b>papelera</b> = empezar un mapa nuevo · <b>pausa</b> = dejar de sumar
+        (lo que ves es lo que se guarda) · <b>descarga</b> = guardar el mapa acumulado y bajar el <b>.glb</b>, que se
+        ve como aquí (en Blender: «Vista previa del material»), o las <b>coordenadas</b> (.json: [x, y, z] del centro
+        de cada cubo). Todo queda guardado, con metadatos, en runtime/scans: .ply, .glb y .coords.json.</p>
+      <div class="ctrl-row slam-row">
+        <span id="slam-info" class="note">Acumulado: —</span>
+      </div>
+    </section>
+
+    <!-- ESTADO DEL ROBOT -->
+    <section class="panel health">
+      <h2>Estado del robot <span id="health-badge" class="badge">—</span></h2>
+      <div class="health-grid">
+        <div>
+          <h3>Batería</h3>
+          <table>
+            <tr><td>Carga</td><td id="h-soc">—</td></tr>
+            <tr><td>Tensión</td><td id="h-volt">—</td></tr>
+            <tr><td>Corriente <small>(unidad sin verificar)</small></td><td id="h-cur">—</td></tr>
+            <tr><td>Ciclos</td><td id="h-cyc">—</td></tr>
+            <tr><td>Temp. BMS · MCU <small>(sin verificar)</small></td><td id="h-temp">—</td></tr>
+          </table>
+        </div>
+        <div>
+          <h3>LiDAR</h3>
+          <table>
+            <tr><td>Suciedad</td><td id="h-dirty">—</td></tr>
+            <tr><td>Paquetes perdidos (nube · IMU)</td><td id="h-loss">—</td></tr>
+            <tr><td>Código de error</td><td id="h-lerr">—</td></tr>
+            <tr><td>Firmware del LiDAR</td><td id="h-lfw">—</td></tr>
+          </table>
+          <h3>Robot</h3>
+          <table>
+            <tr><td>Evitación de obstáculos</td><td id="h-avoid">—</td></tr>
+          </table>
+        </div>
+      </div>
+      <h3>Flujos de datos</h3>
+      <table id="h-topics"><thead><tr><th>Topic</th><th>Hz</th><th>Último</th><th>Estado</th></tr></thead><tbody></tbody></table>
+      <p class="note">Solo lectura, tal como lo publica el robot. Los umbrales de batería (aviso &lt; 25 %, crítico &lt; 15 %)
+        son nuestros, no de Unitree. "no disponible" = el robot no lo publica.</p>
+    </section>
+
+    <!-- AUTENTICACIÓN UNITREE -->
+    <section class="panel auth">
+      <h2>Unitree — Conexión y autenticación</h2>
+      <div id="auth-status" class="note">Clave AES: —</div>
+      <!-- Con la clave ya guardada, el formulario queda plegado: para conectar solo se usan la IP
+           y la clave; el correo y la contraseña solo sirven para recuperarla de la nube. -->
+      <details id="auth-renew">
+        <summary id="auth-summary">Vincular la cuenta y recuperar la clave</summary>
+        <div class="auth-form">
+          <input id="au-email" type="email" placeholder="correo de la cuenta Unitree" autocomplete="username" />
+          <input id="au-pass" type="password" placeholder="contraseña" autocomplete="current-password" />
+          <button id="btn-devices">Vincular cuenta</button>
+        </div>
+        <div id="dev-list"></div>
+        <button id="btn-fetch" disabled>Recuperar y guardar clave del robot seleccionado</button>
+        <div id="auth-msg" class="note"></div>
+        <p class="note">Solo hace falta la primera vez o si el perro rechaza la clave. La contraseña no se
+          guarda (ni ningún token). La clave se almacena fuera del repositorio y nunca se muestra: solo
+          una huella corta. Tras guardar una clave nueva, reinicia el dashboard: la lee al arrancar.</p>
+      </details>
+    </section>
+
+    <!-- DIAGNÓSTICO -->
+    <section class="panel diag">
+      <h2>Diagnóstico</h2>
+      <table id="diag">
+        <tr><td>Modelo</td><td id="d-model">Unitree Go2 AIR</td></tr>
+        <tr><td>Protocolo</td><td>WebRTC + AES-128</td></tr>
+        <tr><td>IP / modo</td><td id="d-ip">—</td></tr>
+        <tr><td>Autenticación</td><td id="d-auth">—</td></tr>
+        <tr><td>Vídeo</td><td id="d-video">—</td></tr>
+        <tr><td>LiDAR</td><td id="d-lidar">—</td></tr>
+        <tr><td>Guardián</td><td id="d-guard">—</td></tr>
+        <tr><td>Librería</td><td id="d-lib">—</td></tr>
+        <tr><td>Último error</td><td id="d-err">—</td></tr>
+        <tr><td>Código para gafas XR / otro equipo</td><td id="d-pair">—</td></tr>
+      </table>
+    </section>
+  </main>
+
+  <!-- three.js r160 (MIT, vendor/THREE_LICENSE): el visor LiDAR usa API de r159+ -->
+  <script type="importmap">
+    { "imports": { "three": "/static/vendor/three.module.min.js",
+                   "three/addons/": "/static/vendor/addons/" } }
+  </script>
+  <script src="/static/app.js"></script>
+  <script type="module" src="/static/lidar/lidarView.js"></script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+{
+  "schema_version": "terrainx.robot.scan/1.1-draft",
+  "id": "scan-20261115T181241Z-d17a35",
+  "scan_context": "controlled_test",
+  "frame_id": "odom",
+  "unit": "m",
+  "timestamp_utc": "2026-11-15T18:12:41.596262Z",
+  "point_count": 84173,
+  "file_url": "scans/scan-20261115T181241Z-d17a35/scan-20261115T181241Z-d17a35.ply",
+  "pose_source": null,
+  "source_record_id": null,
+  "registration": {
+    "status": "local_only",
+    "method": "none",
+    "target_frame": null,
+    "transform_4x4": null,
+    "rmse_m": null
+  },
+  "robot": {
+    "robot_id": "go2-air-pluffy",
+    "platform": "unitree_go2",
+    "body": "earth",
+    "model_variant": "AIR",
+    "model_variant_source": "declared_by_operator",
+    "firmware_version": null,
+    "firmware_source": "unknown",
+    "adapter": "go2_webrtc",
+    "delivery_mode": "live"
+  },
+  "body": "earth",
+  "evidence_class": "derived",
+  "delivery_mode": "live",
+  "demo": false,
+  "capture": {
+    "start_utc": "2026-11-15T18:12:41.596262Z",
+    "end_utc": "2026-11-15T18:12:55.445881Z",
+    "duration_s": 13.849619,
+    "acquisition_first_utc": null,
+    "acquisition_last_utc": null,
+    "mode": "accumulate",
+    "topic": "rt/utlidar/voxel_map_compressed",
+    "frames_received": 27,
+    "frames_used": 27,
+    "frames_rejected": 0,
+    "rejection_reasons": {},
+    "robot_stamp_first_raw": null,
+    "robot_stamp_last_raw": null,
+    "session_id": null
+  },
+  "geometry": {
+    "point_type": "voxel_mesh",
+    "voxel_resolution_m": 0.05,
+    "coordinate_rule": "malla de cubos: el vóxel del mundo k ocupa de (k − ½)·resolution a (k + ½)·resolution en cada eje (la caja que pinta el visor); vértices = esquinas de los cubos, solo caras exteriores, 2 triángulos por cara; point_count = número de vértices del PLY",
+    "bounds_min": [
+      -3.225,
+      -6.975,
+      -0.275
+    ],
+    "bounds_max": [
+      4.575,
+      0.425,
+      1.225
+    ],
+    "units_verification": "unverified",
+    "axes_verification": "unverified",
+    "axes_note": "frame_id declarado por la fuente: 'odom'"
+  },
+  "processing": {
+    "decoder": "terrainx_robot.lidar.slam_map (portado del Bridge) + lidar.voxel_mesh / voxel_glb",
+    "validation": {
+      "rule": "vóxel pintado si sale en ≥ 2 mapas y en ≥ 12% de los mapas que cubrían su sitio; fuera los vóxeles sin vecinos"
+    },
+    "deduplication": {
+      "rule": "rejilla de vóxeles del mundo: un cubo por vóxel; vértices compartidos entre caras del mismo color"
+    },
+    "filters_applied": [],
+    "ply_encoding": "binary_little_endian float32 · malla (vertex xyz + rgb uchar; face triángulos)"
+  },
+  "files": {
+    "ply": {
+      "path": "scan-20261115T181241Z-d17a35.ply",
+      "sha256": "0a53ad9ca6b47da2a331911ffc2856dee7d0f062034f54a7f0371da4ee75d50e",
+      "bytes": 2893148,
+      "format": "PLY binary_little_endian float32 · malla (vertex xyz + rgb uchar; face triángulos)"
+    },
+    "glb": {
+      "path": "scan-20261115T181241Z-d17a35.glb",
+      "sha256": "6854ae0762a55f5dda1f00d44891325318d02af5536e9f9506d387f6e71a4f25",
+      "bytes": 6530308,
+      "format": "glTF 2.0 binario (GLB) · malla de cubos como el visor: paleta de la app, aristas grises, sin luz (KHR_materials_unlit), Y arriba = Z del robot"
+    },
+    "coords": {
+      "path": "scan-20261115T181241Z-d17a35.coords.json",
+      "sha256": "f425b59e4509c1614a74dc530e3eb248c7213b00a82e22a5c2e862a76c7541e2",
+      "bytes": 1338796,
+      "format": "JSON UTF-8 · array [x, y, z] en m: centro de cada cubo del visor (uno por vóxel, también los interiores), ejes del robot como el .ply"
+    },
+    "mission": {
+      "path": "scan-20261115T181241Z-d17a35.mission.json",
+      "sha256": "46a61797d1cae181392965e13dbaf5202b89f47eae6f30e54e5118a38e6bf21b",
+      "bytes": 1744029,
+      "format": "JSON UTF-8 · centros de cubo en el marco local de la misión, en m: x adelante, y izquierda, z arriba; origen = robot al empezar"
+    }
+  },
+  "provenance": {
+    "software": {
+      "terrainx_robot": "0.1.0",
+      "python": "3.13.7",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "numpy": "2.5.4",
+      "lz4": "4.4.5",
+      "pydantic": "2.14.3",
+      "unitree_webrtc_connect": "2.2.0"
+    },
+    "adapter": "go2_webrtc",
+    "session_id": null,
+    "slam": {
+      "epoch": "376da830",
+      "version": 27,
+      "frames": 27,
+      "voxels": 54649,
+      "chunks": 6,
+      "area": 39.1,
+      "source": "live:192.168.123.161",
+      "min_hits": 2,
+      "keep_ratio": 0.12,
+      "paused_when_saved": false
+    },
+    "mesh": {
+      "voxels": 54915,
+      "cube_faces": 62694,
+      "vertices": 84173,
+      "triangles": 125388,
+      "cube_size_m": 0.05,
+      "colors": "paleta de altura de la app de Unitree (franja = kz + 9)"
+    },
+    "glb": {
+      "vertices": 250776,
+      "triangles": 125388,
+      "cube_faces": 62694,
+      "axes": "glTF Y arriba: (x, y, z) del robot → (x, z, −y)",
+      "material": "KHR_materials_unlit + textura con la paleta y aristas grises (1/32 de cara)"
+    },
+    "coords": {
+      "points": 54915,
+      "point": "centro de cada cubo (k · cube_size_m), uno por vóxel",
+      "order": "por x, luego y, luego z",
+      "axes": "los del robot, como el .ply"
+    },
+    "mission": {
+      "count": 54915,
+      "cube_size_m": 0.05,
+      "start_pose_odom": {
+        "x": 1.3305,
+        "y": -2.8067,
+        "z": 0.3115,
+        "yaw": -1.6225
+      },
+      "floor_z_local_m": -0.35,
+      "floor_method": "ESTIMADO: nivel con más cubos a ≤ 1.0 m del punto de partida y por debajo de él",
+      "extent_local_m": {
+        "min": [
+          -3.369,
+          -4.455,
+          -0.562
+        ],
+        "max": [
+          4.23,
+          3.137,
+          0.888
+        ]
+      },
+      "mission_id": "mission-20261115T181241Z-8caefe",
+      "started_utc": "2026-11-15T18:12:41.281370Z",
+      "site": {
+        "name": "Región de Custom AOI (35.58200°, -111.63800°)",
+        "lat": 35.582,
+        "lon": -111.638
+      }
+    }
+  },
+  "quality_flag": "unverified_units_and_axes",
+  "caveats": [
+    "MALLA de cubos: cada cubo es un vóxel ocupado (celda de 0.05 m) del mapa que publica el robot por WebRTC; los vértices son esquinas de los cubos, no puntos medidos ni retornos crudos del LiDAR. Error de cuantización de hasta una celda.",
+    "Unidad 'm' ASUMIDA: ni el robot ni la librería declaran unidades. Pendiente de verificación física (docs/VERIFICACION_FISICA.md).",
+    "Convención de ejes del frame 'odom' no verificada (orientación de X/Y/Z y origen pendientes de comprobar con el robot).",
+    "Sin pose asociada: la nube está en el frame del robot, no georreferenciada (registration.status = local_only).",
+    "Unión de 27 mapas sucesivos: si el robot se desplazó, la coherencia depende de su estimación interna de posición (no verificada).",
+    "Mapa ACUMULADO (DERIVADO): unión filtrada de los mapas de vóxeles del robot hecha por el dashboard, no una medida directa.",
+    "Sin cierre de bucles: si la odometría del perro derivó, al volver a un sitio las paredes pueden salir desplazadas o dobles.",
+    "Colores = paleta de altura de la app de Unitree (como el visor); no son colores reales.",
+    "El .glb es el mismo mapa con el aspecto del visor (aristas grises, sin luz) y los ejes de glTF: (x, y, z) del robot → (x, z, −y). El .ply y el .coords.json (centro de cada cubo, uno por vóxel) guardan las coordenadas del robot.",
+    "Tiempos = primer y último mapa del robot sumados al acumulado."
+  ]
+}
