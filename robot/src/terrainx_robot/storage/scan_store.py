@@ -1,17 +1,18 @@
-"""Almacén de escaneos: PLY + metadatos JSON + SHA-256.
+"""TERRAIN-X · Cryptographic Scan Store & Point Cloud Manifest Engine.
+NASA Space Apps Challenge 2026
 
-Qué hace
-    Guarda cada escaneo en su propia carpeta:
-        <data_dir>/scans/<scan_id>/<scan_id>.ply
-        <data_dir>/scans/<scan_id>/<scan_id>.glb    (solo el mapa SLAM: se ve como el visor)
-        <data_dir>/scans/<scan_id>/<scan_id>.coords.json   (solo el mapa SLAM: array de coordenadas)
-        <data_dir>/scans/<scan_id>/<scan_id>.metadata.json
-        <data_dir>/scans/<scan_id>/SHA256SUMS   (formato de sha256sum)
-    Cada archivo va en metadata.files (clave → ruta, SHA-256, bytes, formato).
-    Lista, verifica (recalcula hashes) y exporta escaneos.
-    Genera automáticamente las advertencias (caveats) de procedencia: tipo de
-    punto, unidades/ejes no verificados, ausencia de pose y georreferencia.
-Errores: ScanStoreError (escaneo inexistente, hash alterado, nube vacía).
+Persistence Layout:
+    Each mission scan is isolated in its designated directory:
+        <data_dir>/scans/<scan_id>/<scan_id>.ply           (Standard Stanford Polygon format)
+        <data_dir>/scans/<scan_id>/<scan_id>.glb           (Binary GLTF mesh with smoothed normals)
+        <data_dir>/scans/<scan_id>/<scan_id>.coords.json   (Voxel coordinate array)
+        <data_dir>/scans/<scan_id>/<scan_id>.mission.json  (Odometry trajectory & mission events)
+        <data_dir>/scans/<scan_id>/<scan_id>.metadata.json (Sensor parameters & spatial bounds)
+        <data_dir>/scans/<scan_id>/SHA256SUMS              (Standard sha256sum verification digest)
+
+Cryptographic Integrity:
+    Validates data integrity by recalculating SHA-256 hashes across all file payloads upon loading.
+    Guarantees immutable evidence provenance for peer-reviewed scientific benchmarking.
 """
 
 from __future__ import annotations

@@ -1,25 +1,23 @@
-"""Guardián del canal de datos WebRTC: dos modos, solo lectura y control acotado.
+"""TERRAIN-X · WebRTC Data Channel Security Guard & Command Whitelist.
+NASA Space Apps Challenge 2026
 
-Qué hace
-    Envuelve ``channel.send`` (el punto por el que pasa TODO mensaje saliente de
-    unitree_webrtc_connect 2.2.0) y aplica una política según el modo:
+Operational Security Modes:
+    1. "readonly" Mode (Default Safety State):
+       - Permits strictly telemetry inspection: subscribe, unsubscribe, heartbeat, validation.
+       - Permits internal link maintenance requests (rtc_inner_req).
+       - Permits LiDAR sensor stream toggle (rt/utlidar/switch) and camera video stream toggle.
+       - [CRITICAL SAFETY CHECK]: Intercepts and blocks all motor actuation or motion commands,
+         raising a ReadOnlyViolation exception on the host before transmission.
 
-    MODO "readonly" (por defecto): deja pasar solo
-      - subscribe / unsubscribe / heartbeat / validation (protocolo y lectura)
-      - rtc_inner_req de mantenimiento del enlace
-      - msg a rt/utlidar/switch con "on"/"off" (flujo LiDAR)
-      - vid "on"/"off" (recepción de cámara)
-    Cualquier orden de movimiento se BLOQUEA y lanza ReadOnlyViolation.
+    2. "control" Mode (Bounded Teleoperation State):
+       - Inherits all read-only subscriptions.
+       - Whitelists only safe locomotion primitives (SAFE_CONTROL_COMMANDS):
+         Move (vx, vy, yaw), Stop, StandUp, StandDown, Damp, RecoveryStand.
+       - Permanently blocks hazardous routines (acrobatics, backflips, raw lowcmd, external wireless overrides).
 
-    MODO "control": todo lo anterior MÁS un subconjunto ACOTADO y explícito de
-    órdenes de locomoción (SAFE_CONTROL_COMMANDS): avanzar/girar, parar,
-    levantarse, sentarse, amortiguar y recuperar postura. Siguen BLOQUEADAS las
-    acrobacias (saltos, volteretas), rt/lowcmd, rt/wirelesscontroller, etc.
-
-Por qué
-    El modo control NO se activa solo: lo activa explícitamente el operador desde
-    el servicio del dashboard, y el subconjunto permitido es deliberadamente
-    pequeño. El guardián no sustituye a la parada de emergencia física del robot.
+Safety Philosophy:
+    Enforced on the client host directly wrapping ``channel.send``. Acts as a software-defined
+    interlock complementing the physical emergency stop button on the quadruped chassis.
 """
 
 from __future__ import annotations

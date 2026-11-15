@@ -3,16 +3,21 @@ import type { MissionCloud } from './robotBridge';
 import { elevationAt, TerrainGrid } from './terrainGrid';
 
 /**
- * Vista 3D de la nube del recorrido y del mapa combinado (terreno + zona subterránea).
+ * TERRAIN-X · Subterranean Cave Fusion & Surface DEM Alignment Engine
+ * NASA Space Apps Challenge 2026
  *
- * TODO en metros y a escala 1:1 en los tres ejes (sin la exageración vertical del Plotly):
- *   Babylon X = este, Y = arriba, Z = norte (origen = centro del modelo 3D a su cota).
- * La nube llega en el marco local de la misión (x adelante, y izquierda, z arriba; origen = robot
- * al empezar). Se coloca con un anclaje DECLARADO por el operador: desplazamiento este/norte
- * desde el centro, rumbo (hacia dónde miraba el robot al empezar, en grados desde el norte en
- * sentido horario) y profundidad bajo la superficie. El punto de partida (el suelo bajo el robot,
- * estimado) se apoya en la superficie del terreno y se baja la profundidad indicada.
- * Cada cubo mide lo que mide el vóxel del LiDAR (5 cm): misma escala que el terreno.
+ * Coordinate Convention & Scale:
+ *  - Metric 1:1 scale across all three Euclidean axes (without synthetic vertical exaggeration):
+ *      Babylon +X = East, Babylon +Y = Up (Elevation), Babylon +Z = North.
+ *  - Origin = Geodetic center of the active DEM at its baseline elevation.
+ *
+ * Frame Alignment Mathematics:
+ *  - The robot's LiDAR point cloud arrives in the local mission frame (X = Forward, Y = Left, Z = Up).
+ *  - Geo-anchoring applies an affine transformation defined by the operator:
+ *      * East/North Offsets (offsetE, offsetN in meters) relative to DEM center.
+ *      * True North Heading Angle (headingDeg clockwise from North).
+ *      * Subsurface Depth (depthM below terrain surface elevation).
+ *  - Voxel size is preserved at 5cm, matching the native LiDAR Livox MID-360 resolution.
  */
 
 export interface Placement {

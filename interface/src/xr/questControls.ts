@@ -1,32 +1,31 @@
 import * as BABYLON from 'babylonjs';
 
 /**
- * Mandos de Meta Quest 3 (Touch Plus) en la sesión WebXR de TERRAIN-X.
+ * TERRAIN-X · WebXR 6DoF Motion Controller Handler (Meta Quest Touch Plus / Pro)
+ * NASA Space Apps Challenge 2026
  *
- *  Gatillo ............ pulsar botones de los paneles (lo hace el puntero de Babylon) y, si el rayo
- *                       apunta al planeta, AGARRARLO y girarlo: la superficie sigue al rayo.
- *  Joystick izq. ...... girar el planeta (X) e inclinarlo (Y).
- *  Joystick der. ...... Y: acercar / alejar el planeta (escala) · X: girar todo el holograma.
- *  Grip (cualquiera) .. agarrar el holograma entero y moverlo por la sala.
- *  A .................. recentrar el holograma delante de ti.
- *  B .................. ocultar / mostrar los paneles.
- *  X .................. encuadrar el planeta (escala y orientación iniciales).
- *  Y .................. abrir / cerrar el panel de la unidad terrestre (Go2).
+ * Interaction Mapping:
+ *  - Primary Trigger: Raycast pointer button click; when targeting the planet, grabs surface rotation.
+ *  - Left Thumbstick: Rotates (X) and tilts (Y) the central planetary body.
+ *  - Right Thumbstick: Y-axis scales planet zoom; X-axis rotates the entire holographic stage.
+ *  - Grip Button (any): Translates and re-positions the entire room-scale stage in physical space.
+ *  - Button A: Recenter spatial cockpit directly in front of the operator's current head pose.
+ *  - Button B: Toggles spatial holographic panels on/off to declutter the visual field.
+ *  - Button X: Resets planet scale and view framing to default planetary coordinates.
+ *  - Button Y: Toggles the Unitree Go2 Quadruped Robot teleoperation panel.
  *
- *  En modo «Conducir» (panel del robot) los dos joysticks dejan de mover el planeta y se pasan
- *  tal cual al panel del robot, que aplica el hombre muerto (ver xrRobotPanel.ts).
- *
- *  Se lee el estado de los mandos en cada fotograma (un joystick mantenido inclinado no emite
- *  eventos de cambio), y los botones por flancos.
+ * Teleoperation Overrides:
+ *  - When the robot driving mode is active, thumbsticks are diverted to `driveSink()` (vx, vy, yaw)
+ *    and enforce a strict 100ms dead-man safety timeout.
  */
 
 export interface Stick { x: number; y: number }
 
 export interface QuestControlHooks {
-  /** Nodo del holograma completo (planeta + paneles): lo mueven el grip, A y el joystick derecho. */
+  /** Root transform node of the entire spatial stage (globe + UI panels), translated by grip/A. */
   stage: BABYLON.TransformNode;
   isPlanetMesh(mesh: BABYLON.AbstractMesh): boolean;
-  /** Centro del planeta y su radio (m) en el mundo, para que el agarre siga al rayo. */
+  /** World position center and radius (meters) for sphere raycast alignment. */
   planetCenter(): BABYLON.Vector3;
   planetRadius(): number;
   spinTiltBy(dSpin: number, dTilt: number): void;
@@ -36,7 +35,7 @@ export interface QuestControlHooks {
   togglePanels(): void;
   fitPlanet(): void;
   toggleRobotPanel(): void;
-  /** Si devuelve una función, los joysticks conducen el robot en lugar de mover el planeta. */
+  /** When non-null, thumbstick inputs drive the robot rather than orbiting the planetary sphere. */
   driveSink(): ((left: Stick, right: Stick) => void) | null;
 }
 

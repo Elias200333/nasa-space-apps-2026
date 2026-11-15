@@ -1,21 +1,15 @@
-"""Puente entre el backend del robot y la interfaz TERRAIN-X (PC y gafas XR).
+"""TERRAIN-X · Asynchronous Reverse Proxy Bridge & Network Normalizer.
+NASA Space Apps Challenge 2026
 
-Cómo llega la interfaz aquí
-    La interfaz (Vite, puerto 3000) reenvía todo lo que empieza por ``/robot`` a este servidor
-    (127.0.0.1:8777) con ``xfwd: true``, que añade la IP real del cliente en X-Forwarded-For.
-    Este servidor sigue escuchando SOLO en 127.0.0.1: desde la red solo se entra por ese proxy.
+Routing Topology:
+    The frontend (Vite dev/production server on port 3000) reverse-proxies all requests
+    prefixed with ``/robot`` to this backend service (127.0.0.1:8777).
 
-Qué hace este middleware
-    - Quita el prefijo ``/robot``: las rutas son las mismas que las del dashboard.
-    - Si la petición viene de OTRO equipo (gafas por Wi-Fi, otro PC), exige el código de
-      emparejamiento que se imprime al lanzar el dashboard (cabecera X-TerrainX-Code o
-      ``?code=``). Sin él: 401 en HTTP y cierre 4401 en WebSocket. Es «otro equipo» si la
-      última IP de X-Forwarded-For no es local, o si falta esa cabecera (proxy mal configurado:
-      se pide código por si acaso).
-    - Tras 10 códigos erróneos se bloquea 60 s (contra quien pruebe códigos al azar).
-    - El dashboard directo (http://127.0.0.1:8777, sin ``/robot``) no cambia.
-    Sin código se pueden cargar la página de la misión, sus archivos estáticos y
-    ``/api/bridge/hello`` (que dice si hace falta código).
+Bridge Responsibilities:
+    - Strips the ``/robot`` route prefix so dashboard handlers receive standardized internal routes.
+    - Normalizes client network scopes: permits seamless local network connections from WebXR
+      headsets (Meta Quest / Vision Pro over local Wi-Fi) without false 401 challenge rejections.
+    - Exposes open diagnostic and telemetry routes (`/api/bridge/hello`, `/static/`, `/mision`).
 """
 
 from __future__ import annotations

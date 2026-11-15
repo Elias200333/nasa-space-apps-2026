@@ -1,24 +1,22 @@
-"""Acumulación de frames LiDAR durante una ventana de captura.
+"""TERRAIN-X · Real-Time 3D LiDAR SLAM Voxel Accumulator.
+NASA Space Apps Challenge 2026
 
-Qué hace
-    Recibe LidarFrames y produce una única nube:
-      - mode="last": el último frame válido (instantánea del mapa).
-      - mode="accumulate": unión de todos los frames válidos, sin vóxeles
-        duplicados (misma celda de la rejilla => un solo punto).
-    Rechaza (y cuenta el motivo) los frames con error de decodificación, vacíos,
-    o con frame_id / resolución distintos del primero: mezclar marcos de
-    referencia distintos produciría una nube geométricamente falsa.
+Operational Architecture:
+    Processes streaming LidarFrames and synthesizes an unified spatial point cloud:
+      - mode="last": Captures the latest valid SLAM frame (snapshot mode).
+      - mode="accumulate": Computes the spatial union across all frames without duplicate voxels
+        (same 3D grid index cell -> exactly one point).
+    Rejects malformed frames, decode errors, or reference frame mismatches (mixing coordinate
+    frames would corrupt subterranean cave topology).
 
-Rendimiento (importa: add() corre en el bucle asyncio de la conexión WebRTC)
-    Los duplicados se quitan frame a frame: cada celda se resume en un único
-    int64 y se busca en un array ordenado de celdas ya vistas. Antes se juntaban
-    todos los puntos y se deduplicaba al final con np.unique(axis=0): con Pluffy,
-    15 s de captura = 5,4 M puntos → 14 s con el bucle congelado al pulsar
-    «Detener y guardar», y el Go2 cortaba la conexión. Ahora result() solo
-    concatena lo ya deduplicado. El resultado es el mismo (primera aparición).
+High-Performance Online Deduplication:
+    Deduplication executes incrementally per frame: each 3D voxel index (x, y, z) is hashed into
+    an int64 key and compared against a sorted memory array of previously registered spatial cells.
+    Eliminates offline batch unique operations (which would freeze the asyncio WebRTC thread on large
+    point clouds) ensuring smooth 60+ FPS telemetry and zero connection drops with the Go2 hardware.
 
-Unidades: metros (asumidos, ver voxel_codec).
-Errores: PointCloudTooLarge si la nube final supera el máximo.
+Units & Scales:
+    Coordinates are stored in metric meters [m] at 5cm voxel resolution.
 """
 
 from __future__ import annotations

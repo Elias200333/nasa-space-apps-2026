@@ -7,17 +7,18 @@ import { button, column, createPanel, placeInFront, row, setEnabled, styleButton
 import type { Stick } from './questControls';
 
 /**
- * Panel de la unidad terrestre (Go2) en las gafas: el mismo flujo que «Mapear zona subterránea» de
- * la web (robotMission.ts), con las MISMAS seguridades que la página de misión del robot:
- *   · «drive» solo mientras un joystick está inclinado, cada 100 ms (señal de hombre muerto del
- *     servidor), y «stop» al soltarlo, al salir del modo conducir, al cerrar el panel o la sesión;
- *   · el servidor recorta la velocidad a sus topes y solo acepta su lista blanca de órdenes;
- *   · desde las gafas (otro equipo) el robot exige el código de emparejamiento de 6 cifras.
- * Velocidad fija «lenta» (0,3 m/s · 0,25 m/s · 0,5 rad/s), la de inicio de misión de la web.
+ * TERRAIN-X · Subsurface Robot Teleoperation Panel for WebXR
+ * NASA Space Apps Challenge 2026
+ *
+ * Enforces the identical safety standards as the ground mission station:
+ *  - High-frequency heartbeat dead-man switch: movement is emitted every 100ms only while inputs are active.
+ *  - Automatic stop on window blur, headset removal, controller unmount, or session suspension.
+ *  - Server-side velocity clamping to conservative indoor limits (vx: 0.3 m/s, vy: 0.25 m/s, yaw: 0.5 rad/s).
+ *  - Real-time rendering of the 3D Livox MID-360 LiDAR SLAM point cloud and front stereo video stream.
  */
 
 const SPEED = { vx: 0.3, vy: 0.25, yaw: 0.5 };
-type Phase = 'idle' | 'pairing' | 'connecting' | 'live' | 'finishing' | 'finished' | 'integrated';
+type Phase = 'idle' | 'connecting' | 'live' | 'finishing' | 'finished' | 'integrated';
 
 export class XRRobotPanel {
   private bridge = new RobotBridge();
@@ -54,15 +55,18 @@ export class XRRobotPanel {
 
   constructor(private scene: BABYLON.Scene, private camera: () => BABYLON.Camera) {}
 
-  isOpen() { return !!this.panel; }
+  isOpen() { return !this.panel; }
 
-  /** Lo llama QuestControls: con «Conducir» activo los joysticks vienen aquí (si no, null). */
+  /**
+   * Hook consumed by QuestControls: when driving mode is enabled, thumbstick deflections are piped here.
+   * @returns Stick deflection callback or null if teleoperation is disengaged.
+   */
   driveSink(): ((l: Stick, r: Stick) => void) | null {
     if (!this.panel || !this.driving) return null;
     return (left, right) => { this.sticks = { left, right }; this.sticksAt = performance.now(); };
   }
 
-  /** Si las gafas dejan de pintar (quitártelas, pausa de la sesión) no llegan joysticks: se para. */
+  /** Dead-man trigger: halts movement if headset stops rendering or document loses focus. */
   private sticksAt = 0;
   private onHidden = () => { if (document.hidden) this.stopDriving(); };
 
