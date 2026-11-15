@@ -1,30 +1,57 @@
 {
-  "site_id": "ES_LANZAROTE_CALDERA_BLANCA",
-  "site_name": "Custom AOI (-28.87700\u00b0, 37.02430\u00b0)",
+  "site_id": "ES_FUERTEVENTURA_ARENA",
+  "site_name": "Custom AOI (28.65000\u00b0, -13.91000\u00b0)",
   "center_gps": {
-    "lat": -28.877,
-    "lon": 37.0243
+    "lat": 28.65,
+    "lon": -13.91
   },
-  "exploration_radius_m": 10000.0,
+  "exploration_radius_m": 100.0,
   "target_body": "Earth",
-  "similarity_pct": 54.12,
+  "similarity_pct": 52.04,
   "metrics_100m": {
-    "radius_m": 10000.0,
-    "area_sq_m": 314159265.3589793,
-    "area_hectares": 31415.93,
-    "elev_min_m": -4840.8,
-    "elev_max_m": -4181.4,
-    "elev_mean_m": -4626.0,
-    "elev_range_m": 659.4,
-    "slope_mean_deg": 2.29,
-    "slope_max_deg": 5.1,
-    "points_sampled": 793
+    "radius_m": 100.0,
+    "area_sq_m": 31415.926535897932,
+    "area_hectares": 3.14,
+    "elev_min_m": 163.8,
+    "elev_max_m": 172.9,
+    "elev_mean_m": 169.0,
+    "elev_range_m": 9.1,
+    "slope_mean_deg": 3.12,
+    "slope_max_deg": 6.33,
+    "points_sampled": 69
   },
   "dem_metadata": {
-    "source": "Copernicus DEM / Mapzen SRTM 30m (Global)",
-    "nominal_resolution_m": 30.0,
-    "crs": "EPSG:4326 (WGS84)",
-    "verified_real_data": true
+    "source": "IGN PNOA-LiDAR Elevacion4258_5 (5m)",
+    "institution": "Instituto Geogr\u00e1fico Nacional (IGN) / IDEE (Espa\u00f1a)",
+    "product": "Modelo Digital del Terreno de Alta Resoluci\u00f3n (MDT)",
+    "coverage_id": "Elevacion4258_5",
+    "nominal_resolution_m": 5.0,
+    "crs": "EPSG:4326",
+    "wcs_service": "https://servicios.idee.es/wcs-inspire/mdt",
+    "documentation_url": "https://centrodedescargas.cnig.es/CentroDescargas/modelos-digitales-elevaciones",
+    "bbox_requested": {
+      "min_lat": 28.646406755300035,
+      "max_lat": 28.653593244699962,
+      "min_lon": -13.914094562903253,
+      "max_lon": -13.905905437096747
+    },
+    "bbox_coverage": {
+      "min_lat": 28.646406999999996,
+      "max_lat": 28.653592999999997,
+      "min_lon": -13.914095,
+      "max_lon": -13.905905
+    },
+    "grid_shape": [
+      41,
+      41
+    ],
+    "elev_min_m": 149.05,
+    "elev_max_m": 190.06,
+    "elev_mean_m": 168.3,
+    "elev_delta_m": 41.01,
+    "mdt01_status": "MDT01 (1m) disponible como descarga MTN25 en CNIG; servicio WCS continuo opera en MDT05 (5m PNOA-LiDAR).",
+    "verified_real_data": true,
+    "timestamp": "2026-11-15T15:01:51.262738+00:00"
   },
   "deliverables": {
     "topographic_image": "topographic_map_ign_100m.png",
@@ -37,39 +64,39 @@
   "evaluation": {
     "target_body": "Mars",
     "target_benchmark_name": "Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum)",
-    "total_similarity_pct": 54.12,
+    "total_similarity_pct": 52.04,
     "metrics_table": [
       {
         "id": "elevation_relief",
         "name": "Rango Altim\u00e9trico y Relieve",
-        "terrestrial_value": "877.8 m (cota -4841--3963 m)",
+        "terrestrial_value": "41.0 m (cota 149-190 m)",
         "planetary_target": "~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))",
-        "similarity_score": 0.742,
+        "similarity_score": 0.3,
         "weight_pct": 10.0,
-        "contribution_pct": 7.42
+        "contribution_pct": 3.0
       },
       {
         "id": "slope_morphometry",
         "name": "Gradiente de Pendiente (Horn)",
-        "terrestrial_value": "13.80\u00b0 (m\u00e1x 29.9\u00b0)",
+        "terrestrial_value": "0.60\u00b0 (m\u00e1x 2.4\u00b0)",
         "planetary_target": "8.0\u00b0 \u00b1 4.0\u00b0",
-        "similarity_score": 0.35,
+        "similarity_score": 0.18,
         "weight_pct": 15.0,
-        "contribution_pct": 5.25
+        "contribution_pct": 2.71
       },
       {
         "id": "surface_roughness_tri",
         "name": "Rugosidad Superficial (TRI)",
-        "terrestrial_value": "20.45 m",
+        "terrestrial_value": "0.99 m",
         "planetary_target": "3.0 \u00b1 1.5 m",
-        "similarity_score": 0.0,
+        "similarity_score": 0.407,
         "weight_pct": 12.0,
-        "contribution_pct": 0.0
+        "contribution_pct": 4.88
       },
       {
         "id": "curvature_profile",
         "name": "Curvatura Topogr\u00e1fica y Sumideros",
-        "terrestrial_value": "0.0000 m\u207b\u00b9",
+        "terrestrial_value": "-0.0000 m\u207b\u00b9",
         "planetary_target": "Inversi\u00f3n de colapso (-0.05)",
         "similarity_score": 0.2,
         "weight_pct": 8.0,
@@ -113,13 +140,13 @@
       }
     ],
     "dem_statistics": {
-      "elev_min_m": -4840.8,
-      "elev_max_m": -3963.0,
-      "elev_mean_m": -4538.6,
-      "elev_range_m": 877.8,
-      "slope_mean_deg": 13.8,
-      "slope_max_deg": 29.94,
-      "tri_mean_m": 20.45,
+      "elev_min_m": 149.0,
+      "elev_max_m": 190.1,
+      "elev_mean_m": 168.3,
+      "elev_range_m": 41.0,
+      "slope_mean_deg": 0.6,
+      "slope_max_deg": 2.39,
+      "tri_mean_m": 0.99,
       "grid_cells": 1681
     }
   }

@@ -363,13 +363,13 @@ export class XRSpatialUIManager {
     adt.addControl(rootBox);
 
     const grid = new GUI.Grid();
-    grid.addColumnDefinition(380, true);  // Logo y título
-    grid.addColumnDefinition(660, true);  // Pestañas Explore, Compare, Terrain, Data, Missions
-    grid.addColumnDefinition(460, true);  // Coordenadas en vivo
-    grid.addColumnDefinition(860, true);  // Acciones: Robot Go2 · Recentrar · Salir
+    grid.addColumnDefinition(540, true);  // Logo y títulos
+    grid.addColumnDefinition(580, true);  // Coordenadas en vivo
+    grid.addColumnDefinition(580, true);  // Barra de búsqueda idéntica a la web
+    grid.addColumnDefinition(660, true);  // Campana, EM, Robot Go2, Salir de XR
     rootBox.addControl(grid);
 
-    // 1. Logo
+    // 1. Logo y títulos
     const brandPanel = new GUI.StackPanel();
     brandPanel.isVertical = false;
     brandPanel.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
@@ -395,7 +395,7 @@ export class XRSpatialUIManager {
     titlePanel.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_CENTER;
 
     const titleText = new GUI.TextBlock();
-    titleText.text = 'IEF Comparaison';
+    titleText.text = 'IEF Comparation';
     titleText.color = '#ffffff';
     titleText.fontSize = 28;
     titleText.fontWeight = 'bold';
@@ -413,68 +413,97 @@ export class XRSpatialUIManager {
     titlePanel.addControl(subText);
 
     brandPanel.addControl(titlePanel);
+
+    // Badge NASA Space Apps
+    const spaceAppsBadge = new GUI.Rectangle();
+    spaceAppsBadge.width = '90px';
+    spaceAppsBadge.height = '48px';
+    spaceAppsBadge.cornerRadius = 24;
+    spaceAppsBadge.color = 'rgba(255, 255, 255, 0.2)';
+    spaceAppsBadge.thickness = 1;
+    spaceAppsBadge.background = 'rgba(15, 23, 42, 0.6)';
+    spaceAppsBadge.paddingLeft = '12px';
+    const saImg = new GUI.Image('saBadgeImg', './nasa_space_apps_logo.png');
+    saImg.width = '40px';
+    saImg.height = '40px';
+    spaceAppsBadge.addControl(saImg);
+    brandPanel.addControl(spaceAppsBadge);
+
     grid.addControl(brandPanel, 0, 0);
 
-    // 2. Pestañas de navegación de la barra superior (Explore, Compare, Terrain, Data, Missions)
-    const tabsStack = new GUI.StackPanel();
-    tabsStack.isVertical = false;
-    tabsStack.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-    tabsStack.spacing = 10;
-
-    const navTabs: { id: string; label: string; action: () => void }[] = [
-      { id: 'explore', label: 'Explore', action: () => { this.activeNavTab = 'explore'; this.updateNavTabs(); this.callbacks.onFitToArea?.(); } },
-      { id: 'compare', label: 'Compare', action: () => { this.activeNavTab = 'compare'; this.updateNavTabs(); this.callbacks.onFullComparison?.(); } },
-      { id: 'terrain', label: 'Terrain', action: () => { this.activeNavTab = 'terrain'; this.updateNavTabs(); this.callbacks.onOpenAnalogs?.(); } },
-      { id: 'data', label: 'Data', action: () => { this.activeNavTab = 'data'; this.updateNavTabs(); this.callbacks.onFullComparison?.(); } },
-      { id: 'missions', label: 'Missions', action: () => { this.activeNavTab = 'missions'; this.updateNavTabs(); this.callbacks.onOpenAnalogs?.(); } },
-    ];
-
-    navTabs.forEach(t => {
-      const b = GUI.Button.CreateSimpleButton(`navTab_${t.id}`, t.label);
-      b.width = '120px';
-      b.height = '52px';
-      b.cornerRadius = 26;
-      b.fontSize = 20;
-      b.fontWeight = 'bold';
-      b.thickness = 1.5;
-      b.color = t.id === this.activeNavTab ? '#ffffff' : '#94a3b8';
-      b.background = t.id === this.activeNavTab ? 'rgba(8, 145, 178, 0.85)' : 'rgba(15, 23, 42, 0.65)';
-      b.onPointerClickObservable.add(() => {
-        sound.playClick(600);
-        t.action();
-      });
-      this.navTabButtons[t.id] = b;
-      tabsStack.addControl(b);
-    });
-    grid.addControl(tabsStack, 0, 1);
-
-    // 3. Coordenadas del centro del globo en vivo
+    // 2. Coordenadas del centro del globo en vivo (idéntica a la píldora superior)
     const coordsPill = new GUI.Rectangle('navCoordsPill');
-    coordsPill.width = '430px';
+    coordsPill.width = '550px';
     coordsPill.height = '58px';
     coordsPill.cornerRadius = 29;
     coordsPill.background = 'rgba(8, 14, 28, 0.85)';
     coordsPill.color = 'rgba(34, 211, 238, 0.45)';
     coordsPill.thickness = 1.5;
     const coordsTxt = new GUI.TextBlock();
-    coordsTxt.text = '⊙ —';
+    coordsTxt.text = '⊙ 15.0488° N, 169.5728° W • WGS84 | 5,000 km';
     coordsTxt.color = '#e2e8f0';
     coordsTxt.fontSize = 20;
     coordsTxt.fontFamily = 'monospace';
     coordsPill.addControl(coordsTxt);
     this.navCoordsBlock = coordsTxt;
-    grid.addControl(coordsPill, 0, 2);
+    grid.addControl(coordsPill, 0, 1);
 
-    // 4. Acciones: Control del Robot Go2 · Recentrar · Salir de XR
+    // 3. Barra de búsqueda idéntica a la web
+    const searchPill = new GUI.Rectangle('navSearchPill');
+    searchPill.width = '550px';
+    searchPill.height = '58px';
+    searchPill.cornerRadius = 29;
+    searchPill.background = 'rgba(15, 23, 42, 0.75)';
+    searchPill.color = 'rgba(255, 255, 255, 0.18)';
+    searchPill.thickness = 1;
+    const searchTxt = new GUI.TextBlock();
+    searchTxt.text = '🔍 Search a location, crater, or feature...   /';
+    searchTxt.color = '#94a3b8';
+    searchTxt.fontSize = 19;
+    searchPill.addControl(searchTxt);
+    searchPill.onPointerClickObservable.add(() => {
+      sound.playClick(600);
+      this.callbacks.onOpenAnalogs?.();
+    });
+    grid.addControl(searchPill, 0, 2);
+
+    // 4. Acciones: Campana · EM · Robot Go2 · Salir de XR
     const actions = new GUI.StackPanel();
     actions.isVertical = false;
     actions.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
     actions.paddingRight = '24px';
     actions.spacing = 10;
 
+    // Campana de notificaciones
+    const bellBtn = GUI.Button.CreateSimpleButton('navBell', '🔔');
+    bellBtn.width = '58px';
+    bellBtn.height = '58px';
+    bellBtn.cornerRadius = 29;
+    bellBtn.color = '#38bdf8';
+    bellBtn.background = 'rgba(15, 23, 42, 0.75)';
+    bellBtn.thickness = 1;
+    bellBtn.fontSize = 24;
+    actions.addControl(bellBtn);
+
+    // Avatar usuario EM
+    const avatar = new GUI.Rectangle('userAvatar');
+    avatar.width = '58px';
+    avatar.height = '58px';
+    avatar.cornerRadius = 29;
+    avatar.background = '#0284c7';
+    avatar.color = '#38bdf8';
+    avatar.thickness = 1.5;
+    const avTxt = new GUI.TextBlock();
+    avTxt.text = 'EM';
+    avTxt.color = '#ffffff';
+    avTxt.fontSize = 22;
+    avTxt.fontWeight = 'bold';
+    avatar.addControl(avTxt);
+    actions.addControl(avatar);
+
     const mk = (label: string, fn: (() => void) | undefined, primary = false, color = '#38bdf8') => {
       const b = GUI.Button.CreateSimpleButton(`nav_${label}`, label);
-      b.width = primary ? '270px' : '200px';
+      b.width = primary ? '260px' : '180px';
       b.height = '58px';
       b.cornerRadius = 29;
       b.fontSize = 20;
@@ -487,8 +516,7 @@ export class XRSpatialUIManager {
     };
 
     mk('🐕 Robot Go2 (WASD)', () => this.callbacks.onToggleRobot?.(), true);
-    mk('⟲ Recentrar', () => this.callbacks.onRecenter?.());
-    mk('✕ Salir', () => this.callbacks.onExitXR?.());
+    mk('🥽 Salir de XR', () => this.callbacks.onExitXR?.());
     grid.addControl(actions, 0, 3);
   }
 
@@ -969,16 +997,16 @@ export class XRSpatialUIManager {
 
     const addToolBtn = (label: string, icon: string, action: 'orbit' | 'move' | 'zoomIn' | 'zoomOut' | 'fit', isFirst = false) => {
       const b = GUI.Button.CreateSimpleButton(`btnTool_${action}`, `${icon}\n${label}`);
-      b.width = '280px';
-      b.height = '230px';
-      b.cornerRadius = 22;
+      b.width = '210px';
+      b.height = '210px';
+      b.cornerRadius = 105;
       b.color = '#38bdf8';
-      b.fontSize = 24;
+      b.fontSize = 20;
       b.fontWeight = 'bold';
-      b.background = isFirst ? 'rgba(14, 165, 233, 0.35)' : 'rgba(15, 23, 42, 0.65)';
-      b.thickness = isFirst ? 2 : 1;
-      b.paddingTop = '12px';
-      b.paddingBottom = '12px';
+      b.background = isFirst ? 'rgba(8, 145, 178, 0.45)' : 'rgba(15, 23, 42, 0.75)';
+      b.thickness = isFirst ? 2.5 : 1.5;
+      b.paddingTop = '14px';
+      b.paddingBottom = '14px';
       b.onPointerClickObservable.add(() => {
         sound.playClick(600);
         this.callbacks.onCameraTool(action);
@@ -1307,13 +1335,13 @@ export class XRSpatialUIManager {
     this.deskSubBlock = cSub;
     topBar.addControl(titleStack, 0, 1);
 
-    // Botones derecha del header
+    // Botones derecha del header (Fit to Area, 3D · r 10 km, Cerrar)
     const rightActions = new GUI.StackPanel();
     rightActions.isVertical = false;
     rightActions.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
 
     const bFit = GUI.Button.CreateSimpleButton('btnFitArea', '⛶ Fit to Area');
-    bFit.width = '180px';
+    bFit.width = '170px';
     bFit.height = '42px';
     bFit.fontSize = 18;
     bFit.cornerRadius = 21;
@@ -1323,17 +1351,32 @@ export class XRSpatialUIManager {
     bFit.onPointerClickObservable.add(() => { sound.playClick(650); this.callbacks.onFitToArea?.(); });
     rightActions.addControl(bFit);
 
-    const b3D = GUI.Button.CreateSimpleButton('btn3DMode', '☰ Top 10 análogos');
+    const b3D = GUI.Button.CreateSimpleButton('btn3DMode', '3D · r 10 km');
     b3D.onPointerClickObservable.add(() => { sound.playClick(650); this.callbacks.onOpenAnalogs?.(); });
-    b3D.width = '230px';
+    b3D.width = '170px';
     b3D.height = '42px';
     b3D.fontSize = 18;
     b3D.cornerRadius = 21;
-    b3D.color = '#10b981';
-    b3D.background = 'rgba(16, 185, 129, 0.2)';
-    b3D.thickness = 1;
-    b3D.paddingLeft = '14px';
+    b3D.color = '#38bdf8';
+    b3D.background = 'rgba(14, 165, 233, 0.25)';
+    b3D.thickness = 1.5;
+    b3D.paddingLeft = '10px';
     rightActions.addControl(b3D);
+
+    const bClose = GUI.Button.CreateSimpleButton('btnDeskClose', '✕');
+    bClose.width = '42px';
+    bClose.height = '42px';
+    bClose.fontSize = 18;
+    bClose.cornerRadius = 21;
+    bClose.color = '#94a3b8';
+    bClose.background = 'rgba(15, 23, 42, 0.7)';
+    bClose.thickness = 1;
+    bClose.paddingLeft = '10px';
+    bClose.onPointerClickObservable.add(() => {
+      sound.playClick(500);
+      deskBox.isVisible = false;
+    });
+    rightActions.addControl(bClose);
 
     topBar.addControl(rightActions, 0, 2);
     mainStack.addControl(topBar);
@@ -1375,15 +1418,53 @@ export class XRSpatialUIManager {
     mapImgContainer.addControl(satImg);
     this.deskSatImage = satImg;
 
-    // Anillo del radio de exploración REAL (su tamaño lo calcula updateDesk)
+    // Anillo del radio de exploración REAL con retícula central
     const radarOverlay = new GUI.Ellipse();
     radarOverlay.width = '180px';
     radarOverlay.height = '180px';
     radarOverlay.color = '#22d3ee';
-    radarOverlay.thickness = 3;
+    radarOverlay.thickness = 2.5;
     radarOverlay.background = 'rgba(34, 211, 238, 0.08)';
+
+    const centerCross = new GUI.TextBlock();
+    centerCross.text = '+';
+    centerCross.color = '#22d3ee';
+    centerCross.fontSize = 24;
+    centerCross.fontWeight = 'bold';
+    radarOverlay.addControl(centerCross);
+
     mapImgContainer.addControl(radarOverlay);
     this.deskRing = radarOverlay;
+
+    // Botones de zoom sobre el mapa satelital
+    const mapZoomStack = new GUI.StackPanel();
+    mapZoomStack.isVertical = true;
+    mapZoomStack.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    mapZoomStack.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+    mapZoomStack.paddingRight = '16px';
+    mapZoomStack.spacing = 8;
+
+    const bZIn = GUI.Button.CreateSimpleButton('btnDeskMapZIn', '+');
+    bZIn.width = '42px';
+    bZIn.height = '42px';
+    bZIn.cornerRadius = 21;
+    bZIn.background = 'rgba(15, 23, 42, 0.85)';
+    bZIn.color = '#38bdf8';
+    bZIn.fontSize = 26;
+    bZIn.thickness = 1;
+    mapZoomStack.addControl(bZIn);
+
+    const bZOut = GUI.Button.CreateSimpleButton('btnDeskMapZOut', '−');
+    bZOut.width = '42px';
+    bZOut.height = '42px';
+    bZOut.cornerRadius = 21;
+    bZOut.background = 'rgba(15, 23, 42, 0.85)';
+    bZOut.color = '#38bdf8';
+    bZOut.fontSize = 26;
+    bZOut.thickness = 1;
+    mapZoomStack.addControl(bZOut);
+
+    mapImgContainer.addControl(mapZoomStack);
 
     mapStack.addControl(mapImgContainer);
     leftSubWin.addControl(mapStack);
@@ -1499,11 +1580,12 @@ export class XRSpatialUIManager {
     dockBar.paddingTop = '16px';
 
     const dockGrid = new GUI.Grid();
-    dockGrid.addColumnDefinition(0.24); // Title
-    dockGrid.addColumnDefinition(0.18); // Surface Area
-    dockGrid.addColumnDefinition(0.18); // Gravity
-    dockGrid.addColumnDefinition(0.18); // Avg. Temp
-    dockGrid.addColumnDefinition(0.22); // Action Button
+    dockGrid.addColumnDefinition(0.22); // Title
+    dockGrid.addColumnDefinition(0.15); // Surface Area
+    dockGrid.addColumnDefinition(0.15); // Gravity
+    dockGrid.addColumnDefinition(0.16); // Avg. Temp
+    dockGrid.addColumnDefinition(0.16); // Terrain Complexity
+    dockGrid.addColumnDefinition(0.16); // Action Button
     dockBar.addControl(dockGrid);
 
     // 1. Título
@@ -1515,23 +1597,23 @@ export class XRSpatialUIManager {
     const dt1 = new GUI.TextBlock();
     dt1.text = '📊 Terrain Comparison';
     dt1.color = '#ffffff';
-    dt1.fontSize = 22;
+    dt1.fontSize = 20;
     dt1.fontWeight = 'bold';
     dt1.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    dt1.height = '30px';
+    dt1.height = '28px';
     docTitleStack.addControl(dt1);
 
     const dt2 = new GUI.TextBlock();
     dt2.text = 'Key surface & environment metrics';
     dt2.color = '#94a3b8';
-    dt2.fontSize = 16;
+    dt2.fontSize = 15;
     dt2.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    dt2.height = '22px';
+    dt2.height = '20px';
     docTitleStack.addControl(dt2);
     dockGrid.addControl(docTitleStack, 0, 0);
 
-    // 2, 3, 4. Métricas
-    const addMetricCol = (col: number, label: string, m1: string, m2: string) => {
+    // 2, 3, 4, 5. Métricas científicas idénticas a la imagen
+    const addMetricCol = (col: number, label: string, m1: string, m2: string, c2 = '#38bdf8') => {
       const p = new GUI.StackPanel();
       p.isVertical = true;
       p.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_CENTER;
@@ -1539,32 +1621,41 @@ export class XRSpatialUIManager {
       const l = new GUI.TextBlock();
       l.text = label;
       l.color = '#94a3b8';
-      l.fontSize = 16;
-      l.height = '22px';
+      l.fontSize = 15;
+      l.height = '20px';
       p.addControl(l);
 
-      const v = new GUI.TextBlock();
-      v.text = `${m1}  •  ${m2}`;
-      v.color = '#38bdf8';
-      v.fontSize = 18;
-      v.fontWeight = 'bold';
-      v.height = '26px';
-      p.addControl(v);
+      const v1 = new GUI.TextBlock();
+      v1.text = m1;
+      v1.color = '#cbd5e1';
+      v1.fontSize = 16;
+      v1.fontWeight = 'bold';
+      v1.height = '22px';
+      p.addControl(v1);
+
+      const v2 = new GUI.TextBlock();
+      v2.text = m2;
+      v2.color = c2;
+      v2.fontSize = 16;
+      v2.fontWeight = 'bold';
+      v2.height = '22px';
+      p.addControl(v2);
 
       dockGrid.addControl(p, 0, col);
     };
 
-    addMetricCol(1, 'Surface Area', 'Moon 0.27×', 'Mars 3.82×');
-    addMetricCol(2, 'Gravity (vs Earth)', 'Moon 0.165×', 'Mars 0.38×');
-    addMetricCol(3, 'Avg. Temperature', '-173 ~ 127 °C', '-125 ~ 20 °C');
+    addMetricCol(1, 'Surface Area', 'Moon 0.27×', 'Mars 3.82×', '#38bdf8');
+    addMetricCol(2, 'Gravity (vs Earth)', 'Moon 0.165×', 'Mars 0.38×', '#38bdf8');
+    addMetricCol(3, 'Avg. Temperature', 'Moon -173 ~ 127 °C', 'Mars -125 ~ 20 °C', '#38bdf8');
+    addMetricCol(4, 'Terrain Complexity', 'Moon Low – Medium', 'Mars Medium – High', '#34d399');
 
-    // 5. Botón Full Comparison
+    // 6. Botón Full Comparison
     const btnFull = GUI.Button.CreateSimpleButton('btnFullCompDesk', '∞ Full Comparison →');
-    btnFull.width = '320px';
-    btnFull.height = '56px';
-    btnFull.fontSize = 20;
+    btnFull.width = '280px';
+    btnFull.height = '52px';
+    btnFull.fontSize = 19;
     btnFull.fontWeight = 'bold';
-    btnFull.cornerRadius = 28;
+    btnFull.cornerRadius = 26;
     btnFull.color = '#38bdf8';
     btnFull.background = 'rgba(14, 165, 233, 0.25)';
     btnFull.thickness = 1.5;
