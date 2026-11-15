@@ -117,40 +117,6 @@ body {
   filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.2));
 }
 
-.nav-tabs {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(15, 23, 42, 0.6);
-  padding: 4px;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.nav-tab-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 500;
-  padding: 6px 16px;
-  border-radius: 9999px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nav-tab-btn:hover {
-  color: var(--text-main);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.nav-tab-btn.active {
-  background: rgba(34, 211, 238, 0.18);
-  color: #ffffff;
-  border: 1px solid var(--border-cyan-active);
-  box-shadow: 0 0 14px rgba(34, 211, 238, 0.35);
-}
-
 .nav-right {
   display: flex;
   align-items: center;
@@ -715,27 +681,6 @@ body {
   background: rgba(34, 211, 238, 0.25);
   color: var(--cyan-glow);
   border: 1px solid var(--border-cyan);
-}
-
-.north-indicator {
-  position: absolute;
-  top: 140px;
-  right: 380px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  color: var(--cyan-glow);
-  font-size: 0.75rem;
-  font-weight: 700;
-  z-index: 30;
-  pointer-events: none;
-}
-
-.north-arrow {
-  width: 14px;
-  height: 20px;
-  fill: currentColor;
 }
 
 /* ==========================================================================
@@ -2430,7 +2375,6 @@ body.vr-mode .panel-left-wrapper,
 body.vr-mode .panel-right-wrapper,
 body.vr-mode .bottom-comparison-panel,
 body.vr-mode .camera-controls-wrapper,
-body.vr-mode .north-indicator,
 body.vr-mode .analog-overlay-bar,
 body.vr-mode #targetSiteCard {
   display: none !important;

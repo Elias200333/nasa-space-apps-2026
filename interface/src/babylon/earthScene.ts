@@ -395,12 +395,10 @@ export class EarthSceneManager {
       this.lastPointerY = e.clientY;
 
       if (this.activeDragMode === 'earth') {
-        // Click izquierdo: Gira la Tierra sobre su eje (continentes rotan frente al observador)
-        this.earthRoot.rotation.y += deltaX * 0.005;
-
-        // Inclinación vertical restringida para preservar la orientación de los polos
-        const newRotX = this.earthRoot.rotation.x + deltaY * 0.005;
-        this.earthRoot.rotation.x = Math.max(-Math.PI / 3.5, Math.min(Math.PI / 3.5, newRotX));
+        // Click izquierdo: «agarrar» el planeta. La superficie sigue al puntero (arrastrar a la derecha
+        // la lleva a la derecha; hacia abajo, abajo): giro sobre su eje polar e inclinación sobre el eje
+        // horizontal de la pantalla, con el polo siempre en vertical (no se tumba de lado).
+        this.spinTiltBy(-deltaX * 0.005, -deltaY * 0.005);
       } else if (this.activeDragMode === 'camera') {
         // Click derecho: Órbita de la perspectiva de la cámara ("como antes")
         this.camera.alpha -= deltaX * 0.005;
@@ -452,7 +450,7 @@ export class EarthSceneManager {
     this.engine.runRenderLoop(() => {
       // Rotación automática muy sutil y suave de la Tierra
       if (this.autoRotate) {
-        this.earthRoot.rotation.y += 0.0002;
+        this.spinTiltBy(0.0002, 0);   // sobre su eje polar: si está inclinado, ya no se bambolea
       }
 
       // Deriva atmosférica independiente de las nubes
@@ -884,6 +882,36 @@ export class EarthSceneManager {
 
     const q = BABYLON.Quaternion.FromRotationMatrix(mTotal);
     return q.toEulerAngles();
+  }
+
+  /** Inclinación máxima a la que se llega arrastrando (la misma que antes: ±π/3.5). */
+  private static readonly MAX_DRAG_TILT = Math.PI / 3.5;
+
+  /**
+   * Orientación «tipo globo» del planeta: primero un giro `spin` sobre su eje polar y después una
+   * inclinación `tilt` sobre el eje X de la escena (la misma forma mY·mX de calculateOrientationEuler).
+   * Se deduce de la rotación actual, para respetar lo que hayan dejado las animaciones.
+   * Polo en el mundo = (0, cos t, sin t); eje X local = (cos s, sin s·sin t, −sin s·cos t).
+   */
+  private getSpinTilt(): { spin: number; tilt: number } {
+    const r = this.earthRoot.rotation;
+    const m = BABYLON.Matrix.RotationYawPitchRoll(r.y, r.x, r.z);
+    const pole = BABYLON.Vector3.TransformNormal(BABYLON.Axis.Y, m);
+    const east = BABYLON.Vector3.TransformNormal(BABYLON.Axis.X, m);
+    const tilt = Math.atan2(pole.z, pole.y);
+    const spin = Math.atan2(east.y * Math.sin(tilt) - east.z * Math.cos(tilt), east.x);
+    return { spin, tilt };
+  }
+
+  /** Gira el planeta sobre su eje polar (`dSpin`) y lo inclina hacia/desde la cámara (`dTilt`). */
+  private spinTiltBy(dSpin: number, dTilt: number) {
+    const { spin, tilt } = this.getSpinTilt();
+    let newTilt = tilt + dTilt;
+    // Tope de inclinación; si una animación dejó el planeta más inclinado (un polo), no salta: solo
+    // impide inclinarlo aún más.
+    if (Math.abs(newTilt) > EarthSceneManager.MAX_DRAG_TILT && Math.abs(newTilt) > Math.abs(tilt)) newTilt = tilt;
+    const m = BABYLON.Matrix.RotationY(spin + dSpin).multiply(BABYLON.Matrix.RotationX(newTilt));
+    this.earthRoot.rotation.copyFrom(BABYLON.Quaternion.FromRotationMatrix(m).toEulerAngles());
   }
 
   /**
