@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TERRAIN-X · Demo Visual Interactiva | NASA Space Apps Challenge 2026</title>
+  <link rel="icon" type="image/png" href="assets/nasa_space_apps_logo.png">
+  <link rel="stylesheet" href="css/demo.css">
+  
+  <!-- Babylon.js 3D Engine (Local con Fallback a CDN) -->
+  <script src="libs/babylon.js"></script>
+  <script>
+    if (!window.BABYLON) {
+      document.write('<script src="https://cdn.babylonjs.com/babylon.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+
+  <!-- ====================================================================
+       1. AVISO SUPERIOR OBLIGATORIO: DEMO PRECOMPILADA & REPOSITORIO GITHUB
+       ==================================================================== -->
+  <aside class="demo-banner" role="banner">
+    <div class="banner-left">
+      <span class="banner-badge">DEMO INTERACTIVA PRECUMPILADA</span>
+      <span class="banner-text">
+        Esta es una <strong>demo visual interactiva</strong> con información científica y telemetría real compilada previamente.
+        Para ejecutar el proyecto en tiempo real (con hardware robótico Unitree Go2 y análisis satelital en vivo), accede al repositorio oficial:
+        <a href="https://github.com/Elias200333/nasa-space-apps-2026" target="_blank" rel="noopener noreferrer">https://github.com/Elias200333/nasa-space-apps-2026</a>
+      </span>
+    </div>
+    <a href="https://github.com/Elias200333/nasa-space-apps-2026" target="_blank" rel="noopener noreferrer" class="banner-btn">
+      Ver Repositorio GitHub ↗
+    </a>
+  </aside>
+
+  <!-- ====================================================================
+       2. BARRA DE NAVEGACIÓN SUPERIOR (ESTILO ESPACIAL NASA)
+       ==================================================================== -->
+  <header class="top-nav">
+    <div class="brand-section">
+      <img src="assets/nasa_space_apps_logo.png" alt="NASA Space Apps Challenge 2026" class="brand-logo">
+      <div class="brand-text">
+        <h1>TERRAIN-X</h1>
+        <p>NASA Space Apps 2026 · Planetary Analogs & Robotics</p>
+      </div>
+    </div>
+
+    <div class="nav-center">
+      <div class="planet-pill-group">
+        <button class="planet-pill" data-planet="Moon">🌑 Moon</button>
+        <button class="planet-pill active" data-planet="Earth">🌍 Earth</button>
+        <button class="planet-pill" data-planet="Mars">🪐 Mars</button>
+      </div>
+
+      <div class="nav-coords" id="navCoords">
+        ⊙ 29.0393° N, 13.7165° W • WGS84 | 5,000 km
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <button class="nav-btn primary" id="btnOpenRobot">
+        🐕 Robot Go2 (WASD)
+      </button>
+      <button class="nav-btn" id="btnOpenComp">
+        📊 Comparativa Global
+      </button>
+      <a href="data/terrain_3d.html" target="_blank" class="nav-btn">
+        🗺️ DEM 3D Plotly ↗
+      </a>
+    </div>
+  </header>
+
+  <!-- ====================================================================
+       3. LIENZO 3D PLANETARIO (BABYLON.JS)
+       ==================================================================== -->
+  <canvas id="renderCanvas"></canvas>
+
+  <!-- ====================================================================
+       4. HERRAMIENTAS DE CÁMARA ORBITAL
+       ==================================================================== -->
+  <aside class="camera-tools">
+    <button class="tool-btn" id="btnOrbit" title="Girar / Pausar Órbita Automática">⟳</button>
+    <button class="tool-btn" id="btnZoomIn" title="Acercar Cámara">+</button>
+    <button class="tool-btn" id="btnZoomOut" title="Alejar Cámara">−</button>
+    <button class="tool-btn" id="btnFit" title="Centrar Planeta">⛶</button>
+  </aside>
+
+  <!-- ====================================================================
+       5. TARJETAS PLANETARIAS FLOTANTES (LUNA Y MARTE)
+       ==================================================================== -->
+  <!-- Tarjeta Luna (Izquierda) -->
+  <section class="planet-side-card left">
+    <div class="card-header">
+      <div class="card-title">
+        <h3>🌑 Moon</h3>
+        <span>Satélite Natural</span>
+      </div>
+    </div>
+    <img src="textures/moon.jpg" alt="Superficie Lunar" class="card-thumb">
+    <div class="metric-grid">
+      <div class="metric-item">
+        <div class="metric-label">Radio</div>
+        <div class="metric-val">1,737 km</div>
+      </div>
+      <div class="metric-item">
+        <div class="metric-label">Área</div>
+        <div class="metric-val">37.9M km²</div>
+      </div>
+      <div class="metric-item">
+        <div class="metric-label">Gravedad</div>
+        <div class="metric-val">0.165 g</div>
+      </div>
+      <div class="metric-item">
+        <div class="metric-label">Temp. Media</div>
+        <div class="metric-val">-173 ~ 127 °C</div>
+      </div>
+    </div>
+    <button class="card-action" onclick="document.querySelector('[data-planet=Moon]').click()">
+      Explorar Luna →
+    </button>
+  </section>
+
+  <!-- Tarjeta Marte (Derecha) -->
+  <section class="planet-side-card right">
+    <div class="card-header">
+      <div class="card-title">
+        <h3>🪐 Mars</h3>
+        <span>Planeta Rojo</span>
+      </div>
+    </div>
+    <img src="textures/mars.jpg" alt="Superficie de Marte" class="card-thumb">
+    <div class="metric-grid">
+      <div class="metric-item">
+        <div class="metric-label">Radio</div>
+        <div class="metric-val">3,390 km</div>
+      </div>
+      <div class="metric-item">
+        <div class="metric-label">Área</div>
+        <div class="metric-val">144.8M km²</div>
+      </div>
+      <div class="metric-item">
+        <div class="metric-label">Gravedad</div>
+        <div class="metric-val">0.38 g</div>
+      </div>
+      <div class="metric-item">
+        <div class="metric-label">Temp. Media</div>
+        <div class="metric-val">-125 ~ 20 °C</div>
+      </div>
+    </div>
+    <button class="card-action" onclick="document.querySelector('[data-planet=Mars]').click()">
+      Explorar Marte →
+    </button>
+  </section>
+
+  <!-- ====================================================================
+       6. CONSOLA INFERIOR: RADAR 2D Y MODELO 3D DEM REAL
+       ==================================================================== -->
+  <main class="bottom-console">
+    <div class="console-header">
+      <div class="console-title">
+        <h2>📍 Analog Site Analysis</h2>
+        <span>Crater de Caldera Blanca (Lanzarote, España) • 29.0393° N, 13.7165° W</span>
+      </div>
+      <div style="font-size: 11px; color: var(--text-muted);">
+        DEM: <strong>Copernicus DEM / IGN MDT05 (30 m)</strong> • Radio: <strong>10 km</strong>
+      </div>
+    </div>
+
+    <div class="console-body">
+      <!-- Radar 2D de Análogos -->
+      <div class="radar-box">
+        <canvas id="radarCanvas"></canvas>
+        <div class="radar-overlay-tag">RADAR 2D · r 10 km</div>
+      </div>
+
+      <!-- DEM 3D Superficie -->
+      <div class="dem-box">
+        <canvas id="demCanvas"></canvas>
+        <div class="dem-controls">
+          <button class="dem-pill" id="btnDemWireframe">Malla / Superficie</button>
+          <button class="dem-pill" id="btnDemExaggeration">Exageración: ×3.5</button>
+        </div>
+      </div>
+
+      <!-- Panel de Métricas Científicas -->
+      <div class="metrics-panel">
+        <div class="sim-score-badge">
+          <div>
+            <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Similitud (vs Marte)</div>
+            <div style="font-size: 11px; color: #38bdf8;">Tharsis Flank Analog</div>
+          </div>
+          <div class="score">68.5%</div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div class="stat-row">
+            <span class="stat-label">Elevación</span>
+            <span class="stat-value">261 – 458 m</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Pendiente (media)</span>
+            <span class="stat-value">4.2° (máx 8.4°)</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Estructura Subterránea</span>
+            <span class="stat-value" style="color: var(--accent-amber);">Tubo de Lava (-14.5 m)</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Pearson (R)</span>
+            <span class="stat-value">0.920</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ====================================================================
+       7. DOCK INFERIOR DE MÉTRICAS COMPARATIVAS
+       ==================================================================== -->
+  <footer class="bottom-dock">
+    <div class="dock-left">
+      <div class="dock-title">
+        <span>📊 Terrain Comparison</span>
+      </div>
+      <div class="dock-metrics">
+        <div class="dock-metric-col">
+          <span>Área Superficial</span>
+          <span id="dockSurfArea">510.1M km²</span>
+        </div>
+        <div class="dock-metric-col">
+          <span>Gravedad (vs Tierra)</span>
+          <span id="dockGravity">1.00× (9.81 m/s²)</span>
+        </div>
+        <div class="dock-metric-col">
+          <span>Temp. Promedio</span>
+          <span id="dockTemp">15 °C</span>
+        </div>
+        <div class="dock-metric-col">
+          <span>Complejidad Terreno</span>
+          <span id="dockComplexity" style="color: var(--accent-green);">Extrema</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-full-comp" id="btnOpenComp">
+      ∞ Full Comparison →
+    </button>
+  </footer>
+
+  <!-- ====================================================================
+       8. MODAL INTERACTIVO: ROBOT UNITREE GO2 (LIDAR SLAM Y CONDUCCIÓN)
+       ==================================================================== -->
+  <div class="modal-overlay" id="robotModal">
+    <div class="robot-modal-card">
+      <div class="modal-header">
+        <h2>🐕 Unidad Terrestre · Unitree Go2 (LiDAR SLAM & Cámara)</h2>
+        <button class="modal-close-btn" id="btnCloseRobot">✕</button>
+      </div>
+
+      <div class="modal-content">
+        <!-- Vista Cámara Go2 -->
+        <div class="robot-cam-box">
+          <canvas id="robotCamCanvas"></canvas>
+          <div class="cam-hud-overlay">
+            CÁMARA GO2 · MODO SIMULACIÓN EN VIVO<br>
+            Batería: 88.4% • Enlace: LocalSTA
+          </div>
+        </div>
+
+        <!-- Vista LiDAR SLAM en Planta -->
+        <div class="robot-lidar-box">
+          <canvas id="robotLidarCanvas"></canvas>
+          <div class="cam-hud-overlay" style="bottom: 10px; top: auto;">
+            LiDAR SLAM · 54,915 pts pregrabados<br>
+            Resolución Vóxel: 0.05 m • Clase: Derived
+          </div>
+        </div>
+      </div>
+
+      <div class="robot-controls-bar">
+        <div class="wasd-hint">
+          <span>Conducción:</span>
+          <span class="key-badge">W</span>
+          <span class="key-badge">A</span>
+          <span class="key-badge">S</span>
+          <span class="key-badge">D</span>
+          <span>para mover al robot y explorar la cueva</span>
+        </div>
+
+        <div class="posture-buttons">
+          <button class="posture-btn" data-posture="StandUp">🐕 Levantar</button>
+          <button class="posture-btn" data-posture="StandDown">🐕 Sentar</button>
+          <button class="posture-btn" data-posture="BalanceStand">🐕 Equilibrio</button>
+          <button class="posture-btn" data-posture="Damp">🐕 Amortiguar</button>
+        </div>
+
+        <div id="robotStatusMsg" style="font-size: 11px; color: var(--accent-cyan); font-family: var(--font-mono);">
+          ● Go2 Listo para Conducción
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       9. MODAL CIENTÍFICO: COMPARATIVA COMPLETA Y ATLAS TEMÁTICO
+       ==================================================================== -->
+  <div class="modal-overlay" id="compModal">
+    <div class="comp-modal-card">
+      <div class="modal-header">
+        <h2>📊 NASA Space Apps 2026 · Atlas Científico & Comparativa Planetaria</h2>
+        <button class="modal-close-btn" id="btnCloseComp">✕</button>
+      </div>
+
+      <div class="comp-scroll-area">
+        <!-- Tabla Comparativa -->
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th>Parámetro Físico / Geológico</th>
+              <th>🌍 Tierra (Benchmark)</th>
+              <th>🌑 Luna (Artemis Target)</th>
+              <th>🪐 Marte (Perseverance / MSR)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Radio Medio</strong></td>
+              <td>6,371 km (1.00×)</td>
+              <td>1,737 km (0.27×)</td>
+              <td>3,390 km (0.53×)</td>
+            </tr>
+            <tr>
+              <td><strong>Gravedad Superficial</strong></td>
+              <td>9.81 m/s² (1.00 g)</td>
+              <td>1.62 m/s² (0.165 g)</td>
+              <td>3.72 m/s² (0.38 g)</td>
+            </tr>
+            <tr>
+              <td><strong>Presión Atmosférica</strong></td>
+              <td>1.013 bar (101.3 kPa)</td>
+              <td>~3 × 10⁻¹⁵ bar (Ultra-vacío)</td>
+              <td>0.006 bar (6.1 mbar)</td>
+            </tr>
+            <tr>
+              <td><strong>Composición Atmosférica</strong></td>
+              <td>N₂ (78%), O₂ (21%), Ar (0.9%)</td>
+              <td>Exosfera tenue (He, Ne, H₂)</td>
+              <td>CO₂ (95.3%), N₂ (2.6%), Ar (1.9%)</td>
+            </tr>
+            <tr>
+              <td><strong>Temperatura de Superficie</strong></td>
+              <td>-89 °C a +58 °C (Media: 15 °C)</td>
+              <td>-173 °C a +127 °C (Media: -20 °C)</td>
+              <td>-125 °C a +20 °C (Media: -63 °C)</td>
+            </tr>
+            <tr>
+              <td><strong>Geología de Cavidades</strong></td>
+              <td>Tubos de lava basálticos (Lanzarote)</td>
+              <td>Tubos de lava colosales (Marius Hills)</td>
+              <td>Conductos volcánicos en flancos de Tharsis</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Atlas Temático Científico -->
+        <div>
+          <h3 style="font-size: 15px; margin-bottom: 10px; color: var(--accent-cyan);">
+            Atlas Temático de Correlación Geomorfológica & Altimetría
+          </h3>
+          <div class="atlas-img-container">
+            <img src="data/thematic_comparison_atlas.png" alt="Atlas Temático Comparativo">
+          </div>
+        </div>
+
+        <div>
+          <h3 style="font-size: 15px; margin-bottom: 10px; color: var(--accent-cyan);">
+            Mapa Topográfico de Detalle IGN / Copernicus DEM (100 m)
+          </h3>
+          <div class="atlas-img-container">
+            <img src="data/topographic_map_ign_100m.png" alt="Mapa Topográfico IGN 100m">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts de la Aplicación -->
+  <script src="js/data.js"></script>
+  <script src="js/demo.js"></script>
+</body>
+</html>
