@@ -62,7 +62,10 @@ export class TerrainxLidarSource extends LidarSource {
   }
 
   _open() {
-    const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws/lidar'
+    // Detrás del proxy de la interfaz (/robot) y con código de emparejamiento: lo pone mision.js
+    const B = window.TERRAINX_BRIDGE || {}
+    const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + (B.base || '') +
+      '/ws/lidar' + (B.code ? '?code=' + encodeURIComponent(B.code) : '')
     const ws = new WebSocket(url)
     ws.binaryType = 'arraybuffer'
     this._ws = ws

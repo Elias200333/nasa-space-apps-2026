@@ -74,11 +74,19 @@ function darkButton(parent, label, icon, onClick) {
   return b
 }
 
-/** Monta el visor en `mount`. onStats({ mode, voxels, fps, receiving, paused }) cada 500 ms */
+// Ruta de la API: igual en el dashboard; detrás del proxy de la interfaz (/robot) y con el código
+// de emparejamiento cuando lo pone mision.js en window.TERRAINX_BRIDGE.
+const bridgeUrl = (path) => {
+  const B = window.TERRAINX_BRIDGE || {}
+  return (B.base || '') + path + (B.code ? (path.includes('?') ? '&' : '?') + 'code=' + encodeURIComponent(B.code) : '')
+}
+
+/** Monta el visor en `mount` (data-mode="slam" en el contenedor: arranca en «Acumulado»).
+ *  onStats({ mode, voxels, fps, receiving, paused }) cada 500 ms */
 export function mountLidarView(mount, { onStats } = {}) {
   const engine = getLidarEngine()
   const slam = getSlamEngine()
-  const ui = { mode: 'live', paused: false, follow: true }
+  const ui = { mode: mount.dataset.mode === 'slam' ? 'slam' : 'live', paused: false, follow: true }
   const slamMode = () => ui.mode === 'slam'
   const floorZ = () => (slamMode() ? slam.floorZ(engine.pose) : engine.floorZ())
 
@@ -281,11 +289,11 @@ export function mountLidarView(mount, { onStats } = {}) {
     saving = true
     toast('Guardando el mapa acumulado…', false, 0)
     try {
-      const r = await fetch('/api/slam/save', { method: 'POST' })
+      const r = await fetch(bridgeUrl('/api/slam/save'), { method: 'POST' })
       const m = await r.json().catch(() => ({}))
       if (!r.ok) { toast(typeof m.detail === 'string' ? m.detail : 'No se pudo guardar el mapa.', true); return }
       const a = Object.assign(document.createElement('a'), {
-        href: `/api/scans/${encodeURIComponent(m.id)}/download?format=${d.format}`,
+        href: bridgeUrl(`/api/scans/${encodeURIComponent(m.id)}/download?format=${d.format}`),
         download: `${m.id}${d.ext}`,
       })
       a.click()

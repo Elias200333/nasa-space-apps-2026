@@ -5,10 +5,10 @@ Qué hace
     en coordenadas XYZ, replicando EXACTAMENTE el decodificador "native" de
     unitree_webrtc_connect 2.2.0 (``lidar/lidar_decoder_native.py``, que incluye
     su propio aviso de licencia de tipo BSD). Lo reimplementamos para:
-      1. reproducir sesiones grabadas sin instalar la pila WebRTC,
+      1. decodificar sin depender del decodificador interno de la librería,
       2. añadir validaciones explícitas (tamaños, parámetros, corrupción),
-      3. generar datos sintéticos con el mismo formato (encode).
-    ``tests/test_voxel_codec.py`` compara ambos decodificadores bit a bit.
+      3. codificar con el mismo formato (encode), para la comprobación de abajo.
+    ``check-library`` compara ambos decodificadores bit a bit.
 
 Formato (deducido del código fuente de la librería; Unitree no lo documenta)
     - payload = bloque LZ4 sin cabecera cuyo tamaño descomprimido es ``src_size``.

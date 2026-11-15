@@ -123,8 +123,8 @@ robot/
 │   │   ├── go2_topics.py     # topics verificados en la librería 2.2.0
 │   │   └── library_check.py  # verificación de la API instalada
 │   ├── auth/                 # clave AES del perro (guardada fuera del repositorio)
-│   ├── dashboard/            # dashboard web: cámara, LiDAR 3D (mapa SLAM), WASD, estado
-│   ├── lidar/                # decodificación, mapa SLAM, malla PLY, GLB y coordenadas
+│   ├── dashboard/            # dashboard web (cámara, LiDAR 3D, WASD, estado) + puente con la interfaz
+│   ├── lidar/                # decodificación, mapa SLAM, malla PLY, GLB, coordenadas y marco de misión
 │   ├── storage/              # PLY y almacén de escaneos
 │   └── probe/                # CapabilityProbe y comprobación de red
 └── runtime/                  # datos generados (en .gitignore)
@@ -245,6 +245,31 @@ Abre **http://127.0.0.1:8777** en el navegador. Paneles: cámara en directo (MJP
    - Botones de postura: **Levantar / Sentar / Equilibrio / Amortiguar / Recuperarse**
 2. El robot **solo se mueve mientras mantienes la tecla**; mientras no pulses nada, no se le envía ninguna orden. Al soltarla, pasar a escribir en un campo de texto, cambiar de ventana, cerrar la pestaña o perder la conexión, se detiene solo (hombre muerto, 0,4 s). Las teclas no cuentan mientras escribes en un campo de texto. El botón **PARAR** está siempre disponible.
 3. Límites de velocidad (recortados en el servidor): avance 1,0 m/s · lateral 0,5 m/s · giro 1,5 rad/s; el selector Lento / Normal / Rápido elige dentro de esos topes. Saltos y volteretas están **bloqueados**.
+
+### Mapear zona subterránea desde la interfaz (PC y gafas XR)
+
+El backend del robot hace de puente con la interfaz de TERRAIN-X (`interface/`). En el panel «Entorno 3D» de un mapa cargado aparece **«Mapear zona subterránea»**:
+
+1. **Conexión.** Sale «Conectando a unidad terrestre…»: conecta el Go2 (si no lo estaba) y empieza una misión, que es un mapa acumulado nuevo con la pose del robot apuntada como punto de partida.
+2. **Recorrido.** Se ve la cámara, el LiDAR acumulado en directo (lo que va detectando) y el mando: teclado W A S D · Q E · Espacio, o botones de mantener pulsado para las gafas. Tiene las mismas seguridades que el dashboard: hombre muerto, topes de velocidad y PARAR.
+3. **«Terminar recorrido».** Se guarda como siempre (`.ply`, `.glb`, `.coords.json`, metadatos y SHA-256) y, además, `<id>.mission.json`: la nube en el marco de la misión. En ese marco el origen es el robot al empezar, x apunta hacia donde miraba, y a su izquierda y z arriba. Es solo un giro más una traslación, así que las distancias no cambian.
+4. **Vista previa** de la nube en 3D.
+5. **«Añadir al mapa».** Muestra el terreno del modelo 3D y, debajo, la nube, a **escala 1:1 en metros en los tres ejes** (sin la exageración vertical del Plotly). El operador declara el anclaje (desplazamiento este/norte desde el centro, rumbo y profundidad), porque el Go2 no tiene GPS ni brújula. Se descarga el **mapa combinado** (JSON con procedencia) y, si el navegador lo admite, se ve en VR a tamaño real.
+
+Para que funcione:
+
+```powershell
+# 1) backend del robot (como siempre). Imprime el CÓDIGO DE EMPAREJAMIENTO
+.\.venv\Scripts\python.exe -m terrainx_robot dashboard
+# 2) interfaz (otra consola, en interface/): reenvía /robot/* a 127.0.0.1:8777
+npm run dev
+```
+
+- **En este PC** se abre `http://localhost:3000` y no hace falta código.
+- **En las gafas u otro equipo** de la misma red se abre `http://<IP-del-PC>:3000` y se escribe el código de 6 cifras. Aparece en la consola y en el panel «Diagnóstico» del dashboard. Tras 10 códigos erróneos, el robot bloquea el acceso 60 s. El backend sigue escuchando solo en 127.0.0.1: desde la red únicamente se entra por el proxy de la interfaz.
+- **«Ver en VR»** necesita un contexto seguro (HTTPS o `localhost`). Con las Quest por cable: `adb reverse tcp:3000 tcp:3000` y abrir `http://localhost:3000` en las gafas (entonces tampoco pide código).
+- **Escala.** El terreno del modelo tiene un punto cada ~20–30 m y se dibuja interpolado; la nube del robot va en cubos de 5 cm. Que las medidas coincidan depende de que el LiDAR esté en metros: es lo que se supone, pero falta la prueba con cinta métrica ([docs/VERIFICACION_FISICA.md](docs/VERIFICACION_FISICA.md), apartado 3).
+- **El mapa combinado es una DEMOSTRACIÓN.** La posición de la zona subterránea la declara el operador, no está georreferenciada, y así queda escrito en el archivo.
 
 ### Qué está probado y qué no
 

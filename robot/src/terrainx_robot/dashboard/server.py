@@ -18,8 +18,17 @@ Endpoints
     WS   /ws/lidar             visor LiDAR 3D: mapa en vivo / acumulado + pose (solo lectura);
                                borrar y congelar el acumulado
 
+Puente con la interfaz TERRAIN-X (PC y gafas XR; ver bridge.py)
+    /robot/...                 las mismas rutas, a través del proxy de la interfaz (Vite)
+    GET  /mision               página de la misión: cámara, LiDAR acumulado y conducción
+    GET  /api/bridge/hello     ¿hace falta el código de emparejamiento?
+    GET  /api/mission          estado de la misión
+    POST /api/mission/start    «Mapear zona subterránea»: mapa nuevo + pose de partida
+    POST /api/mission/finish   «Terminar recorrido»: guarda el mapa (+ <id>.mission.json)
+
 Seguridad
-    - host fijo 127.0.0.1 (no accesible desde la red).
+    - host fijo 127.0.0.1 (no accesible desde la red). Desde otro equipo (gafas) solo se entra
+      por el proxy de la interfaz y con el código de emparejamiento (bridge.py).
     - la clave AES y los tokens nunca se devuelven en las respuestas.
     - WASD activo por defecto con el robot conectado (sin «Habilitar»): la primera orden pasa
       el guardián a modo control ACOTADO; al cerrar el canal, StopMove y solo lectura.
@@ -44,6 +53,7 @@ from ..auth.aes_key_manager import AuthError
 from ..config import Settings
 from ..lidar.live_stream import live_frame
 from ..storage.scan_store import ScanStoreError
+from .bridge import BridgeMiddleware, new_pairing_code
 from .service import DashboardService
 
 log = logging.getLogger(__name__)
@@ -65,10 +75,16 @@ def _safe_stop(service: DashboardService, why: str) -> None:
         log.exception("No se pudo enviar StopMove (%s)", why)
 
 
-def create_app(settings: Settings, service: DashboardService | None = None) -> FastAPI:
+def create_app(settings: Settings, service: DashboardService | None = None,
+               pairing_code: str | None = None) -> FastAPI:
     app = FastAPI(title="TERRAIN-X · Go2 AIR", docs_url=None, redoc_url=None, openapi_url=None)
     service = service or DashboardService(settings)
     app.state.service = service
+    app.state.pairing_code = pairing_code or new_pairing_code()
+    app.add_middleware(BridgeMiddleware, code=app.state.pairing_code)
+
+    def _bridged(request: Request) -> bool:
+        return request.scope.get("terrainx_bridge") is not None
 
     def _svc(request: Request | None = None) -> DashboardService:
         return service
@@ -80,10 +96,44 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
 
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+    @app.get("/mision")
+    async def mission_page() -> FileResponse:
+        return FileResponse(STATIC_DIR / "mision.html")
+
     # -------------------------------------------------------------- estado
     @app.get("/api/status")
-    async def api_status() -> dict[str, Any]:
-        return service.status()
+    async def api_status(request: Request) -> dict[str, Any]:
+        st = service.status()
+        if not _bridged(request):      # solo el dashboard de este PC ve el código de emparejamiento
+            st["pairing_code"] = app.state.pairing_code
+        return st
+
+    # ------------------------------------------------- puente con la interfaz
+    @app.get("/api/bridge/hello")
+    async def bridge_hello(request: Request) -> dict[str, Any]:
+        bridge = request.scope.get("terrainx_bridge") or {}
+        return {"service": "terrainx-robot", "unit": "Unitree Go2", "model_variant": settings.model_variant,
+                "pairing_required": bool(bridge.get("remote")), "connected": service.connected}
+
+    @app.get("/api/mission")
+    async def api_mission() -> dict[str, Any]:
+        return service.mission_status()
+
+    @app.post("/api/mission/start")
+    async def api_mission_start(body: dict[str, Any] | None = None) -> dict[str, Any]:
+        try:
+            return service.start_mission((body or {}).get("site"))
+        except ConnectionFailed as exc:
+            raise HTTPException(status_code=409, detail={"code": exc.code, "message": str(exc), "hint": exc.hint})
+        except CaptureError as exc:
+            raise HTTPException(status_code=409, detail={"code": "pose_not_ready", "message": str(exc)})
+
+    @app.post("/api/mission/finish")
+    async def api_mission_finish() -> dict[str, Any]:
+        try:
+            return await service.finish_mission()
+        except (CaptureError, ScanStoreError) as exc:
+            raise HTTPException(status_code=409, detail={"code": "mission_not_saved", "message": str(exc)})
 
     @app.post("/api/connect")
     async def api_connect() -> dict[str, Any]:
@@ -145,7 +195,8 @@ def create_app(settings: Settings, service: DashboardService | None = None) -> F
         if ref is None:
             raise HTTPException(status_code=404, detail=f"el escaneo {scan_id} no tiene archivo {format!r}")
         path = service.store.scans_dir / scan_id / ref.path
-        media = {"glb": "model/gltf-binary", "coords": "application/json"}.get(format, "application/octet-stream")
+        media = {"glb": "model/gltf-binary", "coords": "application/json",
+                 "mission": "application/json"}.get(format, "application/octet-stream")
         return FileResponse(path, media_type=media, filename=path.name)
 
     # ----------------------------------------------------------- autenticación
@@ -306,5 +357,7 @@ def run(settings: Settings, host: str = "127.0.0.1", port: int = 8777) -> None:
 
     if host not in ("127.0.0.1", "localhost", "::1"):
         raise ValueError("El dashboard solo debe servirse en 127.0.0.1 por seguridad.")
+    code = new_pairing_code()
     log.info("Dashboard en http://%s:%d", host, port)
-    uvicorn.run(create_app(settings), host=host, port=port, log_level="warning")
+    print(f"  Código de emparejamiento para las gafas XR u otro equipo: {code}")
+    uvicorn.run(create_app(settings, pairing_code=code), host=host, port=port, log_level="warning")
