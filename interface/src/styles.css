@@ -752,6 +752,7 @@ body {
 .coordinates-hud {
   flex: 0 1 auto;
   min-width: 0;
+  margin-left: 28px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -2653,13 +2654,13 @@ body {
   font-size: 16px;
 }
 
-/* Ocultar la interfaz 2D tradicional cuando el modo VR/MR está activo y habilitar transparencia para Passthrough */
+/* Ocultar la interfaz 2D tradicional cuando el modo VR/MR está activo y habilitar fondo cósmico inmersivo */
 body.vr-mode {
-  background: transparent !important;
+  background: #020408 !important;
 }
 
 body.vr-mode #earthCanvas {
-  background: transparent !important;
+  background: #020408 !important;
 }
 
 body.vr-mode .main-stage {
@@ -2685,6 +2686,38 @@ body.vr-mode #coordinatesHud,
 body.vr-mode #poiDetailCard,
 body.vr-mode #analogDetailModal {
   display: none !important;
+}
+
+/* Botón flotante para salir de VR en pantalla de escritorio */
+.desktop-vr-exit-btn {
+  display: none;
+  position: fixed;
+  top: 18px;
+  right: 24px;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1.5px solid rgba(34, 211, 238, 0.45);
+  color: #38bdf8;
+  padding: 10px 20px;
+  border-radius: 24px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+}
+.desktop-vr-exit-btn:hover {
+  background: rgba(8, 145, 178, 0.5);
+  color: #ffffff;
+  border-color: #38bdf8;
+  transform: translateY(-1px);
+}
+body.vr-mode .desktop-vr-exit-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* Modal de Bienvenida para VR */
@@ -3950,12 +3983,13 @@ body.vr-mode #analogDetailModal {
    ========================================================================== */
 .analog-site-desk {
   position: absolute;
-  bottom: 70px;
+  /* Apoyada justo encima del dock «Terrain Comparison» (12 px + 70 px de alto + 10 px de aire),
+     del mismo ancho que el dock y sin pisar las tarjetas de la Luna y Marte (300 px a cada lado). */
+  bottom: 92px;
   left: 50%;
   transform: translateX(-50%);
-  width: 670px;
-  max-width: calc(100vw - 600px);
-  height: 198px;
+  width: min(1200px, calc(100vw - 600px));
+  height: 172px;
   background: rgba(8, 14, 28, 0.88);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -3977,15 +4011,42 @@ body.vr-mode #analogDetailModal {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
+  gap: 12px;
+  height: 38px;
+  box-sizing: border-box;
+  padding: 0 14px;
   background: rgba(15, 23, 42, 0.6);
   border-bottom: 1px solid rgba(34, 211, 238, 0.2);
 }
 
+/* Cabecera en una sola línea: el nombre del sitio se recorta con «…» si no cabe */
 .desk-title-group {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.desk-title-text {
+  min-width: 0;
+}
+
+.desk-main-title,
+.desk-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.desk-site-name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desk-controls {
+  flex-shrink: 0;
 }
 
 .desk-pin-icon {
@@ -4063,11 +4124,12 @@ body.vr-mode #analogDetailModal {
 
 .desk-body {
   display: flex;
-  height: calc(100% - 37px);
+  height: calc(100% - 38px);
 }
 
 .desk-map-pane {
-  flex: 1.1;
+  flex: 1 1 0;
+  min-width: 0;
   position: relative;
   border-right: 1px solid rgba(34, 211, 238, 0.18);
   overflow: hidden;
@@ -4167,7 +4229,8 @@ body.vr-mode #analogDetailModal {
 }
 
 .desk-dem-pane {
-  flex: 1.25;
+  flex: 1.45 1 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   padding: 6px 12px;
@@ -4196,9 +4259,12 @@ body.vr-mode #analogDetailModal {
   flex: 1;
 }
 
+/* El dibujo del DEM ocupa lo que sobra; las estadísticas, siempre su ancho completo */
 .desk-dem-canvas-box {
-  width: 175px;
-  height: 122px;
+  flex: 1 1 auto;
+  min-width: 120px;
+  max-width: 340px;
+  height: 104px;
   border-radius: 8px;
   overflow: hidden;
   background: rgba(6, 11, 22, 0.75);
@@ -4211,17 +4277,27 @@ body.vr-mode #analogDetailModal {
   display: block;
 }
 
+/* Similitud a la izquierda (grande) y las cuatro filas a su derecha: cabe en la mesa baja */
 .desk-dem-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: center;
+  column-gap: 18px;
+  row-gap: 4px;
+  flex: 0 0 auto;
 }
 
 .desk-stat-similarity {
   display: flex;
   flex-direction: column;
-  margin-bottom: 2px;
+  justify-content: center;
+  grid-row: 1 / span 4;
+  margin: 0;
+}
+
+.desk-stat-row {
+  gap: 10px;
+  white-space: nowrap;
 }
 
 .stat-sim-label {
@@ -4256,11 +4332,38 @@ body.vr-mode #analogDetailModal {
 }
 
 .desk-elev-legend {
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 2px;
-  padding-left: 4px;
+  padding-left: 10px;
+  padding-right: 26px;
+}
+
+/* Mesa estrecha (pantallas pequeñas): más sitio para el DEM y sin la barra de leyenda, que repite
+   lo que ya rotula el propio dibujo del DEM. */
+.analog-site-desk {
+  container-type: inline-size;
+  container-name: desk;
+}
+
+@container desk (max-width: 1000px) {
+  .desk-map-pane {
+    flex: 0.8 1 0;
+  }
+
+  .desk-dem-canvas-box {
+    min-width: 100px;
+  }
+
+  .desk-elev-legend {
+    display: none;
+  }
+
+  .desk-dem-stats {
+    column-gap: 12px;
+  }
 }
 
 .legend-unit {
@@ -4271,7 +4374,8 @@ body.vr-mode #analogDetailModal {
 
 .legend-scale-bar {
   width: 6px;
-  height: 85px;
+  height: 80px;
+  margin-left: 6px;
   border-radius: 3px;
   background: linear-gradient(to bottom, #eaf0c8 0%, #708e66 35%, #205476 70%, #10263c 100%);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -4281,10 +4385,10 @@ body.vr-mode #analogDetailModal {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 85px;
+  height: 80px;
   position: absolute;
-  right: 6px;
-  top: 36px;
+  right: 0;
+  top: 14px;
   font-size: 0.56rem;
   color: var(--text-dim);
   font-family: var(--font-mono, monospace);
@@ -4292,7 +4396,7 @@ body.vr-mode #analogDetailModal {
 
 .desk-restore-pill {
   position: absolute;
-  bottom: 70px;
+  bottom: 92px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;

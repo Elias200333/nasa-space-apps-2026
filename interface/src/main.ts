@@ -3,6 +3,7 @@ import { EarthSceneManager } from './babylon/earthScene';
 import { MiniPlanetViewer } from './babylon/miniPlanets';
 import { AnalogMap2DManager } from './map/analogMap2D';
 import { AnalogDeskManager } from './desk/analogDesk';
+import { terrainModel } from './data/terrainModel';
 import { generateRandomAnalogCoordinates, PLANET_METRICS, getCandidatesForBody, ANALOG_DATABASE } from './data/analogs';
 import { sound } from './audio';
 import { CelestialBody, AnalogSite, PlanetaryLayerMode, AnalogCandidateItem } from './types';
@@ -216,6 +217,7 @@ async function initApp() {
   const earthCanvas = document.getElementById('earthCanvas') as HTMLCanvasElement;
   if (earthCanvas) {
     earthScene = new EarthSceneManager(earthCanvas);
+    earthScene.preInitWebXR().catch(() => {});
 
     earthScene.onPlanetClicked = (planet) => {
       sound.playClick(600);
@@ -273,11 +275,9 @@ async function initApp() {
   }
 
   // 3. Inicializar mesa holográfica de análogos y cartografía 2D
+  // La mesa muestra el modelo de terreno REAL que ya hay calculado (sin lanzar ningún cálculo)
   analogDeskManager = new AnalogDeskManager();
-  const defaultAnalog = ANALOG_DATABASE.find(s => s.id === 'ES_LANZAROTE_CALDERA_BLANCA') || ANALOG_DATABASE[3];
-  if (defaultAnalog) {
-    analogDeskManager.updateSite(defaultAnalog, 'Mars');
-  }
+  terrainModel.loadCurrent();
 
   init2DMapManager();
   setupUIEventListeners();
@@ -340,6 +340,8 @@ function init2DMapManager() {
     moonCard?.classList.remove('card-selected');
     marsCard?.classList.remove('card-selected', 'mars-selected');
     hideTargetCard();
+    // En el mapa 2D se puede haber calculado otro modelo: la mesa del globo lo refleja
+    terrainModel.loadCurrent();
   });
 
   const btnReturnToOrbit = document.getElementById('btnReturnToOrbit');
@@ -499,7 +501,12 @@ function setupUIEventListeners() {
   if (btnDeskFitArea) {
     btnDeskFitArea.addEventListener('click', () => {
       sound.playClick(600);
-      earthScene.orientToCoordinates(29.0380, -13.7190);
+      // Encuadra la imagen satelital en el radio real y orienta la Tierra al centro del modelo
+      analogDeskManager?.fitToArea();
+      const c = terrainModel.current?.center;
+      if (!c) return;
+      if (activeBody !== 'Earth') selectCelestialTarget('Earth');
+      earthScene.orientToCoordinates(c.lat, c.lon);
     });
   }
 
@@ -563,12 +570,25 @@ function setupUIEventListeners() {
       if (!earthScene.getIsXRActive()) {
         isVRModeActive = true;
         document.body.classList.add('vr-mode');
-        showVRWelcomeModal();
+        earthScene.enterXREnvironment((switchedPlanet) => {
+          selectCelestialTarget(switchedPlanet);
+        });
       } else {
         isVRModeActive = false;
         document.body.classList.remove('vr-mode');
         earthScene.exitXREnvironment();
       }
+    });
+  }
+
+  // 6b. Botón flotante de salida para escritorio en modo XR
+  const btnFloatingExitXR = document.getElementById('btnFloatingExitXR');
+  if (btnFloatingExitXR) {
+    btnFloatingExitXR.addEventListener('click', () => {
+      sound.playClick(500);
+      isVRModeActive = false;
+      document.body.classList.remove('vr-mode');
+      earthScene.exitXREnvironment();
     });
   }
 
@@ -630,10 +650,6 @@ export function selectCelestialTarget(body: CelestialBody) {
       map2DManager.returnToSpaceOrbit();
     }
     hideTargetCard();
-    if (analogDeskManager) {
-      const site = ANALOG_DATABASE.find(s => s.target_body === 'Moon') || ANALOG_DATABASE[0];
-      analogDeskManager.updateSite(site, 'Moon');
-    }
   } else if (body === 'Mars') {
     marsCard?.classList.add('card-selected', 'mars-selected');
     miniMars?.spinFast();
@@ -643,10 +659,6 @@ export function selectCelestialTarget(body: CelestialBody) {
       map2DManager.returnToSpaceOrbit();
     }
     hideTargetCard();
-    if (analogDeskManager) {
-      const site = ANALOG_DATABASE.find(s => s.id === 'ES_LANZAROTE_CALDERA_BLANCA') || ANALOG_DATABASE[3];
-      analogDeskManager.updateSite(site, 'Mars');
-    }
   } else {
     // Earth
     showPlanetaryLayerSelector('Earth');
@@ -657,10 +669,6 @@ export function selectCelestialTarget(body: CelestialBody) {
       earthScene.resetToGlobalView();
     }
     hideTargetCard();
-    if (analogDeskManager) {
-      const site = ANALOG_DATABASE.find(s => s.id === 'ES_LANZAROTE_CALDERA_BLANCA') || ANALOG_DATABASE[3];
-      analogDeskManager.updateSite(site, 'Mars');
-    }
   }
 }
 

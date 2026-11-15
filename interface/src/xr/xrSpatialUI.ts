@@ -3,6 +3,10 @@ import * as GUI from 'babylonjs-gui';
 import { CelestialBody, PlanetaryLayerMode, AnalogSite } from '../types';
 import { sound } from '../audio';
 import { ANALOG_DATABASE } from '../data/analogs';
+import {
+  bodyName, demSourceShort, drawDemIso, drawSatellite, elevationText, fmtNum, radiusText,
+  terrainModel, TerrainModel, zoomForRadius,
+} from '../data/terrainModel';
 
 export interface XRSpatialUICallbacks {
   onPlanetSwitch: (planet: CelestialBody) => void;
@@ -10,6 +14,13 @@ export interface XRSpatialUICallbacks {
   onCameraTool: (action: 'orbit' | 'move' | 'zoomIn' | 'zoomOut' | 'fit') => void;
   onCompareWithEarth?: (target: 'Moon' | 'Mars') => void;
   onAnalogSiteSelect?: (site: AnalogSite) => void;
+  // Acciones de la barra superior y de la mesa (antes decorativas)
+  onRecenter?: () => void;
+  onToggleRobot?: () => void;
+  onExitXR?: () => void;
+  onFitToArea?: () => void;
+  onOpenAnalogs?: () => void;
+  onFullComparison?: () => void;
 }
 
 /**
@@ -59,6 +70,26 @@ export class XRSpatialUIManager {
   private desk3DDynamicTex: BABYLON.DynamicTexture | null = null;
   private deskTelemetryBlocks: { [key: string]: GUI.TextBlock } = {};
   private telemetryCoordsBlock: GUI.TextBlock | null = null;
+  private navCoordsBlock: GUI.TextBlock | null = null;
+
+  // Mesa «Analog Site Analysis» con datos reales (src/data/terrainModel.ts)
+  private deskSubBlock: GUI.TextBlock | null = null;
+  private deskSimLabel: GUI.TextBlock | null = null;
+  private deskSimValue: GUI.TextBlock | null = null;
+  private deskRows: GUI.TextBlock[] = [];
+  private deskSatImage: GUI.Image | null = null;
+  private deskRing: GUI.Control | null = null;
+  private deskModel: TerrainModel | null = null;
+  private deskUnsub: (() => void) | null = null;
+
+  // Mini-esferas 3D orbitales de la Luna y Marte
+  private miniMoonMesh: BABYLON.Mesh | null = null;
+  private miniMarsMesh: BABYLON.Mesh | null = null;
+  private orbitMoonAngle = 0.8;
+  private orbitMarsAngle = 2.4;
+  private orbitObserver: BABYLON.Nullable<BABYLON.Observer<BABYLON.Scene>> = null;
+  private navTabButtons: { [key: string]: GUI.Button } = {};
+  private activeNavTab = 'explore';
 
   constructor(scene: BABYLON.Scene, callbacks: XRSpatialUICallbacks) {
     this.scene = scene;
@@ -80,6 +111,7 @@ export class XRSpatialUIManager {
    */
   public buildSpatialInterface() {
     this.createHolographicPedestal();
+    this.createOrbitingPlanets();
     this.createTopNavigationBar();
     this.createCentralPlanetarySelector();
     this.createCentralCartographyBadge();
@@ -170,7 +202,7 @@ export class XRSpatialUIManager {
     ctx.fillStyle = 'rgba(34, 211, 238, 0.9)';
     ctx.font = 'bold 24px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('29.039° N, 13.716° W • WGS84 | TERRAIN-X HOLOGRAPHIC STAGE', 512, 930);
+    ctx.fillText('TERRAIN-X HOLOGRAPHIC STAGE', 512, 930);
     reticleTex.update();
 
     const reticleMat = new BABYLON.StandardMaterial('xrReticleMat', this.scene);
@@ -192,26 +224,137 @@ export class XRSpatialUIManager {
   }
 
   // =========================================================================
+  // 1b. Mini-Planetas Orbitales 3D (Luna y Marte flanqueando la Tierra)
+  // =========================================================================
+  private createOrbitingPlanets() {
+    const orbitRoot = new BABYLON.TransformNode('xrOrbitRoot', this.scene);
+    orbitRoot.parent = this.pedestalRootNode;
+    orbitRoot.position = new BABYLON.Vector3(0, 0, 0);
+
+    // 1. Órbita elíptica luminosa de la Luna
+    const moonOrbitTorus = BABYLON.MeshBuilder.CreateTorus('xrMoonOrbitTorus', {
+      diameter: 3.2,
+      thickness: 0.009,
+      tessellation: 96
+    }, this.scene);
+    moonOrbitTorus.parent = orbitRoot;
+    moonOrbitTorus.rotation.x = Math.PI / 2 + 0.24;
+    moonOrbitTorus.rotation.y = 0.15;
+    const moonOrbitMat = new BABYLON.StandardMaterial('xrMoonOrbitMat', this.scene);
+    moonOrbitMat.emissiveColor = new BABYLON.Color3(0.22, 0.74, 0.97);
+    moonOrbitMat.diffuseColor = new BABYLON.Color3(0.22, 0.74, 0.97);
+    moonOrbitMat.alpha = 0.45;
+    moonOrbitMat.disableLighting = true;
+    moonOrbitTorus.material = moonOrbitMat;
+    moonOrbitTorus.isPickable = false;
+    this.meshes.push(moonOrbitTorus);
+
+    // Mini-esfera 3D de la Luna
+    const moonSphere = BABYLON.MeshBuilder.CreateSphere('xrMiniMoon', {
+      diameter: 0.32,
+      segments: 32
+    }, this.scene);
+    moonSphere.parent = orbitRoot;
+    const moonMat = new BABYLON.StandardMaterial('xrMiniMoonMat', this.scene);
+    moonMat.diffuseTexture = new BABYLON.Texture('./textures/moon.jpg', this.scene);
+    moonMat.emissiveColor = new BABYLON.Color3(0.22, 0.22, 0.22);
+    moonMat.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+    moonSphere.material = moonMat;
+    this.miniMoonMesh = moonSphere;
+    this.meshes.push(moonSphere);
+
+    // 2. Órbita elíptica luminosa de Marte
+    const marsOrbitTorus = BABYLON.MeshBuilder.CreateTorus('xrMarsOrbitTorus', {
+      diameter: 4.4,
+      thickness: 0.009,
+      tessellation: 96
+    }, this.scene);
+    marsOrbitTorus.parent = orbitRoot;
+    marsOrbitTorus.rotation.x = Math.PI / 2 - 0.20;
+    marsOrbitTorus.rotation.y = -0.22;
+    const marsOrbitMat = new BABYLON.StandardMaterial('xrMarsOrbitMat', this.scene);
+    marsOrbitMat.emissiveColor = new BABYLON.Color3(0.98, 0.45, 0.09);
+    marsOrbitMat.diffuseColor = new BABYLON.Color3(0.98, 0.45, 0.09);
+    marsOrbitMat.alpha = 0.45;
+    marsOrbitMat.disableLighting = true;
+    marsOrbitTorus.material = marsOrbitMat;
+    marsOrbitTorus.isPickable = false;
+    this.meshes.push(marsOrbitTorus);
+
+    // Mini-esfera 3D de Marte
+    const marsSphere = BABYLON.MeshBuilder.CreateSphere('xrMiniMars', {
+      diameter: 0.42,
+      segments: 32
+    }, this.scene);
+    marsSphere.parent = orbitRoot;
+    const marsMat = new BABYLON.StandardMaterial('xrMiniMarsMat', this.scene);
+    marsMat.diffuseTexture = new BABYLON.Texture('./textures/mars.jpg', this.scene);
+    marsMat.emissiveColor = new BABYLON.Color3(0.28, 0.12, 0.05);
+    marsMat.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+    marsSphere.material = marsMat;
+    this.miniMarsMesh = marsSphere;
+    this.meshes.push(marsSphere);
+
+    // Acción de selección interactiva (clic / rayo)
+    moonSphere.actionManager = new BABYLON.ActionManager(this.scene);
+    moonSphere.actionManager.registerAction(
+      new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, () => {
+        sound.playClick(600);
+        this.setActivePlanet('Moon');
+        this.callbacks.onPlanetSwitch('Moon');
+      })
+    );
+
+    marsSphere.actionManager = new BABYLON.ActionManager(this.scene);
+    marsSphere.actionManager.registerAction(
+      new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, () => {
+        sound.playClick(750);
+        this.setActivePlanet('Mars');
+        this.callbacks.onPlanetSwitch('Mars');
+      })
+    );
+
+    // Animación continua y suave de traslación y rotación
+    this.orbitObserver = this.scene.onBeforeRenderObservable.add(() => {
+      this.orbitMoonAngle += 0.0035;
+      this.orbitMarsAngle -= 0.0024;
+
+      if (this.miniMoonMesh) {
+        this.miniMoonMesh.position.x = Math.cos(this.orbitMoonAngle) * 1.6;
+        this.miniMoonMesh.position.z = Math.sin(this.orbitMoonAngle) * 1.6;
+        this.miniMoonMesh.position.y = Math.sin(this.orbitMoonAngle) * 0.35;
+        this.miniMoonMesh.rotation.y += 0.006;
+      }
+      if (this.miniMarsMesh) {
+        this.miniMarsMesh.position.x = Math.cos(this.orbitMarsAngle) * 2.2;
+        this.miniMarsMesh.position.z = Math.sin(this.orbitMarsAngle) * 2.2;
+        this.miniMarsMesh.position.y = Math.cos(this.orbitMarsAngle) * 0.42;
+        this.miniMarsMesh.rotation.y += 0.005;
+      }
+    });
+  }
+
+  // =========================================================================
   // 2. Barra de Navegación Superior Flotante
   // =========================================================================
   private createTopNavigationBar() {
     const plane = BABYLON.MeshBuilder.CreatePlane('xrTopNavPlane', {
-      width: 3.8,
-      height: 0.52
+      width: 4.2,
+      height: 0.54
     }, this.scene);
     plane.parent = this.rootNode;
     plane.position = new BABYLON.Vector3(0, 1.35, 2.7);
     plane.rotation.x = -0.12;
     plane.rotation.y = 0;
 
-    const adt = GUI.AdvancedDynamicTexture.CreateForMesh(plane, 2048, 280, false);
+    const adt = GUI.AdvancedDynamicTexture.CreateForMesh(plane, 2400, 280, false);
     this.dynamicTextures.push(adt);
     this.meshes.push(plane);
     (plane.material as BABYLON.StandardMaterial).backFaceCulling = false;
     (plane.material as BABYLON.StandardMaterial).disableLighting = true;
 
     const rootBox = new GUI.Rectangle('navBarRoot');
-    rootBox.width = '2020px';
+    rootBox.width = '2360px';
     rootBox.height = '260px';
     rootBox.cornerRadius = 28;
     rootBox.color = 'rgba(34, 211, 238, 0.45)';
@@ -220,16 +363,17 @@ export class XRSpatialUIManager {
     adt.addControl(rootBox);
 
     const grid = new GUI.Grid();
-    grid.addColumnDefinition(0.30); // Logo
-    grid.addColumnDefinition(0.42); // Tabs
-    grid.addColumnDefinition(0.28); // Search & User
+    grid.addColumnDefinition(380, true);  // Logo y título
+    grid.addColumnDefinition(660, true);  // Pestañas Explore, Compare, Terrain, Data, Missions
+    grid.addColumnDefinition(460, true);  // Coordenadas en vivo
+    grid.addColumnDefinition(860, true);  // Acciones: Robot Go2 · Recentrar · Salir
     rootBox.addControl(grid);
 
     // 1. Logo
     const brandPanel = new GUI.StackPanel();
     brandPanel.isVertical = false;
     brandPanel.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    brandPanel.paddingLeft = '30px';
+    brandPanel.paddingLeft = '24px';
 
     const logoBlock = new GUI.Rectangle();
     logoBlock.width = '64px';
@@ -247,94 +391,122 @@ export class XRSpatialUIManager {
 
     const titlePanel = new GUI.StackPanel();
     titlePanel.isVertical = true;
-    titlePanel.paddingLeft = '18px';
+    titlePanel.paddingLeft = '14px';
     titlePanel.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_CENTER;
 
     const titleText = new GUI.TextBlock();
     titleText.text = 'IEF Comparaison';
     titleText.color = '#ffffff';
-    titleText.fontSize = 32;
+    titleText.fontSize = 28;
     titleText.fontWeight = 'bold';
     titleText.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    titleText.height = '40px';
+    titleText.height = '36px';
     titlePanel.addControl(titleText);
 
     const subText = new GUI.TextBlock();
     subText.text = 'NASA SPACE APPS 2026';
     subText.color = '#38bdf8';
-    subText.fontSize = 18;
+    subText.fontSize = 16;
     subText.fontWeight = 'bold';
     subText.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    subText.height = '24px';
+    subText.height = '22px';
     titlePanel.addControl(subText);
 
     brandPanel.addControl(titlePanel);
     grid.addControl(brandPanel, 0, 0);
 
-    // 2. Navigation Tabs
-    const tabsRow = new GUI.StackPanel();
-    tabsRow.isVertical = false;
-    tabsRow.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    // 2. Pestañas de navegación de la barra superior (Explore, Compare, Terrain, Data, Missions)
+    const tabsStack = new GUI.StackPanel();
+    tabsStack.isVertical = false;
+    tabsStack.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    tabsStack.spacing = 10;
 
-    ['Explore', 'Compare', 'Terrain', 'Data', 'Missions'].forEach((name, idx) => {
-      const b = GUI.Button.CreateSimpleButton(`topTab_${name}`, name);
-      b.width = '130px';
-      b.height = '48px';
-      b.cornerRadius = 24;
+    const navTabs: { id: string; label: string; action: () => void }[] = [
+      { id: 'explore', label: 'Explore', action: () => { this.activeNavTab = 'explore'; this.updateNavTabs(); this.callbacks.onFitToArea?.(); } },
+      { id: 'compare', label: 'Compare', action: () => { this.activeNavTab = 'compare'; this.updateNavTabs(); this.callbacks.onFullComparison?.(); } },
+      { id: 'terrain', label: 'Terrain', action: () => { this.activeNavTab = 'terrain'; this.updateNavTabs(); this.callbacks.onOpenAnalogs?.(); } },
+      { id: 'data', label: 'Data', action: () => { this.activeNavTab = 'data'; this.updateNavTabs(); this.callbacks.onFullComparison?.(); } },
+      { id: 'missions', label: 'Missions', action: () => { this.activeNavTab = 'missions'; this.updateNavTabs(); this.callbacks.onOpenAnalogs?.(); } },
+    ];
+
+    navTabs.forEach(t => {
+      const b = GUI.Button.CreateSimpleButton(`navTab_${t.id}`, t.label);
+      b.width = '120px';
+      b.height = '52px';
+      b.cornerRadius = 26;
       b.fontSize = 20;
       b.fontWeight = 'bold';
-      b.color = idx === 0 ? '#38bdf8' : '#94a3b8';
-      b.background = idx === 0 ? 'rgba(56, 189, 248, 0.22)' : 'transparent';
-      b.thickness = idx === 0 ? 1.5 : 0;
-      b.paddingLeft = '6px';
-      b.paddingRight = '6px';
-      b.onPointerClickObservable.add(() => sound.playClick(650));
-      tabsRow.addControl(b);
+      b.thickness = 1.5;
+      b.color = t.id === this.activeNavTab ? '#ffffff' : '#94a3b8';
+      b.background = t.id === this.activeNavTab ? 'rgba(8, 145, 178, 0.85)' : 'rgba(15, 23, 42, 0.65)';
+      b.onPointerClickObservable.add(() => {
+        sound.playClick(600);
+        t.action();
+      });
+      this.navTabButtons[t.id] = b;
+      tabsStack.addControl(b);
     });
+    grid.addControl(tabsStack, 0, 1);
 
-    grid.addControl(tabsRow, 0, 1);
+    // 3. Coordenadas del centro del globo en vivo
+    const coordsPill = new GUI.Rectangle('navCoordsPill');
+    coordsPill.width = '430px';
+    coordsPill.height = '58px';
+    coordsPill.cornerRadius = 29;
+    coordsPill.background = 'rgba(8, 14, 28, 0.85)';
+    coordsPill.color = 'rgba(34, 211, 238, 0.45)';
+    coordsPill.thickness = 1.5;
+    const coordsTxt = new GUI.TextBlock();
+    coordsTxt.text = '⊙ —';
+    coordsTxt.color = '#e2e8f0';
+    coordsTxt.fontSize = 20;
+    coordsTxt.fontFamily = 'monospace';
+    coordsPill.addControl(coordsTxt);
+    this.navCoordsBlock = coordsTxt;
+    grid.addControl(coordsPill, 0, 2);
 
-    // 3. Search & User Avatar
-    const userPanel = new GUI.StackPanel();
-    userPanel.isVertical = false;
-    userPanel.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
-    userPanel.paddingRight = '30px';
+    // 4. Acciones: Control del Robot Go2 · Recentrar · Salir de XR
+    const actions = new GUI.StackPanel();
+    actions.isVertical = false;
+    actions.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    actions.paddingRight = '24px';
+    actions.spacing = 10;
 
-    const searchPill = new GUI.Rectangle();
-    searchPill.width = '360px';
-    searchPill.height = '48px';
-    searchPill.cornerRadius = 24;
-    searchPill.background = 'rgba(15, 23, 42, 0.7)';
-    searchPill.color = 'rgba(255, 255, 255, 0.15)';
-    searchPill.thickness = 1;
+    const mk = (label: string, fn: (() => void) | undefined, primary = false, color = '#38bdf8') => {
+      const b = GUI.Button.CreateSimpleButton(`nav_${label}`, label);
+      b.width = primary ? '270px' : '200px';
+      b.height = '58px';
+      b.cornerRadius = 29;
+      b.fontSize = 20;
+      b.fontWeight = 'bold';
+      b.thickness = 1.5;
+      b.color = primary ? '#ffffff' : color;
+      b.background = primary ? 'rgba(8, 145, 178, 0.92)' : 'rgba(14, 165, 233, 0.18)';
+      b.onPointerClickObservable.add(() => { sound.playClick(700); fn?.(); });
+      actions.addControl(b);
+    };
 
-    const sTxt = new GUI.TextBlock();
-    sTxt.text = '🔍 Search a location, crater...';
-    sTxt.color = '#94a3b8';
-    sTxt.fontSize = 18;
-    sTxt.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    sTxt.paddingLeft = '18px';
-    searchPill.addControl(sTxt);
-    userPanel.addControl(searchPill);
+    mk('🐕 Robot Go2 (WASD)', () => this.callbacks.onToggleRobot?.(), true);
+    mk('⟲ Recentrar', () => this.callbacks.onRecenter?.());
+    mk('✕ Salir', () => this.callbacks.onExitXR?.());
+    grid.addControl(actions, 0, 3);
+  }
 
-    const userAvatar = new GUI.Rectangle();
-    userAvatar.width = '48px';
-    userAvatar.height = '48px';
-    userAvatar.cornerRadius = 24;
-    userAvatar.background = '#0284c7';
-    userAvatar.color = '#38bdf8';
-    userAvatar.thickness = 1.5;
-    userAvatar.paddingLeft = '12px';
+  private updateNavTabs() {
+    Object.keys(this.navTabButtons).forEach(id => {
+      const b = this.navTabButtons[id];
+      if (b) {
+        const active = id === this.activeNavTab;
+        b.color = active ? '#ffffff' : '#94a3b8';
+        b.background = active ? 'rgba(8, 145, 178, 0.85)' : 'rgba(15, 23, 42, 0.65)';
+      }
+    });
+  }
 
-    const uTxt = new GUI.TextBlock();
-    uTxt.text = 'EM';
-    uTxt.color = '#ffffff';
-    uTxt.fontSize = 18;
-    uTxt.fontWeight = 'bold';
-    userAvatar.addControl(uTxt);
-    userPanel.addControl(userAvatar);
-
-    grid.addControl(userPanel, 0, 2);
+  /** Coordenadas del centro del globo (las mismas que la píldora de la web). */
+  public setCoordinates(text: string) {
+    if (this.navCoordsBlock) this.navCoordsBlock.text = `⊙ ${text}`;
+    if (this.telemetryCoordsBlock) this.telemetryCoordsBlock.text = `⊙ ${text}`;
   }
 
   // =========================================================================
@@ -528,7 +700,7 @@ export class XRSpatialUIManager {
       height: 2.15
     }, this.scene);
     plane.parent = this.rootNode;
-    plane.position = new BABYLON.Vector3(-2.55, 0.08, 2.55);
+    plane.position = new BABYLON.Vector3(-2.75, 0.08, 2.55);   // algo más fuera: no tapa la esquina de la mesa
     plane.rotation.y = 0.32; // Inclinación suave hacia el centro (~18º)
     plane.rotation.x = -0.04;
 
@@ -641,29 +813,13 @@ export class XRSpatialUIManager {
     });
     stack.addControl(dotsRow);
 
-    // Subpestañas
+    // Subpestañas interactivas
     const tabsRow = new GUI.StackPanel();
     tabsRow.isVertical = false;
     tabsRow.height = '54px';
     tabsRow.paddingTop = '16px';
 
-    ['Overview', 'Terrain', 'Geology', 'Data'].forEach((t, i) => {
-      const b = GUI.Button.CreateSimpleButton(`mTab_${t}`, t);
-      b.width = '350px';
-      b.height = '44px';
-      b.fontSize = 20;
-      b.fontWeight = 'bold';
-      b.cornerRadius = 22;
-      b.color = i === 0 ? '#38bdf8' : '#64748b';
-      b.background = i === 0 ? 'rgba(56, 189, 248, 0.18)' : 'transparent';
-      b.thickness = i === 0 ? 1.5 : 0;
-      b.paddingLeft = '6px';
-      b.paddingRight = '6px';
-      tabsRow.addControl(b);
-    });
-    stack.addControl(tabsRow);
-
-    // Lista de métricas científicas
+    // Lista de métricas científicas dinámicas
     const metricsStack = new GUI.StackPanel();
     metricsStack.isVertical = true;
     metricsStack.paddingTop = '20px';
@@ -699,11 +855,66 @@ export class XRSpatialUIManager {
       metricsStack.addControl(row);
     };
 
-    addMetricRow('⏱️', 'Radius', '1,737 km');
-    addMetricRow('🌐', 'Surface area', '37.9 million km²');
-    addMetricRow('⬇️', 'Gravity', '0.165 g (16.5% of Earth)');
-    addMetricRow('🌡️', 'Avg. temperature', '-173 to 127 °C');
-    addMetricRow('🏔️', 'Dominant terrain', 'Craters, regolith, highlands');
+    const moonTabButtons: { [key: string]: GUI.Button } = {};
+    const setMoonTab = (tab: string) => {
+      Object.keys(moonTabButtons).forEach(t => {
+        const b = moonTabButtons[t];
+        const active = t === tab;
+        b.color = active ? '#38bdf8' : '#64748b';
+        b.background = active ? 'rgba(56, 189, 248, 0.22)' : 'transparent';
+        b.thickness = active ? 1.5 : 0;
+      });
+      metricsStack.clearControls();
+      if (tab === 'Overview') {
+        addMetricRow('⏱️', 'Radius', '1,737 km');
+        addMetricRow('🌐', 'Surface area', '37.9 million km²');
+        addMetricRow('⬇️', 'Gravity', '0.165 g (16.5% of Earth)');
+        addMetricRow('🌡️', 'Avg. temperature', '-173 to 127 °C');
+        addMetricRow('🏔️', 'Dominant terrain', 'Craters, regolith, highlands');
+      } else if (tab === 'Terrain') {
+        addMetricRow('🏔️', 'Topography', 'Impact basins & highlands');
+        addMetricRow('⬆️', 'Max Elevation', '+10.7 km (Dirichlet-Jackson)');
+        addMetricRow('⬇️', 'Lowest Point', '-9.1 km (Antoniadi Crater)');
+        addMetricRow('〰️', 'Roughness', 'Media-Alta (Hurst 0.82)');
+        addMetricRow('📐', 'Surface Slope', 'Media 5.8° (máx 34°)');
+      } else if (tab === 'Geology') {
+        addMetricRow('💎', 'Composition', 'Anortosita, basalto ilmenítico');
+        addMetricRow('🌋', 'Volcanism', 'Mares de lava inactivos');
+        addMetricRow('🧲', 'Magnetic Field', 'Residual cortical localizado');
+        addMetricRow('🧊', 'Water Ice', 'Cráteres polares en sombra (PSR)');
+        addMetricRow('💨', 'Atmosphere', 'Exosfera traza (< 10⁻¹¹ mbar)');
+      } else if (tab === 'Data') {
+        addMetricRow('🚀', 'Key Missions', 'Apollo, LRO, Artemis III');
+        addMetricRow('📍', 'Analog Sites', 'Caldera Blanca, Mauna Kea');
+        addMetricRow('🎯', 'Similarity Score', '62.8% - 71.1%');
+        addMetricRow('📡', 'DEM Resolution', '30 m LRO LOLA / 5 m IGN');
+        addMetricRow('🐕', 'Rover Operation', 'Unitree Go2 / Artemis Rover');
+      }
+    };
+
+    ['Overview', 'Terrain', 'Geology', 'Data'].forEach((t, i) => {
+      const b = GUI.Button.CreateSimpleButton(`mTab_${t}`, t);
+      b.width = '350px';
+      b.height = '44px';
+      b.fontSize = 20;
+      b.fontWeight = 'bold';
+      b.cornerRadius = 22;
+      b.color = i === 0 ? '#38bdf8' : '#64748b';
+      b.background = i === 0 ? 'rgba(56, 189, 248, 0.22)' : 'transparent';
+      b.thickness = i === 0 ? 1.5 : 0;
+      b.paddingLeft = '6px';
+      b.paddingRight = '6px';
+      b.onPointerClickObservable.add(() => {
+        sound.playClick(650);
+        setMoonTab(t);
+      });
+      moonTabButtons[t] = b;
+      tabsRow.addControl(b);
+    });
+    stack.addControl(tabsRow);
+
+    // Inicializar con Overview
+    setMoonTab('Overview');
     stack.addControl(metricsStack);
 
     // Botón Compare with Earth
@@ -733,7 +944,7 @@ export class XRSpatialUIManager {
       height: 1.45
     }, this.scene);
     plane.parent = this.rootNode;
-    plane.position = new BABYLON.Vector3(-1.62, 0.08, 2.65);
+    plane.position = new BABYLON.Vector3(-1.78, 0.08, 2.65);   // acompaña a la tarjeta de la Luna
     plane.rotation.y = 0.22;
 
     const adt = GUI.AdvancedDynamicTexture.CreateForMesh(plane, 380, 1450, false);
@@ -791,7 +1002,7 @@ export class XRSpatialUIManager {
       height: 2.15
     }, this.scene);
     plane.parent = this.rootNode;
-    plane.position = new BABYLON.Vector3(2.55, 0.08, 2.55);
+    plane.position = new BABYLON.Vector3(2.75, 0.08, 2.55);   // algo más fuera: no tapa la esquina de la mesa
     plane.rotation.y = -0.32; // Inclinación suave hacia el centro (~-18º)
     plane.rotation.x = -0.04;
 
@@ -904,29 +1115,13 @@ export class XRSpatialUIManager {
     });
     stack.addControl(dotsRow);
 
-    // Subpestañas
+    // Subpestañas interactivas de Marte
     const tabsRow = new GUI.StackPanel();
     tabsRow.isVertical = false;
     tabsRow.height = '54px';
     tabsRow.paddingTop = '16px';
 
-    ['Overview', 'Terrain', 'Geology', 'Data'].forEach((t, i) => {
-      const b = GUI.Button.CreateSimpleButton(`marTab_${t}`, t);
-      b.width = '350px';
-      b.height = '44px';
-      b.fontSize = 20;
-      b.fontWeight = 'bold';
-      b.cornerRadius = 22;
-      b.color = i === 0 ? '#f97316' : '#64748b';
-      b.background = i === 0 ? 'rgba(249, 115, 22, 0.22)' : 'transparent';
-      b.thickness = i === 0 ? 1.5 : 0;
-      b.paddingLeft = '6px';
-      b.paddingRight = '6px';
-      tabsRow.addControl(b);
-    });
-    stack.addControl(tabsRow);
-
-    // Lista de métricas científicas
+    // Lista de métricas científicas dinámicas
     const metricsStack = new GUI.StackPanel();
     metricsStack.isVertical = true;
     metricsStack.paddingTop = '20px';
@@ -962,11 +1157,66 @@ export class XRSpatialUIManager {
       metricsStack.addControl(row);
     };
 
-    addMetricRow('⏱️', 'Radius', '3,390 km');
-    addMetricRow('🌐', 'Surface area', '144.8 million km²');
-    addMetricRow('⬇️', 'Gravity', '0.38 g (38% of Earth)');
-    addMetricRow('🌡️', 'Avg. temperature', '-125 to 20 °C');
-    addMetricRow('🏔️', 'Dominant terrain', 'Valles, craters, volcanoes');
+    const marsTabButtons: { [key: string]: GUI.Button } = {};
+    const setMarsTab = (tab: string) => {
+      Object.keys(marsTabButtons).forEach(t => {
+        const b = marsTabButtons[t];
+        const active = t === tab;
+        b.color = active ? '#f97316' : '#64748b';
+        b.background = active ? 'rgba(249, 115, 22, 0.22)' : 'transparent';
+        b.thickness = active ? 1.5 : 0;
+      });
+      metricsStack.clearControls();
+      if (tab === 'Overview') {
+        addMetricRow('⏱️', 'Radius', '3,390 km');
+        addMetricRow('🌐', 'Surface area', '144.8 million km²');
+        addMetricRow('⬇️', 'Gravity', '0.38 g (38% of Earth)');
+        addMetricRow('🌡️', 'Avg. temperature', '-125 to 20 °C');
+        addMetricRow('🏔️', 'Dominant terrain', 'Valles, craters, volcanoes');
+      } else if (tab === 'Terrain') {
+        addMetricRow('🏔️', 'Topography', 'Olympus Mons & Valles Marineris');
+        addMetricRow('⬆️', 'Max Elevation', '+21.2 km (Olympus Mons)');
+        addMetricRow('⬇️', 'Lowest Point', '-8.2 km (Hellas Basin)');
+        addMetricRow('〰️', 'Roughness', 'Media-Extrema (Hurst 0.76)');
+        addMetricRow('📐', 'Surface Slope', 'Media 6.2° (máx 45°)');
+      } else if (tab === 'Geology') {
+        addMetricRow('💎', 'Composition', 'Óxidos de hierro, jarosita, basalto');
+        addMetricRow('🌋', 'Volcanism', 'Escudos volcánicos gigantes');
+        addMetricRow('🧲', 'Magnetic Field', 'Ausente global / Paleomagnetismo');
+        addMetricRow('🧊', 'Water Ice', 'Casquetes polares y permafrost');
+        addMetricRow('💨', 'Atmosphere', 'CO₂ 95.3% (6.1 mbar)');
+      } else if (tab === 'Data') {
+        addMetricRow('🚀', 'Key Missions', 'Curiosity, Perseverance, MRO');
+        addMetricRow('📍', 'Analog Sites', 'Río Tinto, Teide, Atacama');
+        addMetricRow('🎯', 'Similarity Score', '55.1% - 74.2%');
+        addMetricRow('📡', 'DEM Resolution', '25 m HiRISE / MOLA / IGN');
+        addMetricRow('🐕', 'Rover Operation', 'Unitree Go2 / Perseverance');
+      }
+    };
+
+    ['Overview', 'Terrain', 'Geology', 'Data'].forEach((t, i) => {
+      const b = GUI.Button.CreateSimpleButton(`marTab_${t}`, t);
+      b.width = '350px';
+      b.height = '44px';
+      b.fontSize = 20;
+      b.fontWeight = 'bold';
+      b.cornerRadius = 22;
+      b.color = i === 0 ? '#f97316' : '#64748b';
+      b.background = i === 0 ? 'rgba(249, 115, 22, 0.22)' : 'transparent';
+      b.thickness = i === 0 ? 1.5 : 0;
+      b.paddingLeft = '6px';
+      b.paddingRight = '6px';
+      b.onPointerClickObservable.add(() => {
+        sound.playClick(650);
+        setMarsTab(t);
+      });
+      marsTabButtons[t] = b;
+      tabsRow.addControl(b);
+    });
+    stack.addControl(tabsRow);
+
+    // Inicializar con Overview
+    setMarsTab('Overview');
     stack.addControl(metricsStack);
 
     // Botón Compare with Earth
@@ -1023,15 +1273,17 @@ export class XRSpatialUIManager {
     deskBox.addControl(mainStack);
 
     // SECCIÓN SUPERIOR: "Analog Site Analysis" Header
-    const topBar = new GUI.StackPanel();
-    topBar.isVertical = false;
-    topBar.height = '50px';
+    // Rejilla con anchos fijos (antes una fila sin anchos: el título se montaba sobre los botones)
+    const topBar = new GUI.Grid();
+    topBar.height = '56px';
+    topBar.addColumnDefinition(50, true);   // icono
+    topBar.addColumnDefinition(1);          // título y sitio
+    topBar.addColumnDefinition(460, true);  // botones
 
     const pinIcon = new GUI.TextBlock();
     pinIcon.text = '📍';
     pinIcon.fontSize = 28;
-    pinIcon.width = '42px';
-    topBar.addControl(pinIcon);
+    topBar.addControl(pinIcon, 0, 0);
 
     const titleStack = new GUI.StackPanel();
     titleStack.isVertical = true;
@@ -1046,13 +1298,14 @@ export class XRSpatialUIManager {
     titleStack.addControl(cTitle);
 
     const cSub = new GUI.TextBlock();
-    cSub.text = 'Crater de Caldera Blanca (Lanzarote, España)';
+    cSub.text = 'Cargando modelo de terreno…';
     cSub.color = '#94a3b8';
     cSub.fontSize = 18;
     cSub.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
     cSub.height = '20px';
     titleStack.addControl(cSub);
-    topBar.addControl(titleStack);
+    this.deskSubBlock = cSub;
+    topBar.addControl(titleStack, 0, 1);
 
     // Botones derecha del header
     const rightActions = new GUI.StackPanel();
@@ -1067,10 +1320,12 @@ export class XRSpatialUIManager {
     bFit.color = '#38bdf8';
     bFit.background = 'rgba(14, 165, 233, 0.2)';
     bFit.thickness = 1;
+    bFit.onPointerClickObservable.add(() => { sound.playClick(650); this.callbacks.onFitToArea?.(); });
     rightActions.addControl(bFit);
 
-    const b3D = GUI.Button.CreateSimpleButton('btn3DMode', '🧊 3D (10 km) ⌵');
-    b3D.width = '180px';
+    const b3D = GUI.Button.CreateSimpleButton('btn3DMode', '☰ Top 10 análogos');
+    b3D.onPointerClickObservable.add(() => { sound.playClick(650); this.callbacks.onOpenAnalogs?.(); });
+    b3D.width = '230px';
     b3D.height = '42px';
     b3D.fontSize = 18;
     b3D.cornerRadius = 21;
@@ -1080,12 +1335,13 @@ export class XRSpatialUIManager {
     b3D.paddingLeft = '14px';
     rightActions.addControl(b3D);
 
-    topBar.addControl(rightActions);
+    topBar.addControl(rightActions, 0, 2);
     mainStack.addControl(topBar);
 
     // CUERPO DIVIDIDO EN 2 SUB-VENTANAS (Mapa Satelital 2D a la izquierda + DEM 3D a la derecha)
     const splitGrid = new GUI.Grid();
     splitGrid.height = '520px';
+    splitGrid.width = '2140px';   // sin ancho fijo medía 2237 px y la mesa (2177 px útiles) recortaba las cifras de la derecha
     splitGrid.addColumnDefinition(0.46); // 2D Map
     splitGrid.addColumnDefinition(0.54); // 3D DEM & Stats
     splitGrid.paddingTop = '12px';
@@ -1111,19 +1367,23 @@ export class XRSpatialUIManager {
     mapImgContainer.thickness = 1.5;
     mapImgContainer.background = '#050a14';
 
-    const satImg = new GUI.Image('satMapImg', './output_3d/thematic_comparison_atlas.png');
+    // Imagen satelital REAL (Esri) del sitio del modelo; la rellena updateDesk()
+    const satImg = new GUI.Image('satMapImg');
     satImg.width = '950px';
     satImg.height = '450px';
+    satImg.stretch = GUI.Image.STRETCH_FILL;
     mapImgContainer.addControl(satImg);
+    this.deskSatImage = satImg;
 
-    const radarOverlay = new GUI.Rectangle();
+    // Anillo del radio de exploración REAL (su tamaño lo calcula updateDesk)
+    const radarOverlay = new GUI.Ellipse();
     radarOverlay.width = '180px';
     radarOverlay.height = '180px';
-    radarOverlay.cornerRadius = 90;
     radarOverlay.color = '#22d3ee';
-    radarOverlay.thickness = 2;
-    radarOverlay.background = 'rgba(34, 211, 238, 0.12)';
+    radarOverlay.thickness = 3;
+    radarOverlay.background = 'rgba(34, 211, 238, 0.08)';
     mapImgContainer.addControl(radarOverlay);
+    this.deskRing = radarOverlay;
 
     mapStack.addControl(mapImgContainer);
     leftSubWin.addControl(mapStack);
@@ -1172,7 +1432,8 @@ export class XRSpatialUIManager {
     statsStack.paddingTop = '18px';
 
     const sLabel = new GUI.TextBlock();
-    sLabel.text = 'Similarity (vs Mars)';
+    this.deskSimLabel = sLabel;
+    sLabel.text = 'Similarity';
     sLabel.color = '#94a3b8';
     sLabel.fontSize = 20;
     sLabel.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
@@ -1180,7 +1441,8 @@ export class XRSpatialUIManager {
     statsStack.addControl(sLabel);
 
     const sScore = new GUI.TextBlock();
-    sScore.text = '68.5%';
+    this.deskSimValue = sScore;
+    sScore.text = '—';
     sScore.color = '#22d3ee';
     sScore.fontSize = 44;
     sScore.fontWeight = 'bold';
@@ -1189,42 +1451,46 @@ export class XRSpatialUIManager {
     statsStack.addControl(sScore);
 
     const addStatRow = (label: string, val: string, color = '#f8fafc') => {
-      const row = new GUI.StackPanel();
-      row.isVertical = false;
+      // Rejilla de dos columnas que se adapta al ancho (con anchos fijos el valor se recortaba)
+      const row = new GUI.Grid();
       row.height = '42px';
+      row.width = '440px';
       row.paddingTop = '6px';
+      row.addColumnDefinition(0.4);
+      row.addColumnDefinition(0.6);
 
       const l = new GUI.TextBlock();
       l.text = label;
       l.color = '#94a3b8';
       l.fontSize = 18;
-      l.width = '240px';
       l.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-      row.addControl(l);
+      row.addControl(l, 0, 0);
 
       const v = new GUI.TextBlock();
       v.text = val;
       v.color = color;
       v.fontSize = 18;
       v.fontWeight = 'bold';
-      v.width = '260px';
-      v.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
-      row.addControl(v);
+      v.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;   // a la izquierda: nunca llega al borde
+      v.paddingLeft = '8px';
+      row.addControl(v, 0, 1);
 
       statsStack.addControl(row);
+      this.deskRows.push(v);
     };
 
-    addStatRow('Elevation', '261 - 265 m');
-    addStatRow('Slope (avg.)', '1.3°');
-    addStatRow('Cavities / Tubes', 'IGN MDT05', '#38bdf8');
-    addStatRow('Pearson (R)', '0.999', '#34d399');
+    // Valores reales del modelo (updateDesk); «—» mientras no haya dato
+    addStatRow('Elevation', '—');
+    addStatRow('Slope (avg.)', '—');
+    addStatRow('DEM', '—', '#38bdf8');
+    addStatRow('Radius', '—', '#34d399');
 
     demContainer.addControl(statsStack, 0, 1);
     splitGrid.addControl(rightSubWin, 0, 1);
 
     // SECCIÓN INFERIOR: "Terrain Comparison" Dock Bar
     const dockBar = new GUI.Rectangle('bottomDockBar');
-    dockBar.width = '2200px';
+    dockBar.width = '2140px';   // cabe en la columna de la mesa (2177 px útiles)
     dockBar.height = '135px';
     dockBar.cornerRadius = 18;
     dockBar.background = 'rgba(15, 23, 42, 0.85)';
@@ -1303,10 +1569,62 @@ export class XRSpatialUIManager {
     btnFull.background = 'rgba(14, 165, 233, 0.25)';
     btnFull.thickness = 1.5;
     btnFull.paddingRight = '20px';
-    btnFull.onPointerClickObservable.add(() => sound.playClick(750));
+    btnFull.onPointerClickObservable.add(() => { sound.playClick(750); this.callbacks.onFullComparison?.(); });
     dockGrid.addControl(btnFull, 0, 4);
 
     mainStack.addControl(dockBar);
+
+    // Datos reales: el mismo modelo de terreno que la mesa de la web
+    this.deskUnsub = terrainModel.subscribe((m) => this.updateDesk(m));
+    this.scene.onBeforeRenderObservable.add(() => {
+      if (!this.deskModel?.grid || !this.rootNode.isEnabled()) return;
+      this.demFrame = (this.demFrame + 1) % 4;        // ~20 fps de giro bastan
+      if (this.demFrame === 0) { this.dem3DAngle += 0.02; this.redrawDesk3DDEM(); }
+    });
+  }
+
+  private demFrame = 0;
+  private satSeq = 0;
+
+  /** Rellena la mesa con el modelo de terreno real (o «—» si falta un dato). */
+  private async updateDesk(m: TerrainModel | null) {
+    this.deskModel = m;
+    const loading = terrainModel.state === 'loading';
+    if (this.deskSubBlock) {
+      this.deskSubBlock.text = m
+        ? `${m.siteName}${loading ? ' (recalculando…)' : ''}${m.center && !m.siteName.includes('°') ? ` · ${m.center.lat.toFixed(4)}°, ${m.center.lon.toFixed(4)}°` : ''}`
+        : (terrainModel.state === 'error' ? `Sin modelo de terreno (${terrainModel.error})` : 'Cargando modelo de terreno…');
+    }
+    if (this.deskSimLabel) this.deskSimLabel.text = `Similarity (vs ${bodyName(m?.targetBody ?? null)})`;
+    if (this.deskSimValue) this.deskSimValue.text = m?.similarityPct != null ? fmtNum(m.similarityPct, 1, '%') : '—';
+    const vals = [elevationText(m), fmtNum(m?.metrics.slopeMean ?? null, 1, '°'), demSourceShort(m), radiusText(m)];
+    this.deskRows.forEach((tb, i) => { tb.text = vals[i] ?? '—'; });
+    this.redrawDesk3DDEM();
+
+    // Imagen satelital real centrada en el sitio, con el anillo del radio
+    const seq = ++this.satSeq;
+    if (!m?.center || !this.deskSatImage) return;
+    const W = 950, Hh = 450, radius = m.radiusM ?? 100;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = Hh;
+    const ctx = cv.getContext('2d')!;
+    ctx.fillStyle = '#050a14';
+    ctx.fillRect(0, 0, W, Hh);
+    const mpp = await drawSatellite(ctx, W, Hh, m.center.lat, m.center.lon, zoomForRadius(m.center.lat, radius, Hh));
+    if (seq !== this.satSeq) return;
+    ctx.font = '20px monospace';
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.7)';
+    ctx.fillRect(0, Hh - 32, W, 32);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(`${m.center.lat.toFixed(4)}°, ${m.center.lon.toFixed(4)}° · r ${radiusText(m)}`, 12, Hh - 9);
+    ctx.fillStyle = '#22d3ee';
+    ctx.fillText('Esri World Imagery', W - 230, Hh - 9);
+    try { this.deskSatImage.source = cv.toDataURL('image/jpeg', 0.85); } catch { /* lienzo sin CORS: se queda vacío */ }
+    if (this.deskRing) {
+      const d = Math.max(12, Math.min(440, (2 * radius) / mpp));
+      this.deskRing.width = `${d}px`;
+      this.deskRing.height = `${d}px`;
+    }
   }
 
   // =========================================================================
@@ -1317,130 +1635,48 @@ export class XRSpatialUIManager {
     const ctx = this.desk3DDynamicTex.getContext() as CanvasRenderingContext2D;
     const W = 1000;
     const H = 720;
-
     ctx.fillStyle = '#080f20';
     ctx.fillRect(0, 0, W, H);
-
-    // Retícula sutil
-    ctx.strokeStyle = 'rgba(34, 211, 238, 0.15)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < W; x += 50) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, H);
-      ctx.stroke();
+    const m = this.deskModel;
+    ctx.textAlign = 'left';
+    if (!m?.grid) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 30px sans-serif';
+      ctx.fillText(terrainModel.state === 'loading' ? 'Cargando DEM…' : 'Sin DEM', 60, H / 2);
+      this.desk3DDynamicTex.update();
+      return;
     }
-    for (let y = 0; y < H; y += 50) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(W, y);
-      ctx.stroke();
-    }
+    // Rejilla REAL del DEM del modelo (la misma que el «Entorno 3D»), en isométrico
+    const exag = drawDemIso(ctx, W - 160, H - 60, m.grid, this.dem3DAngle, { margin: 0.05 });
 
-    const gridN = 14;
-    const centerX = W * 0.44;
-    const centerY = H * 0.58;
-    const cosA = Math.cos(this.dem3DAngle);
-    const sinA = Math.sin(this.dem3DAngle);
-    const scaleX = 320;
-    const scaleY = 170;
-    const scaleZ = 130;
-
-    const points: { sx: number; sy: number; z: number }[][] = [];
-
-    for (let i = 0; i <= gridN; i++) {
-      points[i] = [];
-      const u = (i / gridN - 0.5) * 2;
-      for (let j = 0; j <= gridN; j++) {
-        const v = (j / gridN - 0.5) * 2;
-        const dist = Math.sqrt(u * u + v * v);
-        // Geometría cónica con depresión central (caldera volcánica)
-        const elev = Math.exp(-dist * 2.2) * 1.05 - Math.exp(-dist * 5.0) * 0.82 + Math.sin(u * 6) * Math.cos(v * 6) * 0.08;
-
-        const rx = u * cosA - v * sinA;
-        const ry = u * sinA + v * cosA;
-
-        const sx = centerX + rx * scaleX;
-        const sy = centerY + ry * scaleY * 0.45 - elev * scaleZ;
-        points[i][j] = { sx, sy, z: elev };
-      }
-    }
-
-    // Polígonos con rampa térmica exacta de la imagen (marrón basalto a cian y nieve)
-    for (let i = 0; i < gridN; i++) {
-      for (let j = 0; j < gridN; j++) {
-        const p1 = points[i][j];
-        const p2 = points[i + 1][j];
-        const p3 = points[i + 1][j + 1];
-        const p4 = points[i][j + 1];
-        const avgZ = Math.max(0, Math.min(1, (p1.z + p2.z + p3.z + p4.z) / 4));
-
-        ctx.beginPath();
-        ctx.moveTo(p1.sx, p1.sy);
-        ctx.lineTo(p2.sx, p2.sy);
-        ctx.lineTo(p3.sx, p3.sy);
-        ctx.lineTo(p4.sx, p4.sy);
-        ctx.closePath();
-
-        const r = Math.floor(20 + avgZ * 160);
-        const g = Math.floor(40 + avgZ * 140);
-        const b = Math.floor(60 + avgZ * 90);
-        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.8)`;
-        ctx.strokeStyle = `rgba(34, 211, 238, ${0.25 + avgZ * 0.6})`;
-        ctx.lineWidth = 1.2;
-        ctx.fill();
-        ctx.stroke();
-      }
-    }
-
-    // Anillo de exploración 100m en perspectiva
-    ctx.strokeStyle = '#22d3ee';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.ellipse(centerX, centerY - 45, 90, 40, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Marcador central de diamante rojo
-    ctx.fillStyle = '#ef4444';
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY - 68);
-    ctx.lineTo(centerX + 14, centerY - 54);
-    ctx.lineTo(centerX, centerY - 40);
-    ctx.lineTo(centerX - 14, centerY - 54);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Barra de color a la derecha (220 m a 320 m)
-    const barX = W - 100;
-    const barY = 80;
-    const barH = 500;
+    // Barra de color con las cotas reales del modelo
+    const lo = m.metrics.elevMin, hi = m.metrics.elevMax;
+    const barX = W - 100, barY = 80, barH = 500;
     const grad = ctx.createLinearGradient(0, barY, 0, barY + barH);
-    grad.addColorStop(0, '#f8fafc');
-    grad.addColorStop(0.3, '#38bdf8');
-    grad.addColorStop(0.7, '#0284c7');
-    grad.addColorStop(1, '#0f172a');
+    grad.addColorStop(0, '#eaf0c8');
+    grad.addColorStop(0.35, '#708e66');
+    grad.addColorStop(0.7, '#205476');
+    grad.addColorStop(1, '#10263c');
     ctx.fillStyle = grad;
     ctx.fillRect(barX, barY, 22, barH);
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(barX, barY, 22, barH);
-
     ctx.fillStyle = '#cbd5e1';
     ctx.font = 'bold 18px sans-serif';
-    ctx.textAlign = 'left';
     ctx.fillText('Elev. (m)', barX - 10, barY - 15);
-    ctx.fillText('320', barX + 30, barY + 15);
-    ctx.fillText('270', barX + 30, barY + barH / 2);
-    ctx.fillText('220', barX + 30, barY + barH);
-
-    // Título 3D DEM (IGN PNOA-LiDAR)
+    if (lo != null && hi != null) {
+      ctx.fillText(String(Math.round(hi)), barX + 30, barY + 15);
+      ctx.fillText(String(Math.round((lo + hi) / 2)), barX + 30, barY + barH / 2);
+      ctx.fillText(String(Math.round(lo)), barX + 30, barY + barH);
+    }
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 22px sans-serif';
-    ctx.fillText('3D DEM (IGN PNOA-LiDAR)', 30, 45);
-
+    ctx.fillText(`3D DEM (${demSourceShort(m)})`, 30, 45);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '18px monospace';
+    const ex = exag >= 10 ? Math.round(exag) : exag.toFixed(1);
+    ctx.fillText(`${m.grid.rows}×${m.grid.cols} pts · ~${Math.round(m.grid.spacingM)} m · vertical ×${ex}`, 30, H - 24);
     this.desk3DDynamicTex.update();
   }
 
@@ -1455,6 +1691,11 @@ export class XRSpatialUIManager {
    */
   public updateFollowCamera(cameraPosition: BABYLON.Vector3) {
     if (this.isXRMode) {
+      // En las gafas los paneles quedan FIJOS en la sala (cuelgan del «escenario» XR de
+      // earthScene): si siguieran a la cabeza, al acercarte a leer la mesa se alejaría.
+      // Se recolocan con A (recentrar) o agarrando con el grip.
+      if (this.rootNode.parent) return;
+      // Simulador de escritorio (sin gafas): acompaña a la cámara como antes
       this.rootNode.position.x = BABYLON.Scalar.Lerp(this.rootNode.position.x, cameraPosition.x, 0.15);
       this.rootNode.position.y = BABYLON.Scalar.Lerp(this.rootNode.position.y, cameraPosition.y, 0.15);
       this.rootNode.position.z = BABYLON.Scalar.Lerp(this.rootNode.position.z, cameraPosition.z, 0.15);
@@ -1535,6 +1776,12 @@ export class XRSpatialUIManager {
   }
 
   public dispose() {
+    if (this.orbitObserver) {
+      this.scene.onBeforeRenderObservable.remove(this.orbitObserver);
+      this.orbitObserver = null;
+    }
+    this.deskUnsub?.();
+    this.deskUnsub = null;
     this.dynamicTextures.forEach(dt => dt.dispose());
     this.dynamicTextures = [];
     this.meshes.forEach(m => m.dispose());

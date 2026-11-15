@@ -1,0 +1,94 @@
+{
+  "center": {
+    "lat": 29.1475,
+    "lon": -13.45
+  },
+  "radius_km": 10.0,
+  "metrics": {
+    "elevation_rmse_m": 2.5,
+    "elevation_mae_m": 2.0,
+    "pearson_correlation_r": 0.9993,
+    "elevation_accuracy_pct": 99.31,
+    "relief_accuracy_pct": 95.47,
+    "overall_similarity_pct": 98.06,
+    "total_pixels_evaluated": 40000,
+    "elevation_min_m": 0.0,
+    "elevation_max_m": 361.1,
+    "mean_slope_deg": 4.12,
+    "max_slope_deg": 13.46
+  },
+  "cavities": [
+    {
+      "id": "CAV-001",
+      "type": "Collapsed Lava Tube Skylight / Jameo",
+      "latitude": 29.05767,
+      "longitude": -13.53632,
+      "elevation_m": 73.0,
+      "estimated_depth_m": 19.61,
+      "rim_slope_deg": 9.1,
+      "confidence_score": 0.98,
+      "grid_x": 16,
+      "grid_y": 0
+    },
+    {
+      "id": "CAV-006",
+      "type": "Collapsed Lava Tube Skylight / Jameo",
+      "latitude": 29.05767,
+      "longitude": -13.43191,
+      "elevation_m": 89.0,
+      "estimated_depth_m": 16.41,
+      "rim_slope_deg": 7.1,
+      "confidence_score": 0.98,
+      "grid_x": 117,
+      "grid_y": 0
+    },
+    {
+      "id": "CAV-007",
+      "type": "Collapsed Lava Tube Skylight / Jameo",
+      "latitude": 29.05767,
+      "longitude": -13.42054,
+      "elevation_m": 58.4,
+      "estimated_depth_m": 6.32,
+      "rim_slope_deg": 3.9,
+      "confidence_score": 0.98,
+      "grid_x": 128,
+      "grid_y": 0
+    },
+    {
+      "id": "CAV-009",
+      "type": "Collapsed Lava Tube Skylight / Jameo",
+      "latitude": 29.05857,
+      "longitude": -13.38436,
+      "elevation_m": 160.6,
+      "estimated_depth_m": 5.41,
+      "rim_slope_deg": 3.7,
+      "confidence_score": 0.98,
+      "grid_x": 163,
+      "grid_y": 1
+    },
+    {
+      "id": "CAV-011",
+      "type": "Collapsed Lava Tube Skylight / Jameo",
+      "latitude": 29.05947,
+      "longitude": -13.54459,
+      "elevation_m": 136.5,
+      "estimated_depth_m": 7.14,
+      "rim_slope_deg": 3.8,
+      "confidence_score": 0.98,
+      "grid_x": 8,
+      "grid_y": 2
+    },
+    {
+      "id": "CAV-013",
+      "type": "Collapsed Lava Tube Skylight / Jameo",
+      "latitude": 29.05947,
+      "longitude": -13.44225,
+      "elevation_m": 168.5,
+      "estimated_depth_m": 9.21,
+      "rim_slope_deg": 5.0,
+      "confidence_score": 0.98,
+      "grid_x": 107,
+      "grid_y": 2
+    }
+  ]
+}

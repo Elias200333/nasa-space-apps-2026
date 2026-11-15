@@ -277,6 +277,12 @@
     </div>
   </div>
 
+  <!-- Botón flotante para salir de VR en pantalla de escritorio -->
+  <button id="btnFloatingExitXR" class="desktop-vr-exit-btn" title="Salir de Modo Holográfico XR">
+    <span>✕</span>
+    <span>Salir de Modo XR</span>
+  </button>
+
   <!-- 1. Barra de Navegación Superior -->
   <header class="top-nav">
     <div class="nav-left">
@@ -702,7 +708,7 @@
           </div>
           <div class="desk-title-text">
             <span class="desk-main-title">Analog Site Analysis</span>
-            <span class="desk-site-name" id="deskSiteName">Crater de Caldera Blanca (Lanzarote, España)</span>
+            <span class="desk-site-name" id="deskSiteName">Cargando modelo…</span>
           </div>
         </div>
 
@@ -714,9 +720,8 @@
             </svg>
             <span>Fit to Area</span>
           </button>
-          <button class="desk-btn active" id="btnDeskToggle3D" title="Alternar visualización 3D">
-            <span>🧊 3D (10 km)</span>
-            <span class="chevron">▾</span>
+          <button class="desk-btn active" id="btnDeskToggle3D" title="Abrir el entorno 3D del análogo (mapa 2D + modelo 3D)">
+            <span id="deskRadiusChip">3D · r —</span>
           </button>
           <button class="desk-close-btn" id="btnDeskClose" title="Minimizar mesa de análisis">✕</button>
         </div>
@@ -726,18 +731,12 @@
         <!-- Mitad Izquierda: Ortofoto Satelital 2D con Retícula -->
         <div class="desk-map-pane">
           <div class="desk-map-viewport" id="deskMapViewport">
+            <!-- Imagen satelital real (Esri) con el anillo del radio de exploración: la pinta analogDesk.ts -->
             <canvas id="deskMapCanvas" width="340" height="145"></canvas>
-            <div class="desk-map-reticle">
-              <div class="reticle-circle outer"></div>
-              <div class="reticle-circle inner"></div>
-              <div class="reticle-dot"></div>
-            </div>
             <div class="desk-map-tools">
-              <button class="desk-tool-icon" id="btnDeskMapLayers" title="Capas satélite">▦</button>
-              <button class="desk-tool-icon" id="btnDeskMapInfo" title="Info satelital">ⓘ</button>
               <div class="desk-zoom-group">
-                <button class="desk-tool-icon" id="btnDeskZoomIn">+</button>
-                <button class="desk-tool-icon" id="btnDeskZoomOut">−</button>
+                <button class="desk-tool-icon" id="btnDeskZoomIn" title="Acercar la imagen satelital">+</button>
+                <button class="desk-tool-icon" id="btnDeskZoomOut" title="Alejar la imagen satelital">−</button>
               </div>
             </div>
           </div>
@@ -746,7 +745,7 @@
         <!-- Mitad Derecha: Relieve DEM 3D & Telemetría Altimétrica -->
         <div class="desk-dem-pane">
           <div class="desk-dem-header">
-            <span class="desk-dem-badge">3D DEM (IGN PNOA-LiDAR)</span>
+            <span class="desk-dem-badge" id="deskDemBadge">3D DEM</span>
           </div>
           <div class="desk-dem-content">
             <div class="desk-dem-canvas-box">
@@ -754,36 +753,31 @@
             </div>
             <div class="desk-dem-stats">
               <div class="desk-stat-similarity">
-                <span class="stat-sim-label" id="deskSimLabel">Similarity (vs Mars)</span>
-                <span class="stat-sim-val" id="deskSimVal">68.5%</span>
+                <span class="stat-sim-label" id="deskSimLabel">Similarity</span>
+                <span class="stat-sim-val" id="deskSimVal">—</span>
               </div>
               <div class="desk-stat-row">
                 <span class="s-label">Elevation:</span>
-                <span class="s-val" id="deskElevVal">261 – 265 m</span>
+                <span class="s-val" id="deskElevVal">—</span>
               </div>
               <div class="desk-stat-row">
                 <span class="s-label">Slope (avg.):</span>
-                <span class="s-val" id="deskSlopeVal">1.3°</span>
+                <span class="s-val" id="deskSlopeVal">—</span>
               </div>
               <div class="desk-stat-row">
-                <span class="s-label">Cavities / Tubes:</span>
-                <span class="s-val" id="deskCavitiesVal">IGN MDT05</span>
+                <span class="s-label">DEM:</span>
+                <span class="s-val" id="deskCavitiesVal">—</span>
               </div>
               <div class="desk-stat-row">
-                <span class="s-label">Pearson (R):</span>
-                <span class="s-val" id="deskPearsonVal">0.939</span>
+                <span class="s-label">Radius:</span>
+                <span class="s-val" id="deskPearsonVal">—</span>
               </div>
             </div>
             <div class="desk-elev-legend">
               <span class="legend-unit">Elev. (m)</span>
               <div class="legend-scale-bar"></div>
-              <div class="legend-labels">
-                <span>320</span>
-                <span>300</span>
-                <span>280</span>
-                <span>260</span>
-                <span>240</span>
-                <span>220</span>
+              <div class="legend-labels" id="deskLegendLabels">
+                <span>—</span>
               </div>
             </div>
           </div>
@@ -794,7 +788,7 @@
     <!-- Píldora de restauración cuando la mesa está minimizada -->
     <button id="btnRestoreDesk" class="desk-restore-pill hidden" title="Mostrar Mesa de Análisis de Análogos">
       <span class="desk-pill-dot"></span>
-      <span id="deskPillTitle">Analog Site Analysis: Caldera Blanca (68.5%)</span>
+      <span id="deskPillTitle">Analog Site Analysis</span>
       <span class="desk-pill-arrow">▲</span>
     </button>
   </main>
@@ -935,13 +929,6 @@
             <p class="drawer-subtitle" id="terrain3dSubtitle">Radio: 100 m • IGN PNOA-LiDAR & NASA Trek</p>
           </div>
           <div class="drawer-actions">
-            <button id="btnRegen3D" class="drawer-action-btn regen-btn"
-              title="Recalcular modelo 3D con generate_terrain_3D.py">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-              </svg>
-              <span>Recalcular</span>
-            </button>
             <button id="btnMaximize3DPanel" class="drawer-action-btn expand-btn"
               title="Ampliar a pantalla completa (respetando panel derecho)">
               <svg id="maximizeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"

@@ -1,5 +1,16 @@
-import { AnalogSite } from '../types';
+import {
+  bodyName, demSourceShort, drawDemIso, drawSatellite, elevationText, fmtNum, radiusText,
+  terrainModel, TerrainModel, TerrainState, zoomForRadius,
+} from '../data/terrainModel';
 
+/**
+ * Mesa «Analog Site Analysis» de la vista del globo.
+ *
+ * Muestra el modelo de terreno REAL que hay calculado (src/data/terrainModel.ts):
+ *  - izquierda: imagen satelital Esri centrada en el sitio, con el anillo del radio de exploración;
+ *  - derecha: la rejilla real del DEM en isométrico (con su exageración vertical rotulada) y las
+ *    métricas del backend. Lo que no venga en los datos se muestra «—».
+ */
 export class AnalogDeskManager {
   private deskEl: HTMLElement | null;
   private restorePill: HTMLElement | null;
@@ -8,12 +19,14 @@ export class AnalogDeskManager {
   private mapCtx: CanvasRenderingContext2D | null = null;
   private demCtx: CanvasRenderingContext2D | null = null;
 
-  private currentSite: AnalogSite | null = null;
-  private currentBody: 'Moon' | 'Mars' = 'Mars';
-  private zoomLevel = 1.0;
+  private model: TerrainModel | null = null;
+  private state: TerrainState = 'loading';
+  private stateMsg = '';
+  private zoomOffset = 0;
   private isCollapsed = false;
   private animFrameId = 0;
-  private demAngle = 0;
+  private demAngle = 0.6;
+  private mapSeq = 0;
 
   constructor() {
     this.deskEl = document.getElementById('analogSiteDesk');
@@ -24,54 +37,64 @@ export class AnalogDeskManager {
     if (this.mapCanvas) this.mapCtx = this.mapCanvas.getContext('2d');
     if (this.demCanvas) this.demCtx = this.demCanvas.getContext('2d');
 
+    // Los lienzos dibujan en píxeles: si la mesa cambia de tamaño se ajusta su resolución al
+    // tamaño real (si no, el dibujo se estira y se deforma).
+    const fitCanvas = (cv: HTMLCanvasElement | null, draw: () => void) => {
+      if (!cv) return;
+      new ResizeObserver(() => {
+        const w = Math.round(cv.clientWidth), h = Math.round(cv.clientHeight);
+        if (w > 0 && h > 0 && (cv.width !== w || cv.height !== h)) {
+          cv.width = w;
+          cv.height = h;
+          draw();
+        }
+      }).observe(cv);
+    };
+    fitCanvas(this.mapCanvas, () => this.drawMap());
+    fitCanvas(this.demCanvas, () => this.drawDEM());
+
     this.setupListeners();
     this.startRenderLoop();
+    terrainModel.subscribe((m, state, err) => {
+      const siteChanged = m !== this.model;
+      this.model = m;
+      this.state = state;
+      this.stateMsg = err || '';
+      if (siteChanged) this.zoomOffset = 0;
+      this.renderText();
+      if (siteChanged || state !== 'ready') this.drawMap();
+      this.drawDEM();
+    });
   }
 
   private setupListeners() {
-    const btnClose = document.getElementById('btnDeskClose');
-    if (btnClose) {
-      btnClose.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.collapse();
-      });
-    }
-
-    if (this.restorePill) {
-      this.restorePill.addEventListener('click', () => {
-        this.expand();
-      });
-    }
-
-    const btnZoomIn = document.getElementById('btnDeskZoomIn');
-    if (btnZoomIn) {
-      btnZoomIn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.zoomLevel = Math.min(2.5, this.zoomLevel + 0.25);
-        this.drawMap();
-      });
-    }
-
-    const btnZoomOut = document.getElementById('btnDeskZoomOut');
-    if (btnZoomOut) {
-      btnZoomOut.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.zoomLevel = Math.max(0.6, this.zoomLevel - 0.25);
-        this.drawMap();
-      });
-    }
+    document.getElementById('btnDeskClose')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.collapse();
+    });
+    this.restorePill?.addEventListener('click', () => this.expand());
+    document.getElementById('btnDeskZoomIn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.zoomOffset = Math.min(4, this.zoomOffset + 1);
+      this.drawMap();
+    });
+    document.getElementById('btnDeskZoomOut')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.zoomOffset = Math.max(-6, this.zoomOffset - 1);
+      this.drawMap();
+    });
   }
 
   public collapse() {
     this.isCollapsed = true;
-    if (this.deskEl) this.deskEl.classList.add('collapsed');
-    if (this.restorePill) this.restorePill.classList.remove('hidden');
+    this.deskEl?.classList.add('collapsed');
+    this.restorePill?.classList.remove('hidden');
   }
 
   public expand() {
     this.isCollapsed = false;
-    if (this.deskEl) this.deskEl.classList.remove('collapsed');
-    if (this.restorePill) this.restorePill.classList.add('hidden');
+    this.deskEl?.classList.remove('collapsed');
+    this.restorePill?.classList.add('hidden');
     this.drawMap();
     this.drawDEM();
   }
@@ -80,77 +103,55 @@ export class AnalogDeskManager {
     return this.isCollapsed;
   }
 
-  public updateSite(site: AnalogSite, body: 'Moon' | 'Mars' = 'Mars') {
-    this.currentSite = site;
-    this.currentBody = body;
+  /** Centro del modelo actual (para «Fit to Area»), o null si aún no hay modelo. */
+  public getCenter(): { lat: number; lon: number } | null {
+    return this.model?.center ?? null;
+  }
 
-    const titleEl = document.getElementById('deskSiteName');
-    if (titleEl) {
-      titleEl.textContent = `${site.name} (${site.region})`;
-    }
-
-    const pillTitle = document.getElementById('deskPillTitle');
-    if (pillTitle) {
-      pillTitle.textContent = `Analog Site Analysis: ${site.name} (${site.similarity_score.toFixed(1)}%)`;
-    }
-
-    const simLabel = document.getElementById('deskSimLabel');
-    if (simLabel) {
-      simLabel.textContent = `Similarity (vs ${body})`;
-    }
-
-    const simVal = document.getElementById('deskSimVal');
-    if (simVal) {
-      simVal.textContent = `${site.similarity_score.toFixed(1)}%`;
-      if (body === 'Mars') {
-        simVal.style.color = '#22d3ee';
-      } else {
-        simVal.style.color = '#38bdf8';
-      }
-    }
-
-    const elevVal = document.getElementById('deskElevVal');
-    if (elevVal) {
-      if (site.id.includes('CALDERA_BLANCA')) {
-        elevVal.textContent = '261 – 265 m';
-      } else if (site.id.includes('ARENA')) {
-        elevVal.textContent = '164 – 173 m';
-      } else if (site.id.includes('TEIDE')) {
-        elevVal.textContent = '2,150 – 3,718 m';
-      } else {
-        elevVal.textContent = '180 – 320 m';
-      }
-    }
-
-    const slopeVal = document.getElementById('deskSlopeVal');
-    if (slopeVal) {
-      if (site.id.includes('CALDERA_BLANCA')) {
-        slopeVal.textContent = '1.3°';
-      } else if (site.id.includes('ARENA')) {
-        slopeVal.textContent = '3.1°';
-      } else {
-        slopeVal.textContent = '2.4°';
-      }
-    }
-
-    const cavVal = document.getElementById('deskCavitiesVal');
-    if (cavVal) {
-      cavVal.textContent = site.sources?.includes('IGN PNOA-LiDAR') ? 'IGN MDT05' : 'USGS 3DEP';
-    }
-
-    const pVal = document.getElementById('deskPearsonVal');
-    if (pVal) {
-      pVal.textContent = site.id.includes('CALDERA_BLANCA') ? '0.939' : '0.999';
-    }
-
+  /** Vuelve a encuadrar la imagen satelital en el radio de exploración. */
+  public fitToArea() {
+    this.zoomOffset = 0;
     this.drawMap();
-    this.drawDEM();
+  }
+
+  private setText(id: string, text: string, title?: string) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    if (title !== undefined) el.title = title;
+  }
+
+  private renderText() {
+    const m = this.model;
+    const loading = this.state === 'loading';
+    const name = m ? m.siteName : (this.state === 'error' ? 'Sin modelo de terreno' : 'Cargando modelo…');
+    // Los modelos de exploración libre ya llevan las coordenadas en el nombre
+    const coords = m?.center && !name.includes('°') ? ` · ${m.center.lat.toFixed(4)}°, ${m.center.lon.toFixed(4)}°` : '';
+    this.setText('deskSiteName', loading && m ? `${name} (recalculando…)` : `${name}${coords}`, this.stateMsg || name);
+    this.setText('deskPillTitle', `Analog Site Analysis: ${m ? m.siteName : '—'}${m?.similarityPct != null ? ` (${fmtNum(m.similarityPct, 1, '%')})` : ''}`);
+    this.setText('deskSimLabel', `Similarity (vs ${bodyName(m?.targetBody ?? null)})`, m?.benchmark || '');
+    this.setText('deskSimVal', m?.similarityPct != null ? fmtNum(m.similarityPct, 1, '%') : '—');
+    this.setText('deskElevVal', elevationText(m));
+    this.setText('deskSlopeVal', fmtNum(m?.metrics.slopeMean ?? null, 1, '°'));
+    this.setText('deskCavitiesVal', demSourceShort(m), m?.demSource || '');
+    this.setText('deskPearsonVal', radiusText(m));
+    this.setText('deskRadiusChip', `3D · r ${radiusText(m)}`);
+    this.setText('deskDemBadge', m?.grid ? `3D DEM (${demSourceShort(m)})` : '3D DEM');
+    const labels = document.getElementById('deskLegendLabels');
+    if (labels) {
+      const lo = m?.metrics.elevMin, hi = m?.metrics.elevMax;
+      const vals = lo != null && hi != null ? [0, 0.2, 0.4, 0.6, 0.8, 1].map((t) => Math.round(hi - (hi - lo) * t)) : [];
+      labels.innerHTML = vals.map((v) => `<span>${v}</span>`).join('') || '<span>—</span>';
+    }
   }
 
   private startRenderLoop() {
-    const loop = () => {
-      this.demAngle += 0.008;
-      if (!this.isCollapsed) {
+    let last = 0;
+    const loop = (t: number) => {
+      // el DEM gira despacio; se redibuja a ~20 fps (no hace falta más y ahorra batería)
+      if (!this.isCollapsed && this.model?.grid && t - last > 50) {
+        last = t;
+        this.demAngle += 0.012;
         this.drawDEM();
       }
       this.animFrameId = requestAnimationFrame(loop);
@@ -159,215 +160,82 @@ export class AnalogDeskManager {
   }
 
   public destroy() {
-    if (this.animFrameId) {
-      cancelAnimationFrame(this.animFrameId);
-    }
+    if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
   }
 
-  /**
-   * Dibuja la ortofoto satelital fotorealista de alta resolución con el anillo de retícula
-   */
-  public drawMap() {
-    if (!this.mapCtx || !this.mapCanvas) return;
-    const ctx = this.mapCtx;
-    const w = this.mapCanvas.width;
-    const h = this.mapCanvas.height;
-
-    ctx.save();
-    ctx.clearRect(0, 0, w, h);
-
-    // 1. Fondo de terreno volcánico (Islas Canarias / malpaís basáltico)
-    const grad = ctx.createRadialGradient(w * 0.42, h * 0.52, 10, w * 0.5, h * 0.5, w * 0.65);
-    grad.addColorStop(0, '#5a6252'); // Fondo interior del cráter (toba volcánica clara)
-    grad.addColorStop(0.25, '#82896a'); // Borde del cráter Caldera Blanca
-    grad.addColorStop(0.38, '#3d4436'); // Laderas volcánicas
-    grad.addColorStop(0.55, '#1e241c'); // Mar de lavas y malpaís basáltico oscuro
-    grad.addColorStop(1.0, '#121815');
-    ctx.fillStyle = grad;
+  private message(ctx: CanvasRenderingContext2D, w: number, h: number, text: string) {
+    ctx.fillStyle = '#0b1218';
     ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.9)';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, w / 2, h / 2);
+    ctx.textAlign = 'left';
+  }
 
-    // 2. Textura orgánica y crestas del cráter
-    const cx = w * 0.44;
-    const cy = h * 0.52;
-    const zoom = this.zoomLevel;
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(zoom, zoom);
-    ctx.translate(-cx, -cy);
-
-    // Caldera Blanca - anillo de toba elíptico
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, 54, 42, 0.22, 0, Math.PI * 2);
-    ctx.lineWidth = 14;
-    ctx.strokeStyle = 'rgba(164, 172, 140, 0.75)';
-    ctx.stroke();
-
-    // Fondo del cráter freatomagmático
-    ctx.beginPath();
-    ctx.ellipse(cx - 3, cy - 2, 44, 32, 0.22, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(108, 118, 92, 0.85)';
-    ctx.fill();
-
-    // Cono adyacente menor (Caldereta)
-    ctx.beginPath();
-    ctx.ellipse(cx + 62, cy - 22, 28, 22, -0.15, 0, Math.PI * 2);
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = 'rgba(142, 148, 122, 0.65)';
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(92, 98, 76, 0.7)';
-    ctx.fill();
-
-    // Coladas de lava circundantes
-    ctx.strokeStyle = 'rgba(28, 34, 28, 0.85)';
-    ctx.lineWidth = 3;
-    for (let r = 70; r < 140; r += 16) {
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0.8, 3.4);
-      ctx.stroke();
+  /** Imagen satelital real (Esri World Imagery) del sitio con el anillo del radio de exploración. */
+  public async drawMap() {
+    if (!this.mapCtx || !this.mapCanvas) return;
+    const ctx = this.mapCtx, w = this.mapCanvas.width, h = this.mapCanvas.height;
+    const m = this.model;
+    const seq = ++this.mapSeq;
+    if (!m?.center) {
+      this.message(ctx, w, h, this.state === 'loading' ? 'Cargando imagen satelital…' : 'Sin imagen: no hay modelo calculado');
+      return;
     }
-    ctx.restore();
+    const radius = m.radiusM ?? 100;
+    const z = Math.max(3, Math.min(19, zoomForRadius(m.center.lat, radius, h) + this.zoomOffset));
+    const off = document.createElement('canvas');
+    off.width = w;
+    off.height = h;
+    const octx = off.getContext('2d')!;
+    octx.fillStyle = '#0b1218';
+    octx.fillRect(0, 0, w, h);
+    const mpp = await drawSatellite(octx, w, h, m.center.lat, m.center.lon, z);
+    if (seq !== this.mapSeq) return;            // llegó otra petición mientras tanto
+    ctx.drawImage(off, 0, 0);
 
-    // 3. Retícula holográfica de telemetría (Cyan NASA)
-    ctx.save();
-    ctx.strokeStyle = 'rgba(34, 211, 238, 0.85)';
+    const cx = w / 2, cy = h / 2, rPx = radius / mpp;
+    ctx.strokeStyle = 'rgba(34, 211, 238, 0.9)';
     ctx.lineWidth = 1.5;
-
-    // Círculo exterior
+    ctx.setLineDash([5, 4]);
     ctx.beginPath();
-    ctx.arc(cx, cy, 38, 0, Math.PI * 2);
+    ctx.arc(cx, cy, rPx, 0, Math.PI * 2);
     ctx.stroke();
-
-    // Círculo interior
-    ctx.strokeStyle = 'rgba(34, 211, 238, 0.45)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 18, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Marcador central en cruz
+    ctx.setLineDash([]);
     ctx.strokeStyle = '#22d3ee';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(cx - 6, cy); ctx.lineTo(cx + 6, cy);
-    ctx.moveTo(cx, cy - 6); ctx.lineTo(cx, cy + 6);
+    ctx.moveTo(cx - 7, cy); ctx.lineTo(cx + 7, cy);
+    ctx.moveTo(cx, cy - 7); ctx.lineTo(cx, cy + 7);
     ctx.stroke();
 
-    // Coordenadas en la esquina inferior izquierda
-    ctx.fillStyle = 'rgba(226, 232, 240, 0.85)';
     ctx.font = '10px monospace';
-    const coordsStr = this.currentSite?.coordinates?.label || '29.0380° N, 13.7190° W';
-    ctx.fillText(coordsStr, 10, h - 10);
-    ctx.fillStyle = 'rgba(34, 211, 238, 0.9)';
-    ctx.fillText('IGN PNOA • 0.25 m/px', w - 128, h - 10);
-
-    ctx.restore();
-    ctx.restore();
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.7)';
+    ctx.fillRect(0, h - 18, w, 18);
+    ctx.fillStyle = 'rgba(226, 232, 240, 0.92)';
+    ctx.fillText(`${m.center.lat.toFixed(4)}°, ${m.center.lon.toFixed(4)}° · r ${radiusText(m)}`, 8, h - 6);
+    const src = 'Esri World Imagery';
+    ctx.fillStyle = 'rgba(34, 211, 238, 0.95)';
+    ctx.fillText(src, w - ctx.measureText(src).width - 8, h - 6);
   }
 
-  /**
-   * Dibuja el modelo 3D DEM con relieve sombreado y malla isométrica IGN PNOA-LiDAR
-   */
+  /** Rejilla REAL del DEM del modelo, en isométrico. */
   public drawDEM() {
     if (!this.demCtx || !this.demCanvas) return;
-    const ctx = this.demCtx;
-    const w = this.demCanvas.width;
-    const h = this.demCanvas.height;
-
-    ctx.save();
-    ctx.clearRect(0, 0, w, h);
-
-    // Fondo oscuro tecnológico
-    ctx.fillStyle = 'rgba(8, 14, 26, 0.92)';
-    ctx.fillRect(0, 0, w, h);
-
-    // Dibujar malla de superficie 3D isométrica
-    const rows = 14;
-    const cols = 18;
-    const originX = w * 0.46;
-    const originY = h * 0.65;
-    const cellW = 7.5;
-    const cellH = 4.2;
-
-    const angle = this.demAngle;
-
-    // Proyección isométrica
-    const getPoint = (r: number, c: number) => {
-      // Perfil de elevación de cráter con cono volcánico (Caldera Blanca)
-      const distFromCenter = Math.hypot(r - rows / 2, c - cols / 2);
-      let elev = 0;
-      if (distFromCenter < 2.5) {
-        elev = 6 - distFromCenter * 1.5; // Fondo
-      } else if (distFromCenter < 4.8) {
-        elev = 18 - (distFromCenter - 3.8) * (distFromCenter - 3.8) * 8; // Cresta
-      } else {
-        elev = Math.max(0, 8 - (distFromCenter - 4.8) * 2.5); // Faldas
-      }
-
-      // Animación sutil de respiración o inclinación
-      const wobble = Math.sin(angle + (r + c) * 0.15) * 0.8;
-      const z = (elev + wobble) * 1.5;
-
-      const px = originX + (c - cols / 2) * cellW - (r - rows / 2) * (cellW * 0.6);
-      const py = originY + (c - cols / 2) * cellH * 0.5 + (r - rows / 2) * cellH - z;
-      return { x: px, y: py, z };
-    };
-
-    // Dibujar polígonos de relieve con gradiente de color según elevación
-    for (let r = 0; r < rows - 1; r++) {
-      for (let c = 0; c < cols - 1; c++) {
-        const p1 = getPoint(r, c);
-        const p2 = getPoint(r, c + 1);
-        const p3 = getPoint(r + 1, c + 1);
-        const p4 = getPoint(r + 1, c);
-
-        const avgZ = (p1.z + p2.z + p3.z + p4.z) / 4;
-        const normZ = Math.max(0, Math.min(1, avgZ / 26));
-
-        // Rampa de color altimétrica: azul oscuro -> cian -> oliva -> amarillo claro
-        let fillCol = 'rgba(24, 48, 72, 0.7)';
-        if (normZ > 0.6) {
-          fillCol = `rgba(234, 240, 200, ${0.4 + normZ * 0.5})`;
-        } else if (normZ > 0.3) {
-          fillCol = `rgba(112, 142, 102, ${0.5 + normZ * 0.4})`;
-        } else {
-          fillCol = `rgba(32, 84, 118, ${0.5 + normZ * 0.4})`;
-        }
-
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.lineTo(p3.x, p3.y);
-        ctx.lineTo(p4.x, p4.y);
-        ctx.closePath();
-
-        ctx.fillStyle = fillCol;
-        ctx.fill();
-
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.28)';
-        ctx.lineWidth = 0.6;
-        ctx.stroke();
-      }
+    const ctx = this.demCtx, w = this.demCanvas.width, h = this.demCanvas.height;
+    const g = this.model?.grid;
+    if (!g) {
+      this.message(ctx, w, h, this.state === 'loading' ? 'Cargando DEM…' : 'Sin DEM');
+      return;
     }
-
-    // Marcador del punto focal del cráter
-    const centerPt = getPoint(Math.floor(rows / 2), Math.floor(cols / 2));
-    ctx.strokeStyle = '#ef4444';
-    ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(centerPt.x, centerPt.y, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Ejes coordenados isométricos
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.8)';
-    ctx.font = '8px monospace';
-    ctx.fillText('Elev. (m)', 12, 16);
-    ctx.fillText('320', 12, 28);
-    ctx.fillText('280', 12, 42);
-    ctx.fillText('240', 12, 56);
-
-    ctx.restore();
+    ctx.fillStyle = 'rgba(8, 14, 26, 0.95)';
+    ctx.fillRect(0, 0, w, h);
+    const exag = drawDemIso(ctx, w, h, g, this.demAngle, { margin: 0.06 });
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.85)';
+    ctx.font = '9px monospace';
+    ctx.fillText(`${g.rows}×${g.cols} pts · ~${Math.round(g.spacingM)} m`, 6, 12);
+    const ex = exag >= 10 ? Math.round(exag) : exag.toFixed(1);
+    ctx.fillText(`vertical ×${ex}`, 6, h - 6);
   }
 }
