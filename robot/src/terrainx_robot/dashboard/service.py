@@ -19,6 +19,10 @@ Seguridad
       que se guarda), descarga = se guarda (PLY malla + GLB igual que el visor + coordenadas
       JSON + metadatos + SHA-256, clase DERIVED) y se baja el GLB o las coordenadas. Si el mapa
       no ha cambiado desde el último guardado, se reutiliza ese escaneo (sin duplicados).
+    - Misión de la interfaz («Mapear zona subterránea»): empieza con un mapa acumulado nuevo y
+      apunta la pose del robot; al terminar se guarda como siempre y, además, la nube en el
+      marco local de la misión (<id>.mission.json) para colocarla sobre el terreno. No envía
+      nada al robot: la conducción sigue yendo por /ws/control.
 """
 
 from __future__ import annotations
@@ -38,6 +42,7 @@ from ..auth.aes_key_manager import DEFAULT_STORE, AesKeyManager
 from ..config import Settings
 from ..lidar.accumulator import AccumulatedCloud
 from ..lidar.live_stream import raw_frame_fields
+from ..lidar.mission_frame import MISSION_FORMAT, build_mission_json
 from ..lidar.slam_map import KEEP_RATIO, MIN_HITS, SlamMap
 from ..lidar.voxel_coords import COORDS_FORMAT, build_coords_json
 from ..lidar.voxel_glb import build_voxel_glb
@@ -50,7 +55,7 @@ from ..models import (
     ScanMetadata,
 )
 from ..storage.scan_store import ScanStore, ScanStoreError
-from ..util import new_id, utc_now
+from ..util import iso_utc, new_id, utc_now
 from . import robot_details
 
 log = logging.getLogger(__name__)
@@ -71,7 +76,7 @@ class DashboardService:
             region=settings.go2.region,
             device_type="Go2",
         )
-        # adapter_factory() -> Go2WebRTCAdapter: punto de inyección para pruebas.
+        # adapter_factory() -> Go2WebRTCAdapter (por defecto, el robot real).
         self._adapter_factory = adapter_factory or (
             lambda: Go2WebRTCAdapter(self.settings, self.store, enable_video=True)
         )
@@ -91,6 +96,7 @@ class DashboardService:
         self._slam_adapter: Go2WebRTCAdapter | None = None   # de dónde sale el mapa
         self._saving = False
         self._last_save: tuple | None = None   # (origen, epoch, versión del mapa, scan_id) del último guardado
+        self._mission: dict[str, Any] | None = None   # misión de la interfaz en curso o la última
 
     # --------------------------------------------------------------- conexión
     @property
@@ -191,6 +197,7 @@ class DashboardService:
         base["source"] = {"kind": "live" if self._live_adapter() is not None else "none"}
         base["slam"] = dict(self.slam.meta(), errors=self.slam_errors, paused=self.slam_paused,
                             saving=self._saving, evidence_class=self._slam_evidence.value)
+        base["mission"] = self.mission_status()
         return base
 
     # ------------------------------------------------------------------- vídeo
@@ -251,7 +258,7 @@ class DashboardService:
             log.info("Mapa SLAM %s", "en pausa" if paused else "reanudado")
         self.slam_paused = paused
 
-    async def save_slam_map(self) -> dict[str, Any]:
+    async def save_slam_map(self, *, mission: dict[str, Any] | None = None) -> dict[str, Any]:
         """Botón de descarga del visor: guarda el mapa acumulado tal como se ve (PLY malla + GLB
         igual que el visor + coordenadas JSON + metadatos + SHA-256) y devuelve sus metadatos
         más ``reused``; el navegador baja luego el GLB o las coordenadas. Si el mapa no ha
@@ -259,7 +266,8 @@ class DashboardService:
         devuelve ese (reused = True): bajar los dos archivos no crea dos escaneos. Funciona
         también desconectado (el mapa sigue en memoria). Lo pesado va en otro hilo: en este bucle
         vive la conexión WebRTC (con Pluffy, bloquearlo 8–14 s hizo que el perro cortara; ver
-        base.stop_capture)."""
+        base.stop_capture). Con ``mission`` (fin de una misión de la interfaz) no se reutiliza
+        nada y se añade la nube en el marco local de la misión."""
         if self._saving:
             raise CaptureError("ya se está guardando el mapa: espera a que termine")
         adapter, evidence, source = self._slam_adapter, self._slam_evidence, self._slam_source
@@ -268,7 +276,7 @@ class DashboardService:
         self._saving = True
         try:
             t0 = time.monotonic()
-            same = await asyncio.to_thread(self._unchanged_since_last_save, source)
+            same = None if mission else await asyncio.to_thread(self._unchanged_since_last_save, source)
             if same is not None:
                 log.info("Mapa SLAM sin cambios desde %s: se reutiliza ese escaneo", same.id)
                 return dict(same.model_dump(mode="json"), reused=True)
@@ -276,7 +284,7 @@ class DashboardService:
             if not len(snap["voxels"]) or snap["res"] is None:
                 raise ScanStoreError("el mapa acumulado está vacío: deja que el perro vea algo antes de guardar")
             meta, faces = await asyncio.to_thread(
-                self._save_slam_map, snap, adapter=adapter, evidence=evidence, source=source)
+                self._save_slam_map, snap, adapter=adapter, evidence=evidence, source=source, mission=mission)
             self._last_save = (source, snap["meta"]["epoch"], snap["meta"]["version"], meta.id)
         finally:
             self._saving = False
@@ -302,7 +310,7 @@ class DashboardService:
         return None
 
     def _save_slam_map(self, snap: dict, *, adapter, evidence: EvidenceClass,
-                       source: str | None) -> tuple[ScanMetadata, int]:
+                       source: str | None, mission: dict[str, Any] | None = None) -> tuple[ScanMetadata, int]:
         """Hilo aparte. Clase de evidencia: DERIVED (cálculo sobre los mapas del robot)."""
         idx, res, slam_meta = snap["voxels"], snap["res"], snap["meta"]
         mesh = build_voxel_mesh(idx, res)
@@ -320,6 +328,16 @@ class DashboardService:
             "scan_id": scan_id,
             "content": "mapa SLAM acumulado del dashboard (DERIVADO): un punto por cubo del visor",
             **common, "metadata": f"{scan_id}.metadata.json"})
+        extra_files = {"glb": (".glb", glb.data, GLB_FORMAT), "coords": (".coords.json", coords, COORDS_FORMAT)}
+        extra_prov: dict[str, Any] = {}
+        if mission is not None:
+            mission_json, summary = build_mission_json(idx, res, mission["start_pose"], info={
+                "scan_id": scan_id, "mission_id": mission["id"],
+                "content": "nube del recorrido de la misión (DERIVADA): un punto por cubo del visor",
+                **common, "site": mission.get("site"), "metadata": f"{scan_id}.metadata.json"})
+            extra_files["mission"] = (".mission.json", mission_json, MISSION_FORMAT)
+            extra_prov["mission"] = dict(summary, mission_id=mission["id"], started_utc=mission["started_utc"],
+                                         site=mission.get("site"))
         cloud = AccumulatedCloud(
             points=mesh.vertices, mode="accumulate", topic="rt/utlidar/voxel_map_compressed",
             frame_id=snap["frame_id"], resolution=mesh.resolution, point_type=PointType.VOXEL_MESH,
@@ -349,8 +367,7 @@ class DashboardService:
             delivery_mode=delivery, scan_context=adapter.scan_context,
             capture_start=capture_start, capture_end=snap["last_utc"] or now,
             session_id=None, pose_source=None, binary=True, extra_caveats=caveats,
-            extra_files={"glb": (".glb", glb.data, GLB_FORMAT),
-                         "coords": (".coords.json", coords, COORDS_FORMAT)},
+            extra_files=extra_files,
             scan_id=scan_id,
             extra_provenance={
                 "slam": dict(slam_meta, source=source, min_hits=MIN_HITS, keep_ratio=KEEP_RATIO,
@@ -365,9 +382,50 @@ class DashboardService:
                         "material": "KHR_materials_unlit + textura con la paleta y aristas grises (1/32 de cara)"},
                 "coords": {"points": mesh.voxels, "point": "centro de cada cubo (k · cube_size_m), uno por vóxel",
                            "order": "por x, luego y, luego z", "axes": "los del robot, como el .ply"},
+                **extra_prov,
             },
         )
         return meta, mesh.cube_faces
+
+    # ---------------------------------------------- misión de la interfaz
+    def mission_status(self) -> dict[str, Any]:
+        m = self._mission
+        if m is None:
+            return {"active": False}
+        return {"active": m.get("finished_utc") is None, "id": m["id"], "started_utc": m["started_utc"],
+                "finished_utc": m.get("finished_utc"), "scan_id": m.get("scan_id"), "site": m.get("site")}
+
+    def start_mission(self, site: dict[str, Any] | None = None) -> dict[str, Any]:
+        """«Mapear zona subterránea»: mapa acumulado NUEVO y pose de partida apuntada. Necesita el
+        robot conectado y su pose (rt/utlidar/robot_pose); si aún no ha llegado, CaptureError y
+        la interfaz vuelve a probar."""
+        live = self._live_adapter()
+        if live is None or not self.connected:
+            raise ConnectionFailed("not_connected", "No hay conexión con la unidad terrestre.",
+                                   "Conecta el robot antes de empezar el recorrido.")
+        pose = live.last_pose
+        if pose is None:
+            raise CaptureError("aún no ha llegado la posición del robot (rt/utlidar/robot_pose); espera un momento")
+        clean_site = None
+        if isinstance(site, dict):
+            clean_site = {k: site[k] for k in ("name", "lat", "lon", "body") if isinstance(site.get(k), (str, int, float))}
+        self.slam_reset()
+        self.set_slam_paused(False)
+        self._mission = {"id": new_id("mission"), "started_utc": iso_utc(utc_now()),
+                         "start_pose": {k: float(pose[k]) for k in ("x", "y", "z", "yaw")}, "site": clean_site}
+        log.info("Misión %s empezada (pose de partida %s)", self._mission["id"], self._mission["start_pose"])
+        return self.mission_status()
+
+    async def finish_mission(self) -> dict[str, Any]:
+        """«Terminar recorrido»: guarda el mapa del recorrido (PLY + GLB + coordenadas + nube en el
+        marco de la misión, con SHA-256) y devuelve sus metadatos."""
+        m = self._mission
+        if m is None or m.get("finished_utc") is not None:
+            raise CaptureError("no hay ningún recorrido en marcha")
+        meta = await self.save_slam_map(mission=m)
+        m["finished_utc"], m["scan_id"] = iso_utc(utc_now()), meta["id"]
+        log.info("Misión %s terminada: escaneo %s", m["id"], meta["id"])
+        return {"scan": meta, "mission": self.mission_status()}
 
     def _start_slam(self) -> None:
         if self._slam_thread is not None and self._slam_thread.is_alive():

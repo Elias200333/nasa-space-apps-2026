@@ -21,7 +21,6 @@
 
 ```powershell
 cd C:\Users\Usuario\Desktop\github\nasa-space-apps-2026\robot
-.\.venv\Scripts\python.exe -m pytest
 .\.venv\Scripts\python.exe -m terrainx_robot check-library
 .\.venv\Scripts\python.exe -m terrainx_robot info
 ```

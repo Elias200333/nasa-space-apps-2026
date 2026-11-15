@@ -50,12 +50,7 @@ Abre en tu navegador:
 
 ---
 
-## 🧪 Tests y Validación
-
-Para ejecutar las pruebas unitarias automatizadas con **Vitest**:
-```bash
-npm test
-```
+## 📦 Compilación para Producción
 
 Para generar la compilación de producción optimizada:
 ```bash

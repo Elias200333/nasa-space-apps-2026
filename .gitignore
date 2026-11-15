@@ -1,0 +1,44 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# Bytecode y caches de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Logs y datos de ejecucion
+*.log
+runtime/
+
+# Claves, secretos y configuraciones locales
+.env
+.env.*
+!.env.example
+*.aes
+*.key
+*aes_key*.txt
+secrets/
+obtener_clave_perro*.py
+
+# SO y editores
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/

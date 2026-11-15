@@ -52,6 +52,7 @@ async function refresh() {
   $("d-guard").textContent = s.control_enabled ? "MODO CONTROL" : "solo lectura";
   $("d-lib").textContent = s.library_version || "—";
   $("d-err").textContent = s.last_error || "ninguno";
+  $("d-pair").textContent = s.pairing_code || "—";   // solo lo recibe este PC (no por el proxy)
   $("d-model").textContent = "Unitree Go2 " + (s.model_variant && s.model_variant !== "unknown" ? s.model_variant : "(modelo sin declarar)");
 
   // Autenticación

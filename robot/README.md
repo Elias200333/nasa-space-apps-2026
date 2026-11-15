@@ -6,22 +6,21 @@ Software del especialista de robótica de TERRAIN-X (NASA Space Apps Challenge 2
 
 **Dashboard web local:** autenticación AES-128, conexión compartida al Go2, **cámara en directo**, visor LiDAR 3D con el mapa SLAM acumulado (se guarda como PLY + GLB + coordenadas JSON), estado del robot (batería, LiDAR, flujos de datos) y **teleoperación WASD** con hombre muerto (activa con el robot conectado). Ver [sección 11](#11-dashboard-web-del-go2-air).
 
-> Por defecto el módulo es de **solo lectura**: un guardián bloquea en el propio PC cualquier orden que no esté en una lista blanca. La conducción WASD es un **modo aparte** que hay que habilitar explícitamente; usa un guardián acotado (solo Move/Stop/levantar/sentar/amortiguar) y se detiene al soltar la tecla, perder el foco o cortarse la conexión. Nada de esto sustituye a la parada de emergencia física del robot, que siempre debe manejar un operador presente.
+> Por defecto el módulo es de **solo lectura**: un guardián bloquea en el propio PC cualquier orden que no esté en una lista blanca. La conducción WASD se activa en cuanto el robot está conectado; usa un guardián acotado (solo Move/Stop/levantar/sentar/amortiguar) y se detiene al soltar la tecla, perder el foco o cortarse la conexión. Nada de esto sustituye a la parada de emergencia física del robot, que siempre debe manejar un operador presente.
 
 ---
 
 ## 1. Estado de la Fase 1
 
-| Componente | Implementado | Probado offline | Pendiente con el robot físico |
-|---|---|---|---|
-| `RobotAdapter` (interfaz común) | ✅ | ✅ | — |
-| `Go2WebRTCAdapter` (LocalAP / LocalSTA) | ✅ | ✅ con librería simulada y con el parser binario real de la librería | Conexión real, comportamiento en Windows con el robot |
-| Guardián de solo lectura | ✅ | ✅ (todas las órdenes `SPORT_CMD` de la librería se bloquean) | — |
-| `CapabilityProbe` | ✅ | ✅ con un adaptador sintético | Qué topics publica realmente vuestro Go2 y a qué frecuencia |
-| Decodificación LiDAR (`voxel_codec`) | ✅ | ✅ idéntica bit a bit al decodificador `native` de la librería | **Unidades, ejes y origen del frame** (ver [docs/VERIFICACION_FISICA.md](docs/VERIFICACION_FISICA.md)) |
-| Exportación PLY + JSON + SHA-256 | ✅ | ✅ | — |
-| Telemetría (batería, IMU, posición) | ✅ campos de los ejemplos oficiales | ✅ con librería simulada | Que los campos existan en vuestro firmware y sus unidades |
-| Modelo y firmware | Solo si el operador los declara | ✅ | Leerlos en la app oficial y anotarlos en `.env` |
+| Componente | Estado | Pendiente con el robot físico |
+|---|---|---|
+| `Go2WebRTCAdapter` (LocalAP / LocalSTA) | ✅ Conectado a Pluffy (Go2 AIR) por cable en LocalSTA el 14-11-2026: vídeo ~14 fps, LiDAR ~7,7 Hz, lowstate y sportmodestate a 20 Hz | LocalAP (Wi-Fi del propio perro) sin comprobar |
+| Guardián de solo lectura y modo control acotado | ✅ Solo pasan las órdenes de la lista blanca; con Pluffy se condujo con WASD | — |
+| Decodificación LiDAR (`voxel_codec`) | ✅ Idéntica bit a bit al decodificador `native` de la librería (`check-library`) | **Unidades, ejes y origen del frame** (ver [docs/VERIFICACION_FISICA.md](docs/VERIFICACION_FISICA.md)) |
+| Mapa SLAM acumulado → PLY + GLB + coordenadas, con SHA-256 | ✅ Guardado con datos de Pluffy | — |
+| Telemetría (batería, IMU, posición) | ✅ Llega de Pluffy (campos de los ejemplos oficiales) | Unidades de los campos `*_raw` |
+| `CapabilityProbe` | ✅ | Ejecutarlo con Pluffy y guardar el informe |
+| Modelo y firmware | Solo si el operador los declara (`AIR` declarado) | Leer el firmware en la app oficial y anotarlo en `.env` |
 
 **Lo que no existe todavía, por diseño:** movimiento, Meta Quest 3, misiones, comunicación planetaria, métricas geométricas (pendiente, suelo, obstáculos) y registro a ENU. Corresponden a las fases 2 a 5.
 
@@ -48,20 +47,20 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements\lock-windows-py313.txt
 .\.venv\Scripts\python.exe -m pip install --no-deps -e .
 
-# Opción B: rangos de pyproject.toml (núcleo + Go2 + tests)
-.\.venv\Scripts\python.exe -m pip install -e ".[go2,dev]"
+# Opción B: rangos de pyproject.toml (núcleo + Go2 + dashboard)
+.\.venv\Scripts\python.exe -m pip install -e ".[go2,dashboard]"
 ```
 
-El núcleo (PLY, tests offline) solo necesita `numpy`, `lz4`, `pydantic` y `python-dotenv`. El extra `[go2]` instala `unitree_webrtc_connect==2.2.0`, la versión cuyo código fuente se ha revisado.
+El núcleo (decodificación LiDAR y PLY) solo necesita `numpy`, `lz4`, `pydantic` y `python-dotenv`. El extra `[go2]` instala `unitree_webrtc_connect==2.2.0`, la versión cuyo código fuente se ha revisado.
 
-## 4. Prueba rápida SIN robot
+## 4. Comprobar la instalación (sin robot)
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest
-.\.venv\Scripts\python.exe -m terrainx_robot list-scans
+.\.venv\Scripts\python.exe -m terrainx_robot check-library
+.\.venv\Scripts\python.exe -m terrainx_robot info
 ```
 
-Los tests usan una escena **sintética** (suelo, caja de 0,50 m y pared) con el mismo formato binario que publica el robot y un robot simulado: no necesitan robot ni Internet. Lo que sale de ella queda marcado como `evidence_class=synthetic_test` y `demo=true`. No hay modo replay: los datos reales solo salen del robot conectado.
+`check-library` comprueba la API de la librería instalada y que nuestro decodificador LiDAR da exactamente los mismos puntos que el suyo. `info` muestra la configuración efectiva; la clave solo aparece como «configurada». Los datos reales solo salen del robot conectado.
 
 ## 5. Uso CON el robot
 
@@ -104,13 +103,12 @@ Códigos de salida: `0` correcto · `1` error · `2` resultado degradado.
 
 ```
 robot/
-├── pyproject.toml            # paquete, dependencias y extras [go2] y [dev]
+├── pyproject.toml            # paquete, dependencias y extras [go2] y [dashboard]
 ├── requirements/             # lock exacto verificado en Windows + Python 3.13
 ├── .env.example              # plantilla de configuración (sin secretos)
 ├── contracts/                # PROPUESTA de contrato 1.1-draft para Ciencia y Plataforma
 │   ├── README.md             #   qué deben aprobar
-│   ├── schemas/              #   JSON Schema generados desde el código
-│   └── examples/             #   escaneo e informe SINTÉTICOS de ejemplo
+│   └── schemas/              #   JSON Schema generados desde el código
 ├── docs/
 │   ├── VERIFICACION_FISICA.md   # protocolo de la primera sesión con el robot
 │   └── NOTAS_LIBRERIA_GO2.md    # qué se comprobó en el código de la librería 2.2.0
@@ -124,11 +122,11 @@ robot/
 │   │   ├── readonly_guard.py # lista blanca de mensajes salientes
 │   │   ├── go2_topics.py     # topics verificados en la librería 2.2.0
 │   │   └── library_check.py  # verificación de la API instalada
-│   ├── lidar/                # voxel_codec, frames, validación, acumulación, describe
+│   ├── auth/                 # clave AES del perro (guardada fuera del repositorio)
+│   ├── dashboard/            # dashboard web (cámara, LiDAR 3D, WASD, estado) + puente con la interfaz
+│   ├── lidar/                # decodificación, mapa SLAM, malla PLY, GLB, coordenadas y marco de misión
 │   ├── storage/              # PLY y almacén de escaneos
-│   ├── probe/                # CapabilityProbe y comprobación de red
-│   └── fixtures/synthetic.py # escena sintética para los tests
-├── tests/                    # pytest: ninguno necesita robot ni Internet
+│   └── probe/                # CapabilityProbe y comprobación de red
 └── runtime/                  # datos generados (en .gitignore)
     ├── scans/<id>/           #   <id>.ply · <id>.metadata.json · SHA256SUMS
     ├── probes/               #   informes de capacidades
@@ -139,7 +137,7 @@ robot/
 
 - **`evidence_class`**: el **origen** del dato.
   - `robot_measured`: medido físicamente por un robot.
-  - `synthetic_test`: generado por software para pruebas.
+  - `synthetic_test`: generado por software (no es una medición).
   - Reservados para otros módulos: `orbital_nasa` y `derived`.
 - **`delivery_mode`**: la **vía** por la que llegó el dato. Hoy el módulo solo produce `live`; el contrato compartido reserva `replay` y `emulated_link`.
 - **`point_type = voxel_occupancy`**: por WebRTC el Go2 no entrega retornos crudos del LiDAR. Entrega un **mapa de vóxeles ocupados**, una rejilla 128 × 128 × N con la resolución que indica el propio mensaje (0,05 en los ejemplos). Cada punto es `origin + índice × resolution`.
@@ -248,10 +246,34 @@ Abre **http://127.0.0.1:8777** en el navegador. Paneles: cámara en directo (MJP
 2. El robot **solo se mueve mientras mantienes la tecla**; mientras no pulses nada, no se le envía ninguna orden. Al soltarla, pasar a escribir en un campo de texto, cambiar de ventana, cerrar la pestaña o perder la conexión, se detiene solo (hombre muerto, 0,4 s). Las teclas no cuentan mientras escribes en un campo de texto. El botón **PARAR** está siempre disponible.
 3. Límites de velocidad (recortados en el servidor): avance 1,0 m/s · lateral 0,5 m/s · giro 1,5 rad/s; el selector Lento / Normal / Rápido elige dentro de esos topes. Saltos y volteretas están **bloqueados**.
 
+### Mapear zona subterránea desde la interfaz (PC y gafas XR)
+
+El backend del robot hace de puente con la interfaz de TERRAIN-X (`interface/`). En el panel «Entorno 3D» de un mapa cargado aparece **«Mapear zona subterránea»**:
+
+1. **Conexión.** Sale «Conectando a unidad terrestre…»: conecta el Go2 (si no lo estaba) y empieza una misión, que es un mapa acumulado nuevo con la pose del robot apuntada como punto de partida.
+2. **Recorrido.** Se ve la cámara, el LiDAR acumulado en directo (lo que va detectando) y el mando: teclado W A S D · Q E · Espacio, o botones de mantener pulsado para las gafas. Tiene las mismas seguridades que el dashboard: hombre muerto, topes de velocidad y PARAR.
+3. **«Terminar recorrido».** Se guarda como siempre (`.ply`, `.glb`, `.coords.json`, metadatos y SHA-256) y, además, `<id>.mission.json`: la nube en el marco de la misión. En ese marco el origen es el robot al empezar, x apunta hacia donde miraba, y a su izquierda y z arriba. Es solo un giro más una traslación, así que las distancias no cambian.
+4. **Vista previa** de la nube en 3D.
+5. **«Añadir al mapa».** Muestra el terreno del modelo 3D y, debajo, la nube, a **escala 1:1 en metros en los tres ejes** (sin la exageración vertical del Plotly). El operador declara el anclaje (desplazamiento este/norte desde el centro, rumbo y profundidad), porque el Go2 no tiene GPS ni brújula. Se descarga el **mapa combinado** (JSON con procedencia) y, si el navegador lo admite, se ve en VR a tamaño real.
+6. **«Integrar en el mapa 3D».** El backend guarda la cueva en `runtime/caves/<id>.json`: el escaneo, la posición declarada, el rumbo y la profundidad. La interfaz vuelve al «Entorno 3D», donde la cueva aparece como un **marcador** sobre el terreno, con una línea hasta su profundidad. Al hacer clic, la cámara se acerca y se abre el mapa de la cueva; «Volver» deja la vista como estaba. El robot sigue conectado para poder grabar otra cueva, y cada una añade su marcador. API: `GET/POST /api/caves` y `DELETE /api/caves/{id}` (quitar una cueva no borra su escaneo).
+
+Para que funcione:
+
+```powershell
+# 1) backend del robot (como siempre). Imprime el CÓDIGO DE EMPAREJAMIENTO
+.\.venv\Scripts\python.exe -m terrainx_robot dashboard
+# 2) interfaz (otra consola, en interface/): reenvía /robot/* a 127.0.0.1:8777
+npm run dev
+```
+
+- **En este PC** se abre `http://localhost:3000` y no hace falta código.
+- **En las gafas u otro equipo** de la misma red se abre `http://<IP-del-PC>:3000` y se escribe el código de 6 cifras. Aparece en la consola y en el panel «Diagnóstico» del dashboard. Tras 10 códigos erróneos, el robot bloquea el acceso 60 s. El backend sigue escuchando solo en 127.0.0.1: desde la red únicamente se entra por el proxy de la interfaz.
+- **«Ver en VR»** necesita un contexto seguro (HTTPS o `localhost`). Con las Quest por cable: `adb reverse tcp:3000 tcp:3000` y abrir `http://localhost:3000` en las gafas (entonces tampoco pide código).
+- **Escala.** El terreno del modelo tiene un punto cada ~20–30 m y se dibuja interpolado; la nube del robot va en cubos de 5 cm. Que las medidas coincidan depende de que el LiDAR esté en metros: es lo que se supone, pero falta la prueba con cinta métrica ([docs/VERIFICACION_FISICA.md](docs/VERIFICACION_FISICA.md), apartado 3).
+- **El mapa combinado es una DEMOSTRACIÓN.** La posición de la zona subterránea la declara el operador, no está georreferenciada, y así queda escrito en el archivo.
+
 ### Qué está probado y qué no
 
-- **Probado sin robot** (206 tests, incluidos los del dashboard con un robot simulado): los endpoints, el modo control acotado y activo por defecto, el hombre muerto, el recorte de velocidad, el mapa guardado como PLY + GLB + coordenadas, la pausa y que la clave/credenciales no se filtran.
-- **Probado con Pluffy (2026-11-14, 22:18):** el guardado del mapa como malla PLY (40 275 vóxeles, 0,38 s fuera del bucle de la conexión).
-- **Pendiente de probar con Pluffy:** el `.glb`, las coordenadas, la pausa del acumulado y el WASD activo por defecto. El `.glb` sí está comprobado, sin robot, con el mapa real de las 22:18: se ve como el visor en three.js y en Blender 4.5.
-- **Pendiente de comprobar con el Go2 físico:** que lleguen vídeo y LiDAR reales y a qué frecuencia, y el comportamiento real de la locomoción. Nada de esto está verificado hasta probarlo con el robot.
+- **Comprobado con Pluffy (Go2 AIR, 14-11-2026):** conexión por cable, cámara (~14 fps), LiDAR (~7,7 Hz), estado del robot y conducción con WASD. El mapa SLAM se guardó como malla PLY (22:18, 40 275 vóxeles, 0,38 s fuera del bucle de la conexión) y como PLY + GLB + coordenadas (23:12, `scan-20261114T221229Z-570c91`, 47 809 cubos): las coordenadas cuadran cubo a cubo con el `.ply` y el `.glb`, y el `.glb` se ve como el visor en three.js y en Blender 4.5.
+- **Pendiente con Pluffy:** la pausa del acumulado, el WASD activo por defecto (sin botón «Habilitar») y las unidades y ejes (ver [docs/VERIFICACION_FISICA.md](docs/VERIFICACION_FISICA.md)).
 - Three.js se incluye vendorizado en `dashboard/static/vendor/` (MIT) para que el visor 3D funcione **sin internet** en la red del robot.

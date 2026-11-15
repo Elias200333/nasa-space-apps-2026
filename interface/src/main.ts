@@ -2,11 +2,13 @@ import './styles.css';
 import { EarthSceneManager } from './babylon/earthScene';
 import { MiniPlanetViewer } from './babylon/miniPlanets';
 import { AnalogMap2DManager } from './map/analogMap2D';
+import { AnalogDeskManager } from './desk/analogDesk';
 import { generateRandomAnalogCoordinates, PLANET_METRICS, getCandidatesForBody, ANALOG_DATABASE } from './data/analogs';
 import { sound } from './audio';
 import { CelestialBody, AnalogSite, PlanetaryLayerMode, AnalogCandidateItem } from './types';
 import { formatPlanetaryCoordinates, VERIFIED_PLANETARY_POIS } from './nasa/trekProviders';
 import { XRDetector } from './xr/xrDetector';
+import { initRobotMission } from './robot/robotMission';
 
 // Estado global de la aplicación
 let activeBody: CelestialBody = 'Earth';
@@ -16,6 +18,7 @@ let earthScene: EarthSceneManager;
 let miniMoon: MiniPlanetViewer;
 let miniMars: MiniPlanetViewer;
 let map2DManager: AnalogMap2DManager;
+let analogDeskManager: AnalogDeskManager;
 let isVRModeActive = false;
 
 /**
@@ -214,6 +217,11 @@ async function initApp() {
   if (earthCanvas) {
     earthScene = new EarthSceneManager(earthCanvas);
 
+    earthScene.onPlanetClicked = (planet) => {
+      sound.playClick(600);
+      selectCelestialTarget(planet);
+    };
+
     earthScene.onTextureProgress = (texName) => {
       coordinator.setStatus(`Cargando ${texName}...`);
     };
@@ -264,7 +272,13 @@ async function initApp() {
     miniMars = new MiniPlanetViewer(miniMarsCanvas, 'Mars');
   }
 
-  // 3. Inicializar cartografía 2D y HUD
+  // 3. Inicializar mesa holográfica de análogos y cartografía 2D
+  analogDeskManager = new AnalogDeskManager();
+  const defaultAnalog = ANALOG_DATABASE.find(s => s.id === 'ES_LANZAROTE_CALDERA_BLANCA') || ANALOG_DATABASE[3];
+  if (defaultAnalog) {
+    analogDeskManager.updateSite(defaultAnalog, 'Mars');
+  }
+
   init2DMapManager();
   setupUIEventListeners();
   updateLiveTelemetry(0.0000, 0.0000);
@@ -304,6 +318,9 @@ if (document.readyState === 'loading') {
  */
 function init2DMapManager() {
   map2DManager = new AnalogMap2DManager('map2dContainer');
+
+  // Puente con la unidad terrestre (Go2): botón «Mapear zona subterránea» del panel «Entorno 3D»
+  initRobotMission();
 
   // Callback cuando el usuario pulsa "Regresar a Órbita Espacial" desde el mapa 2D
   map2DManager.setOnReturnToOrbit((lat, lon) => {
@@ -386,6 +403,9 @@ function setupUIEventListeners() {
     btnCompareMoon.addEventListener('click', (e) => {
       e.stopPropagation();
       openScienceModal('modalCompare');
+      if (earthScene && earthScene.getIsXRActive()) {
+        earthScene.openXRComparisonStation('Moon');
+      }
     });
   }
 
@@ -394,6 +414,9 @@ function setupUIEventListeners() {
     btnCompareMars.addEventListener('click', (e) => {
       e.stopPropagation();
       openScienceModal('modalCompare');
+      if (earthScene && earthScene.getIsXRActive()) {
+        earthScene.openXRComparisonStation('Mars');
+      }
     });
   }
 
@@ -440,6 +463,24 @@ function setupUIEventListeners() {
   });
 
   // 5. Barra de herramientas flotante sobre la Tierra / planeta activo
+  const btnToolOrbit = document.getElementById('btnToolOrbit');
+  if (btnToolOrbit) {
+    btnToolOrbit.addEventListener('click', () => {
+      sound.playClick(600);
+      const isAuto = earthScene.toggleAutoRotate();
+      if (isAuto) btnToolOrbit.classList.add('active');
+      else btnToolOrbit.classList.remove('active');
+    });
+  }
+
+  const btnToolMove = document.getElementById('btnToolMove');
+  if (btnToolMove) {
+    btnToolMove.addEventListener('click', () => {
+      sound.playClick(600);
+      btnToolMove.classList.toggle('active');
+    });
+  }
+
   const btnResetEarth = document.getElementById('btnResetEarth');
   if (btnResetEarth) {
     btnResetEarth.addEventListener('click', () => {
@@ -450,6 +491,23 @@ function setupUIEventListeners() {
         earthScene.resetToGlobalView();
       }
       hideTargetCard();
+    });
+  }
+
+  // Controles de la mesa holográfica de análogos (Analog Site Desk)
+  const btnDeskFitArea = document.getElementById('btnDeskFitArea');
+  if (btnDeskFitArea) {
+    btnDeskFitArea.addEventListener('click', () => {
+      sound.playClick(600);
+      earthScene.orientToCoordinates(29.0380, -13.7190);
+    });
+  }
+
+  const btnDeskToggle3D = document.getElementById('btnDeskToggle3D');
+  if (btnDeskToggle3D) {
+    btnDeskToggle3D.addEventListener('click', () => {
+      sound.playClick(650);
+      generateAndDiveToAnalog(activeBody === 'Moon' ? 'Moon' : 'Mars');
     });
   }
 
@@ -572,6 +630,10 @@ export function selectCelestialTarget(body: CelestialBody) {
       map2DManager.returnToSpaceOrbit();
     }
     hideTargetCard();
+    if (analogDeskManager) {
+      const site = ANALOG_DATABASE.find(s => s.target_body === 'Moon') || ANALOG_DATABASE[0];
+      analogDeskManager.updateSite(site, 'Moon');
+    }
   } else if (body === 'Mars') {
     marsCard?.classList.add('card-selected', 'mars-selected');
     miniMars?.spinFast();
@@ -581,9 +643,13 @@ export function selectCelestialTarget(body: CelestialBody) {
       map2DManager.returnToSpaceOrbit();
     }
     hideTargetCard();
+    if (analogDeskManager) {
+      const site = ANALOG_DATABASE.find(s => s.id === 'ES_LANZAROTE_CALDERA_BLANCA') || ANALOG_DATABASE[3];
+      analogDeskManager.updateSite(site, 'Mars');
+    }
   } else {
     // Earth
-    hidePlanetaryLayerSelector();
+    showPlanetaryLayerSelector('Earth');
     earthScene.switchPlanet('Earth');
     if (map2DManager && map2DManager.isMapActive()) {
       map2DManager.returnToSpaceOrbit();
@@ -591,22 +657,34 @@ export function selectCelestialTarget(body: CelestialBody) {
       earthScene.resetToGlobalView();
     }
     hideTargetCard();
+    if (analogDeskManager) {
+      const site = ANALOG_DATABASE.find(s => s.id === 'ES_LANZAROTE_CALDERA_BLANCA') || ANALOG_DATABASE[3];
+      analogDeskManager.updateSite(site, 'Mars');
+    }
   }
 }
 
-function showPlanetaryLayerSelector(body: 'Mars' | 'Moon') {
+function showPlanetaryLayerSelector(body: CelestialBody) {
   const selector = document.getElementById('planetLayerSelector');
   if (!selector) return;
 
-  selector.classList.remove('hidden', 'mars-theme', 'moon-theme');
-  selector.classList.add(body === 'Mars' ? 'mars-theme' : 'moon-theme');
+  selector.classList.remove('hidden', 'mars-theme', 'moon-theme', 'earth-theme');
+  if (body === 'Mars') selector.classList.add('mars-theme');
+  else if (body === 'Moon') selector.classList.add('moon-theme');
+  else selector.classList.add('earth-theme');
 
   const titleEl = document.getElementById('layerSelectorPlanetTitle');
-  if (titleEl) {
-    titleEl.textContent = `${body === 'Mars' ? 'MARTE' : 'LUNA'} • CARTOGRAFÍA NASA`;
-  }
+  const provenanceBadge = document.getElementById('layerProvenanceBadge');
+  const infoNotice = document.getElementById('layerInfoNotice');
 
-  updateLayerModeUI(body, currentLayerMode);
+  if (body === 'Earth') {
+    if (titleEl) titleEl.textContent = 'EARTH • CARTOGRAPHY (NASA/USGS)';
+    if (provenanceBadge) provenanceBadge.textContent = 'NASA/USGS (30 m/px)';
+    if (infoNotice) infoNotice.textContent = 'Global terrain, elevation and exploration layers (30 m)';
+  } else {
+    if (titleEl) titleEl.textContent = `${body === 'Mars' ? 'MARTE' : 'LUNA'} • CARTOGRAFÍA NASA`;
+    updateLayerModeUI(body as 'Mars' | 'Moon', currentLayerMode);
+  }
 }
 
 function hidePlanetaryLayerSelector() {
@@ -628,26 +706,44 @@ function updateLayerModeUI(body: 'Mars' | 'Moon', mode: PlanetaryLayerMode) {
 
   if (body === 'Mars') {
     if (mode === 'surface') {
-      if (provenanceBadge) provenanceBadge.textContent = 'NASA Mars Trek / Viking MDIM2.1 (232 m/px)';
-      if (infoNotice) infoNotice.textContent = 'Mosaico orbital global en color real Viking MDIM2.1 (NASA Trek WMTS)';
+      if (provenanceBadge) {
+        provenanceBadge.textContent = 'Viking MDIM2.1 (232m)';
+        provenanceBadge.title = 'NASA Mars Trek / Viking MDIM2.1 (232 m/px)';
+      }
+      if (infoNotice) infoNotice.textContent = 'Mosaico orbital global en color real (NASA Mars Trek WMTS)';
     } else if (mode === 'topography') {
-      if (provenanceBadge) provenanceBadge.textContent = 'NASA Mars Trek / MGS MOLA (463 m/px)';
-      if (infoNotice) infoNotice.textContent = 'Altimetría de relieve sombreado en color MOLA • Gradiente hipsométrico (relieve visual, no malla DEM 3D)';
+      if (provenanceBadge) {
+        provenanceBadge.textContent = 'MGS MOLA (463m)';
+        provenanceBadge.title = 'NASA Mars Trek / MGS MOLA (463 m/px)';
+      }
+      if (infoNotice) infoNotice.textContent = 'Relieve sombreado altimétrico MOLA (cartografía 2D, no malla DEM)';
     } else {
-      if (provenanceBadge) provenanceBadge.textContent = 'NASA Mars Trek / 5 Accidentes Científicos';
-      if (infoNotice) infoNotice.textContent = 'Exploración de Olympus Mons, Valles Marineris, Jezero, Gale y Elysium Mons con coordenadas verificadas';
+      if (provenanceBadge) {
+        provenanceBadge.textContent = '5 POIs Científicos';
+        provenanceBadge.title = 'NASA Mars Trek / 5 Accidentes Científicos';
+      }
+      if (infoNotice) infoNotice.textContent = 'Olympus Mons, Valles Marineris, Jezero, Gale y Elysium Mons';
     }
   } else {
     // Moon
     if (mode === 'surface') {
-      if (provenanceBadge) provenanceBadge.textContent = 'NASA Moon Trek / LRO WAC (100 m/px)';
-      if (infoNotice) infoNotice.textContent = 'Mosaico global fotográfico Lunar Reconnaissance Orbiter WAC 303ppd (NASA Trek WMTS)';
+      if (provenanceBadge) {
+        provenanceBadge.textContent = 'LRO WAC (100m)';
+        provenanceBadge.title = 'NASA Moon Trek / LRO WAC (100 m/px)';
+      }
+      if (infoNotice) infoNotice.textContent = 'Mosaico global Lunar Reconnaissance Orbiter (NASA Moon Trek WMTS)';
     } else if (mode === 'topography') {
-      if (provenanceBadge) provenanceBadge.textContent = 'NASA Moon Trek / LRO LOLA (128 ppd)';
-      if (infoNotice) infoNotice.textContent = 'Cartografía de elevación en color LOLA • Relieve sombreado altimétrico (relieve visual, no malla DEM 3D)';
+      if (provenanceBadge) {
+        provenanceBadge.textContent = 'LRO LOLA (128ppd)';
+        provenanceBadge.title = 'NASA Moon Trek / LRO LOLA (128 ppd)';
+      }
+      if (infoNotice) infoNotice.textContent = 'Cartografía de elevación en color LOLA (cartografía 2D, no malla DEM)';
     } else {
-      if (provenanceBadge) provenanceBadge.textContent = 'NASA Moon Trek / 5 Accidentes Científicos';
-      if (infoNotice) infoNotice.textContent = 'Exploración de Tycho, Copernicus, Mare Tranquillitatis, Aristarchus y Shackleton con coordenadas verificadas';
+      if (provenanceBadge) {
+        provenanceBadge.textContent = '5 POIs Científicos';
+        provenanceBadge.title = 'NASA Moon Trek / 5 Accidentes Científicos';
+      }
+      if (infoNotice) infoNotice.textContent = 'Tycho, Copernicus, Mare Tranquillitatis, Aristarchus y Shackleton';
     }
   }
 }
@@ -956,9 +1052,9 @@ function updateLiveTelemetry(lat: number, lon: number) {
 
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(() => {});
+    document.documentElement.requestFullscreen().catch(() => { });
   } else {
-    document.exitFullscreen().catch(() => {});
+    document.exitFullscreen().catch(() => { });
   }
 }
 
@@ -1019,9 +1115,9 @@ function setupGlobalSearch() {
     } else {
       matches = SEARCH_CATALOG.filter(item => {
         return item.name.toLowerCase().includes(q) ||
-               (item.nameEs && item.nameEs.toLowerCase().includes(q)) ||
-               item.description.toLowerCase().includes(q) ||
-               item.categoryLabel.toLowerCase().includes(q);
+          (item.nameEs && item.nameEs.toLowerCase().includes(q)) ||
+          item.description.toLowerCase().includes(q) ||
+          item.categoryLabel.toLowerCase().includes(q);
       });
     }
 

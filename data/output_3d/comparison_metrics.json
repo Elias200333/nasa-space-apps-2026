@@ -1,24 +1,24 @@
 {
-  "site_id": "US_HAWAII_MAUNA_KEA",
-  "site_name": "Custom AOI (19.81975\u00b0, -155.46823\u00b0)",
+  "site_id": "IS_KRAFLA_COLD",
+  "site_name": "Custom AOI (65.71758\u00b0, -16.75213\u00b0)",
   "center_gps": {
-    "lat": 19.81975,
-    "lon": -155.46823
+    "lat": 65.71758,
+    "lon": -16.75213
   },
   "exploration_radius_m": 100.0,
-  "target_body": "Moon",
-  "similarity_pct": 58.67,
+  "target_body": "Earth",
+  "similarity_pct": 52.68,
   "metrics_100m": {
     "radius_m": 100.0,
     "area_sq_m": 31415.926535897932,
     "area_hectares": 3.14,
-    "elev_min_m": 4153.6,
-    "elev_max_m": 4193.8,
-    "elev_mean_m": 4174.4,
-    "elev_range_m": 40.3,
-    "slope_mean_deg": 17.11,
-    "slope_max_deg": 26.35,
-    "points_sampled": 69
+    "elev_min_m": 594.5,
+    "elev_max_m": 604.5,
+    "elev_mean_m": 598.7,
+    "elev_range_m": 10.1,
+    "slope_mean_deg": 3.05,
+    "slope_max_deg": 4.83,
+    "points_sampled": 71
   },
   "dem_metadata": {
     "source": "Copernicus DEM / Mapzen SRTM 30m (Global)",
@@ -35,42 +35,42 @@
     "report_md": "terrain_comparison_report.md"
   },
   "evaluation": {
-    "target_body": "Moon",
-    "target_benchmark_name": "Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit)",
-    "total_similarity_pct": 58.67,
+    "target_body": "Mars",
+    "target_benchmark_name": "Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum)",
+    "total_similarity_pct": 52.68,
     "metrics_table": [
       {
         "id": "elevation_relief",
         "name": "Rango Altim\u00e9trico y Relieve",
-        "terrestrial_value": "231.5 m (cota 3964-4196 m)",
-        "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
-        "similarity_score": 0.721,
-        "weight_pct": 12.0,
-        "contribution_pct": 8.65
+        "terrestrial_value": "67.1 m (cota 573-640 m)",
+        "planetary_target": "~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))",
+        "similarity_score": 0.334,
+        "weight_pct": 10.0,
+        "contribution_pct": 3.34
       },
       {
         "id": "slope_morphometry",
         "name": "Gradiente de Pendiente (Horn)",
-        "terrestrial_value": "4.06\u00b0 (m\u00e1x 7.5\u00b0)",
-        "planetary_target": "6.5\u00b0 \u00b1 3.0\u00b0",
-        "similarity_score": 0.718,
-        "weight_pct": 16.0,
-        "contribution_pct": 11.48
+        "terrestrial_value": "0.71\u00b0 (m\u00e1x 1.5\u00b0)",
+        "planetary_target": "8.0\u00b0 \u00b1 4.0\u00b0",
+        "similarity_score": 0.19,
+        "weight_pct": 15.0,
+        "contribution_pct": 2.86
       },
       {
         "id": "surface_roughness_tri",
         "name": "Rugosidad Superficial (TRI)",
-        "terrestrial_value": "5.87 m",
-        "planetary_target": "2.6 \u00b1 1.2 m",
-        "similarity_score": 0.025,
-        "weight_pct": 14.0,
-        "contribution_pct": 0.34
+        "terrestrial_value": "1.02 m",
+        "planetary_target": "3.0 \u00b1 1.5 m",
+        "similarity_score": 0.419,
+        "weight_pct": 12.0,
+        "contribution_pct": 5.03
       },
       {
         "id": "curvature_profile",
         "name": "Curvatura Topogr\u00e1fica y Sumideros",
-        "terrestrial_value": "0.0000 m\u207b\u00b9",
-        "planetary_target": "Inversi\u00f3n de colapso (-0.04)",
+        "terrestrial_value": "-0.0000 m\u207b\u00b9",
+        "planetary_target": "Inversi\u00f3n de colapso (-0.05)",
         "similarity_score": 0.2,
         "weight_pct": 10.0,
         "contribution_pct": 2.0
@@ -113,13 +113,13 @@
       }
     ],
     "dem_statistics": {
-      "elev_min_m": 3964.0,
-      "elev_max_m": 4195.5,
-      "elev_mean_m": 4103.9,
-      "elev_range_m": 231.5,
-      "slope_mean_deg": 4.06,
-      "slope_max_deg": 7.46,
-      "tri_mean_m": 5.87,
+      "elev_min_m": 572.9,
+      "elev_max_m": 640.0,
+      "elev_mean_m": 599.5,
+      "elev_range_m": 67.1,
+      "slope_mean_deg": 0.71,
+      "slope_max_deg": 1.48,
+      "tri_mean_m": 1.02,
       "grid_cells": 1681
     }
   }

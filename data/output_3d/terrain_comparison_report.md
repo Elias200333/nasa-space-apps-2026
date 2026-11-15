@@ -1,13 +1,13 @@
 # TERRAIN-X: Informe de Verificación Científica de Análogos Planetarios (Radio 100 m)
 **NASA Space Apps Challenge 2026 — Validación Rigurosa de Análogos para la Luna y Marte**  
-**Fecha de Generación:** `2026-11-15T04:13:25.539299+00:00`  
-**Cuerpo Planetario Objetivo:** `MOON` | **Emparejamiento Orbital:** `Planetary Analog Target (Moon)`
+**Fecha de Generación:** `2026-11-15T12:28:32.219333+00:00`  
+**Cuerpo Planetario Objetivo:** `EARTH` | **Emparejamiento Orbital:** `Planetary Analog Target (Earth)`
 
 ---
 
 ## 1. Identificación y Parámetros del Sitio Terrestre
-- **Nombre del Sitio:** `Custom AOI (19.81975°, -155.46823°)` (ID: `US_HAWAII_MAUNA_KEA`)
-- **Coordenadas Centrales GPS:** `19.81975° N, -155.46823° E`
+- **Nombre del Sitio:** `Custom AOI (65.71758°, -16.75213°)` (ID: `IS_KRAFLA_COLD`)
+- **Coordenadas Centrales GPS:** `65.71758° N, -16.75213° E`
 - **Radio de Exploración Específico:** **`100.0 metros`** (Superficie del Área de Ensayo: `31,415.9 m²` / `3.14 ha`)
 - **Ventana Visual Contextual:** `800 × 800 metros`
 - **Sincronización Geodésica:** Sub-píxel en WGS84 (EPSG:4326) con proyección métrica local (desfase: 0 metros)
@@ -17,13 +17,13 @@
 ## 2. Métricas del Área de Exploración de 100 Metros de Radio
 | Métrica Topográfica en el Área de 100 m | Valor Medido en Datos Reales |
 | :--- | :--- |
-| **Cota Mínima** | `4153.6 m` |
-| **Cota Máxima** | `4193.8 m` |
-| **Cota Media** | `4174.4 m` |
-| **Desnivel Local (Δz)** | `40.3 m` |
-| **Pendiente Media Local (Horn)** | `17.11°` |
-| **Pendiente Máxima Local** | `26.35°` |
-| **Puntos de Muestreo Activo en 100 m** | `69 celdas` |
+| **Cota Mínima** | `594.5 m` |
+| **Cota Máxima** | `604.5 m` |
+| **Cota Media** | `598.7 m` |
+| **Desnivel Local (Δz)** | `10.1 m` |
+| **Pendiente Media Local (Horn)** | `3.05°` |
+| **Pendiente Máxima Local** | `4.83°` |
+| **Puntos de Muestreo Activo en 100 m** | `71 celdas` |
 
 ---
 
@@ -31,16 +31,16 @@
 
 | Dimensión Analógica Evaluada | Valor Medido en Tierra | Valor Objetivo de Referencia en Moon | Coeficiente $S_i$ [0-1] | Peso Asignado ($w_i$) | Contribución al Total ($w_i 	imes S_i$) |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **Rango Altimétrico y Relieve** | `231.5 m (cota 3964-4196 m)` | `~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))` | `0.721` | `12.0%` | **`8.65%`** |
-| **Gradiente de Pendiente (Horn)** | `4.06° (máx 7.5°)` | `6.5° ± 3.0°` | `0.718` | `16.0%` | **`11.48%`** |
-| **Rugosidad Superficial (TRI)** | `5.87 m` | `2.6 ± 1.2 m` | `0.025` | `14.0%` | **`0.34%`** |
-| **Curvatura Topográfica y Sumideros** | `0.0000 m⁻¹` | `Inversión de colapso (-0.04)` | `0.2` | `10.0%` | **`2.0%`** |
-| **Tubos de Lava y Cavidades** | `Evidencia: 70% (Contexto volcánico: 90%)` | `Claraboyas intactas / Pit Craters` | `0.79` | `20.0%` | **`15.8%`** |
-| **Morfología de Conos / Cráteres** | `Índice: 60%` | `Cráteres de impacto / conos piroclásticos` | `0.6` | `8.0%` | **`4.8%`** |
-| **Composición Espectral y Mineralógica** | `Concordancia: 70%` | `Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)` | `0.7` | `12.0%` | **`8.4%`** |
-| **Extremos Ambientales e Hiperaridez** | `Proxy Aridez: 90%` | `Desierto poliextremo / Vacío` | `0.9` | `8.0%` | **`7.2%`** |
+| **Rango Altimétrico y Relieve** | `67.1 m (cota 573-640 m)` | `~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))` | `0.334` | `10.0%` | **`3.34%`** |
+| **Gradiente de Pendiente (Horn)** | `0.71° (máx 1.5°)` | `8.0° ± 4.0°` | `0.19` | `15.0%` | **`2.86%`** |
+| **Rugosidad Superficial (TRI)** | `1.02 m` | `3.0 ± 1.5 m` | `0.419` | `12.0%` | **`5.03%`** |
+| **Curvatura Topográfica y Sumideros** | `-0.0000 m⁻¹` | `Inversión de colapso (-0.05)` | `0.2` | `8.0%` | **`1.6%`** |
+| **Tubos de Lava y Cavidades** | `Evidencia: 70% (Contexto volcánico: 90%)` | `Claraboyas intactas / Pit Craters` | `0.79` | `15.0%` | **`11.85%`** |
+| **Morfología de Conos / Cráteres** | `Índice: 60%` | `Cráteres de impacto / conos piroclásticos` | `0.6` | `10.0%` | **`6.0%`** |
+| **Composición Espectral y Mineralógica** | `Concordancia: 65%` | `Ferric Oxides (Hematite / Goethite), Jarosite sulfates & Smectite clays` | `0.65` | `20.0%` | **`13.0%`** |
+| **Extremos Ambientales e Hiperaridez** | `Proxy Aridez: 90%` | `Desierto poliextremo / Vacío` | `0.9` | `10.0%` | **`9.0%`** |
 
-| **SIMILITUD TOTAL VERIFICADA** | | | | **`100.0%`** | **`58.67%`** |
+| **SIMILITUD TOTAL VERIFICADA** | | | | **`100.0%`** | **`52.68%`** |
 
 ---
 

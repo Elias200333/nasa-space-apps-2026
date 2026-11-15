@@ -70,7 +70,7 @@ class DeviceSummary:
         }
 
 
-# --- Puntos de inyección para pruebas (por defecto: la librería real) --------
+# --- Puntos de inyección (por defecto: la librería real) --------------------
 
 
 class _CloudLike(Protocol):

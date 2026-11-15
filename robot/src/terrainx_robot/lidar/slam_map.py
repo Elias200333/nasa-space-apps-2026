@@ -18,7 +18,7 @@ Qué hace
 
     A los visores va cada trozo con el formato de la rejilla de bits del propio
     perro (lz4): el navegador lo dibuja con el mismo código que el mapa en vivo.
-    Para guardarlo, snapshot() / export_voxels() dan los mismos vóxeles que pinta el visor
+    Para guardarlo, snapshot() da los mismos vóxeles que pinta el visor
     (de ahí salen la malla PLY y el GLB: lidar/voxel_mesh.py y lidar/voxel_glb.py).
 
 Clase de evidencia
@@ -42,7 +42,6 @@ from datetime import datetime, timezone
 import lz4.block
 import numpy as np
 
-from .voxel_mesh import VoxelMesh, build_voxel_mesh
 
 CHUNK = 128          # vóxeles por lado (x, y) de un trozo: como la ventana del perro
 LAYERS = 64          # capas por trozo (3,2 m)
@@ -148,16 +147,11 @@ class SlamMap:
             self.last_utc = now
 
     # ── Salida: los vóxeles pintados (para guardar el mapa) ──
-    def export_voxels(self) -> tuple[np.ndarray, float | None]:
-        """Vóxeles pintados del mapa acumulado: índices enteros del mundo k (N, 3) y la
-        resolución. Misma regla de pintado que los trozos que ve el visor (MIN_HITS,
-        KEEP_RATIO, sin vóxeles sueltos). El vóxel k ocupa de (k − ½)·res a (k + ½)·res."""
-        with self._lock:
-            return self._voxels_locked()
-
     def snapshot(self) -> dict:
         """Foto coherente del mapa para guardarlo: vóxeles, resolución, estado (meta), marco y
-        horas del primer y último mapa sumados, todo leído bajo el mismo cerrojo."""
+        horas del primer y último mapa sumados, todo leído bajo el mismo cerrojo. Misma regla
+        de pintado que los trozos que ve el visor (MIN_HITS, KEEP_RATIO, sin vóxeles sueltos);
+        el vóxel k ocupa de (k − ½)·res a (k + ½)·res."""
         with self._lock:
             idx, res = self._voxels_locked()
             return {"voxels": idx, "res": res, "meta": self._meta_locked(), "frame_id": self.frame_id,
@@ -175,22 +169,6 @@ class SlamMap:
             return np.empty((0, 3), dtype=np.int64), res
         return np.concatenate(parts).astype(np.int64), res
 
-    def export_points(self) -> np.ndarray:
-        """Vóxeles pintados → (N, 3) en metros, con la MISMA convención que las capturas en
-        vivo (voxel_codec): punto = origen de la ventana + índice · res = (k − ½) · res."""
-        idx, res = self.export_voxels()
-        if not len(idx) or res is None:
-            return np.empty((0, 3), dtype=np.float64)
-        return (idx.astype(np.float64) - 0.5) * res
-
-    def export_mesh(self) -> VoxelMesh | None:
-        """El mapa acumulado como malla de cubos (lo que pinta el visor), o None si está vacío.
-        Solo se bloquea el mapa mientras se leen los vóxeles; la malla se hace fuera."""
-        idx, res = self.export_voxels()
-        if not len(idx) or res is None:
-            return None
-        return build_voxel_mesh(idx, res)
-
     # ── Salida: los trozos para los visores ──
     def changed_frames(self) -> list[bytes]:
         """Reempaqueta los trozos que han cambiado desde la última vez y devuelve los que
@@ -206,12 +184,6 @@ class SlamMap:
                 self._sent[key] = (blob, n, cols, self._send_seq)
                 out.append(blob)
             return out
-
-    def all_frames(self) -> list[bytes]:
-        """Todo el mapa tal como se empaquetó la última vez (para un visor que lo acaba de
-        abrir); lo que haya cambiado desde entonces le llega con los demás."""
-        with self._lock:
-            return [blob for blob, n, _, _ in self._sent.values() if n]
 
     def frames_since(self, seq: int) -> tuple[list[bytes], int]:
         """Trozos empaquetados después del envío nº ``seq`` y el nº del último.
