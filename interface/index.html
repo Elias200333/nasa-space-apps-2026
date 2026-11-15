@@ -290,6 +290,18 @@
         <img src="/nasa_space_apps_logo.png" alt="NASA Space Apps" class="brand-nasa-logo" height="22"
           style="height: 22px; width: auto;" />
       </div>
+
+      <!-- Lectura de coordenadas del centro del globo y escala, en tiempo real (la actualiza main.ts) -->
+      <div class="coordinates-hud" title="Coordenadas del punto central del globo">
+        <div class="hud-coords">
+          <span class="hud-reticle-icon">⊙</span>
+          <span id="hudCoordsText">29.0393° N, 13.7165° W • WGS84</span>
+        </div>
+        <div class="hud-divider">|</div>
+        <div class="hud-scale">
+          <span>5,000 km</span>
+        </div>
+      </div>
     </div>
 
     <div class="nav-right">
@@ -678,18 +690,6 @@
       </button>
     </aside>
 
-    <!-- Lectura de Coordenadas y Escala en tiempo real (Bottom Center HUD) -->
-    <div class="coordinates-hud">
-      <div class="hud-coords">
-        <span class="hud-reticle-icon">⊙</span>
-        <span id="hudCoordsText">29.0393° N, 13.7165° W • WGS84</span>
-      </div>
-      <div class="hud-divider">|</div>
-      <div class="hud-scale">
-        <span>5,000 km</span>
-      </div>
-    </div>
-
     <!-- Mesa Holográfica de Análisis de Análogos Terrestres (Analog Site Analysis Desk) -->
     <div id="analogSiteDesk" class="analog-site-desk">
       <div class="desk-header">
@@ -810,6 +810,10 @@
           <h2 id="mapSiteTitle">Cargando análogo...</h2>
           <p id="mapSiteCoords">0.0000° N, 0.0000° E</p>
         </div>
+        <div class="score-chip" title="Fidelidad de terreno del análogo">
+          <span class="score-label">Fidelidad</span>
+          <span class="score-value" id="mapSiteScore">--%</span>
+        </div>
       </div>
 
       <div class="map-hud-center">
@@ -821,7 +825,7 @@
             <rect x="9" y="3" width="6" height="4" rx="1"></rect>
             <path d="M9 12h6M9 16h6"></path>
           </svg>
-          <span>Top 10 Análogos</span>
+          <span class="hud-btn-label">Top 10 Análogos</span>
           <span class="hud-count-pill" id="hudCandidatesCount">10</span>
         </button>
 
@@ -833,34 +837,28 @@
             <line x1="12" y1="6" x2="12" y2="2"></line>
             <line x1="12" y1="22" x2="12" y2="18"></line>
           </svg>
-          <span id="btnCenterTargetText">Centrar en objetivo</span>
+          <span id="btnCenterTargetText" class="hud-btn-label">Centrar en objetivo</span>
         </button>
 
         <button id="btnToggle3DPreview" class="preview-3d-toggle-btn active"
-          title="Previsualizar entorno 3D y cavidades en un radio de 10 km">
+          title="Mostrar u ocultar el entorno 3D (modelo de terreno y cavidades)">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
             <polyline points="2 17 12 22 22 17"></polyline>
             <polyline points="2 12 12 17 22 12"></polyline>
           </svg>
-          <span>Entorno 3D (10 km)</span>
+          <span class="hud-btn-label">Entorno 3D</span>
           <span class="preview-status-pill" id="previewStatusPill">Listo</span>
         </button>
-
-        <div class="score-chip">
-          <span class="score-label">Fidelidad de Terreno</span>
-          <span class="score-value" id="mapSiteScore">--%</span>
-        </div>
       </div>
 
       <div class="map-hud-right">
-        <span class="zoom-out-hint">Rueda del ratón hacia atrás para volver a 3D</span>
-        <button id="btnReturnToOrbit" class="orbit-return-btn" title="Ascender a órbita espacial">
+        <button id="btnReturnToOrbit" class="orbit-return-btn" title="Regresar a la órbita (vista 3D del planeta)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="19" x2="12" y2="5"></line>
             <polyline points="5 12 12 5 19 12"></polyline>
           </svg>
-          <span>Regresar a Órbita (3D)</span>
+          <span class="hud-btn-label">Regresar a órbita</span>
         </button>
       </div>
     </div>

@@ -35,6 +35,18 @@ export class AnalogMap2DManager {
     this.mapContainer = document.getElementById(mapContainerId) as HTMLElement;
     this.setup3DPanelControls();
     this.setupCandidatesDrawerControls();
+    this.syncHudTooltips();
+  }
+
+  /** La barra del mapa recorta el título y las coordenadas con «…»: el texto completo va en el tooltip. */
+  private syncHudTooltips() {
+    for (const id of ['mapSiteTitle', 'mapSiteCoords']) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      const sync = () => { el.title = (el.textContent || '').trim(); };
+      sync();
+      new MutationObserver(sync).observe(el, { childList: true, characterData: true, subtree: true });
+    }
   }
 
   public setOnReturnToOrbit(callback: (lat?: number, lon?: number, body?: CelestialBody) => void) {

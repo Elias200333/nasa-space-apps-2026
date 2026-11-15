@@ -59,7 +59,14 @@ body {
 .nav-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-right: 20px;
+}
+
+.nav-left .brand-logo {
+  flex-shrink: 0;
 }
 
 .brand-logo {
@@ -121,6 +128,7 @@ body {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-shrink: 0;
 }
 
 .search-box {
@@ -739,13 +747,12 @@ body {
 }
 
 /* ==========================================================================
-   6. Lectura de Coordenadas y Escala en Tiempo Real (HUD Telemetry Pill)
+   6. Lectura de Coordenadas y Escala en Tiempo Real (en la barra superior, junto a la marca)
    ========================================================================== */
 .coordinates-hud {
-  position: absolute;
-  bottom: 278px;
-  left: 50%;
-  transform: translateX(-50%);
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -767,6 +774,22 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Si falta sitio en la barra, la coordenada se recorta con «…» por el final (el sistema de
+   referencia), nunca por encima de la escala. */
+#hudCoordsText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-divider,
+.hud-scale {
+  flex-shrink: 0;
 }
 
 .hud-reticle-icon {
@@ -1099,17 +1122,6 @@ body {
   overflow: hidden;
 }
 
-.zoom-out-hint {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  background: rgba(15, 23, 42, 0.6);
-  padding: 6px 12px;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  font-family: var(--font-mono);
-  margin-right: 12px;
-}
-
 /* ==========================================================================
    9. Cartografía Satelital 2D (Leaflet Viewport & HUD)
    Transición suave de zoom continuo y crossfade estilo Google Earth
@@ -1279,6 +1291,101 @@ body {
   border-color: var(--cyan-glow);
   box-shadow: 0 0 22px rgba(34, 211, 238, 0.5);
   transform: translateY(-1px);
+}
+
+/* --- Barra superior del mapa 2D (Tierra, Luna, Marte y análogos), en tres grupos ---
+   izquierda: qué sitio es (distintivo, título, coordenadas y fidelidad) · centro: herramientas ·
+   derecha: volver a la órbita. Nada se parte en varias líneas: el título se recorta con «…»
+   y el nombre completo sale en el tooltip. */
+.map2d-hud-header {
+  gap: 20px;
+  padding: 0 20px;
+}
+
+.map2d-hud-header .map-hud-left {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 14px;
+}
+
+.map2d-hud-header .map-hud-badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.map2d-hud-header .map-title-block {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.map2d-hud-header .map-title-block h2,
+.map2d-hud-header .map-title-block p {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.map2d-hud-header .map-title-block h2 {
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.map2d-hud-header .map-hud-center {
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.map2d-hud-header .map-hud-right {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding-left: 20px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Misma altura y forma para todos los controles de la barra */
+.map2d-hud-header .drawer-hud-toggle-btn,
+.map2d-hud-header .center-target-btn,
+.map2d-hud-header .preview-3d-toggle-btn,
+.map2d-hud-header .score-chip,
+.map2d-hud-header .orbit-return-btn {
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 14px;
+  gap: 7px;
+  border-radius: 9999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 0.78rem;
+}
+
+.map2d-hud-header .score-chip {
+  gap: 8px;
+}
+
+.map2d-hud-header .score-value {
+  font-size: 0.95rem;
+}
+
+.map2d-hud-header svg {
+  flex-shrink: 0;
+}
+
+/* Pantallas más estrechas: estos botones se quedan en icono (el texto sigue en su tooltip) */
+@media (max-width: 1500px) {
+  .map2d-hud-header #btnCenterTarget .hud-btn-label,
+  .map2d-hud-header #btnReturnToOrbit .hud-btn-label {
+    display: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .map2d-hud-header .hud-btn-label {
+    display: none;
+  }
 }
 
 .leaflet-map-view {
@@ -2569,7 +2676,6 @@ body.vr-mode .bottom-comparison-dock,
 body.vr-mode .bottom-dock,
 body.vr-mode .camera-controls-wrapper,
 body.vr-mode .earth-floating-tools,
-body.vr-mode .north-indicator,
 body.vr-mode .analog-overlay-bar,
 body.vr-mode #targetSiteCard,
 body.vr-mode #analogSiteDesk,
