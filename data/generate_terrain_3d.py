@@ -446,8 +446,8 @@ class RealisticTerrainComparisonEngine:
         fig.update_layout(
             paper_bgcolor="#090d16",
             scene=dict(
-                xaxis=dict(title="Longitud (°)", backgroundcolor="#0f172a", gridcolor="#334155", color="#94a3b8"),
-                yaxis=dict(title="Latitud (°)", backgroundcolor="#0f172a", gridcolor="#334155", color="#94a3b8"),
+                xaxis=dict(title="Longitude (°)", backgroundcolor="#0f172a", gridcolor="#334155", color="#94a3b8"),
+                yaxis=dict(title="Latitude (°)", backgroundcolor="#0f172a", gridcolor="#334155", color="#94a3b8"),
                 zaxis=dict(title="Elevación (m)", backgroundcolor="#0f172a", gridcolor="#334155", color="#94a3b8"),
                 aspectmode="manual",
                 aspectratio=dict(x=1.2, y=1.2, z=0.45)
@@ -846,11 +846,11 @@ def main():
         site, target_body, custom_lat, custom_lon = select_random_site(target_body=args.body)
         site_id = site.id
         print(f"\n{'='*85}")
-        print(f" 🎲 [MODO ALEATORIO ACTIVO] Simulación Planetaria Dinámica")
-        print(f"    -> Cuerpo Seleccionado: {target_body.upper()}")
-        print(f"    -> Sitio Análogo: {site.name} ({site_id})")
-        print(f"    -> Coordenadas GPS de Muestreo: [{custom_lat:.5f}° N, {custom_lon:.5f}° E]")
-        print(f"    -> Radio de Exploración: {args.radius_m:.1f} m (Área: {math.pi * (args.radius_m**2):,.1f} m²)")
+        print(f" 🎲 [RANDOM SELECTION ACTIVE] Dynamic Planetary Simulation")
+        print(f"    -> Selected Body: {target_body.upper()}")
+        print(f"    -> Analog Site: {site.name} ({site_id})")
+        print(f"    -> Sample GPS Coordinates: [{custom_lat:.5f}° N, {custom_lon:.5f}° E]")
+        print(f"    -> Exploration Radius: {args.radius_m:.1f} m (Area: {math.pi * (args.radius_m**2):,.1f} m²)")
         print(f"{'='*85}\n")
     else:
         site_id = args.site or "ES_LANZAROTE_CALDERA_BLANCA"

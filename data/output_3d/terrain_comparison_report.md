@@ -29,7 +29,7 @@
 
 ## 3. Desglose Metodológico de Similitud y Contribución de Pesos
 
-| Dimensión Analógica Evaluada | Valor Medido en Tierra | Valor Objetivo de Referencia en Earth | Coeficiente $S_i$ [0-1] | Peso Asignado ($w_i$) | Contribución al Total ($w_i 	imes S_i$) |
+| Dimensión Analógica Evaluada | Valor Medido en Tierra | Valor Objetivo de Referencia en Moon | Coeficiente $S_i$ [0-1] | Peso Asignado ($w_i$) | Contribución al Total ($w_i 	imes S_i$) |
 | :--- | :--- | :--- | :---: | :---: | :---: |
 | **Rango Altimétrico y Relieve** | `235.1 m (cota 1867-2102 m)` | `~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))` | `0.598` | `10.0%` | **`5.98%`** |
 | **Gradiente de Pendiente (Horn)** | `3.60° (máx 8.8°)` | `8.0° ± 4.0°` | `0.546` | `15.0%` | **`8.19%`** |

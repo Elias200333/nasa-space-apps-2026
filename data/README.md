@@ -1,8 +1,8 @@
-# 🪐 TERRAIN-X: Planetary Analog Evaluation Engine (Data Module)
+# 🪐 TERRAIN-X: Planetary Analog Evaluation Engine (`data/` Subsystem)
 
-> **Official Challenge 2026:** *Identify Earth Locations that Analog the Permanent Moon Base Locations and Mars*  
-> **Subsystem:** `nasa-space-apps-2026/data`  
-> **Target Profile:** Exploration and ingress testing in volcanic basaltic terrains with accessible subsurface cavities (lava tubes & collapse pit skylights).
+> **NASA Space Apps Challenge 2026:** *Identify Earth Locations that Analog the Permanent Moon Base Locations and Mars*  
+> **Subsystem Root:** `nasa-space-apps-2026/data/`  
+> **Core Focus:** Multi-scale scientific verification comparing Earth terrestrial analog sites against Lunar and Martian environments using real orbital, atmospheric, and high-resolution LiDAR topographic data.
 
 ---
 
@@ -18,22 +18,9 @@
 
 ---
 
-## 1. Overview & Scientific Rationale
+## 2. Directory Architecture & Subfolder Index
 
-TERRAIN-X compares candidate terrestrial locations against Lunar and Martian environments for an **operational mission testing profile**, not universal planetary equivalence. 
-
-### Initial Mission Profile: Volcanic Cavity & Skylight Access
-* **Target Planetary Analogs:**
-  * **Moon:** Marius Hills Pit / Oceanus Procellarum Mare Basalts
-  * **Mars:** Arsia Mons Volcanic Pits / Tharsis Montes
-* **Operational Goal:** Assess terrestrial test readiness for autonomous quadruped robots, tethered descent anchors, subterranean LiDAR/IMU mapping, and radio propagation in basaltic tubes.
-* **Core Principle:** Strict provenance, transparent scoring, refusal to convert missing data to zero, and geodetic coordinate guards preventing cross-body spatial overlay.
-
----
-
-## 2. Directory Structure
-
-```text
+```
 nasa-space-apps-2026/data/
 ├── README.md                      <- Complete installation and user manual
 ├── requirements.txt               <- Pinned Python dependencies
@@ -73,10 +60,9 @@ nasa-space-apps-2026/data/
 
 ---
 
-## 3. Prerequisites & Installation
+## 3. NASA APIs & Planetary Datasets Integrated
 
-Supported platforms: **Windows 10/11**, **Ubuntu/Debian Linux**, **macOS (Intel & Apple Silicon)**.  
-Python Version: **Python 3.10 to 3.14+**.
+The system connects dynamically to the following official NASA services:
 
 ### Step 1: Open Terminal in the `data` directory
 ```bash
@@ -99,12 +85,11 @@ python3 -m pip install -r requirements.txt
 Run the interactive multi-domain scientific analyzer. Before computing, it asks you to specify whether the analysis is for **the Moon** or for **Mars**, fetches real telemetry from NASA CMR & NASA POWER, and outputs a complete scientific breakdown:
 
 ```bash
-# Interactive mode (prompts for Moon or Mars):
-python main.py
+# Evaluate Lanzarote Caldera Blanca against Moon
+python analyze_analog.py --body moon --site ES_LANZAROTE_CALDERA_BLANCA --radius-m 100.0
 
-# Direct target execution:
-python main.py --body moon
-python main.py --body mars
+# Evaluate Rio Tinto against Mars
+python analyze_analog.py --body mars --site ES_RIO_TINTO --radius-m 100.0
 ```
 
 ---
@@ -115,12 +100,12 @@ The command-line tool allows instant ranking and sensitivity inspection.
 
 ### A. Rank all Candidate Sites against Lunar Profile
 ```bash
-python modules/science/cli.py rank --mission LUNAR_VOLCANIC_CAVITY_V1
+python generate_terrain_3d.py --body Moon --site ES_LANZAROTE_CALDERA_BLANCA --radius-m 100.0
 ```
 
-### B. Rank Candidate Sites against Martian Profile
+### D. Run the Automated Pytest Verification Suite
 ```bash
-python modules/science/cli.py rank --mission MARS_LAVA_TUBE_COLLAPSE_V1
+pytest tests
 ```
 
 ### C. Run Weight Sensitivity Perturbation Analysis ($\pm 25\%$)

@@ -21,7 +21,7 @@
     "points_sampled": 75
   },
   "dem_metadata": {
-    "source": "Copernicus DEM / SRTM 30m (Cache verificado)",
+    "source": "Copernicus DEM / Mapzen SRTM 30m (Global)",
     "nominal_resolution_m": 30.0,
     "crs": "EPSG:4326 (WGS84)",
     "verified_real_data": true
@@ -72,8 +72,8 @@
         "terrestrial_value": "0.0000 m\u207b\u00b9",
         "planetary_target": "Inversi\u00f3n de colapso (-0.05)",
         "similarity_score": 0.2,
-        "weight_pct": 8.0,
-        "contribution_pct": 1.6
+        "weight_pct": 10.0,
+        "contribution_pct": 2.0
       },
       {
         "id": "lava_tubes_cavities",
@@ -81,8 +81,8 @@
         "terrestrial_value": "Evidencia: 70% (Contexto volc\u00e1nico: 90%)",
         "planetary_target": "Claraboyas intactas / Pit Craters",
         "similarity_score": 0.79,
-        "weight_pct": 15.0,
-        "contribution_pct": 11.85
+        "weight_pct": 20.0,
+        "contribution_pct": 15.8
       },
       {
         "id": "crater_morphology",
@@ -90,17 +90,17 @@
         "terrestrial_value": "\u00cdndice: 60%",
         "planetary_target": "Cr\u00e1teres de impacto / conos pirocl\u00e1sticos",
         "similarity_score": 0.6,
-        "weight_pct": 10.0,
-        "contribution_pct": 6.0
+        "weight_pct": 8.0,
+        "contribution_pct": 4.8
       },
       {
         "id": "spectral_mineralogy",
         "name": "Composici\u00f3n Espectral y Mineral\u00f3gica",
-        "terrestrial_value": "Concordancia: 65%",
-        "planetary_target": "Ferric Oxides (Hematite / Goethite), Jarosite sulfates & Smectite clays",
-        "similarity_score": 0.65,
-        "weight_pct": 20.0,
-        "contribution_pct": 13.0
+        "terrestrial_value": "Concordancia: 70%",
+        "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
+        "similarity_score": 0.7,
+        "weight_pct": 12.0,
+        "contribution_pct": 8.4
       },
       {
         "id": "environmental_aridity",
@@ -108,8 +108,8 @@
         "terrestrial_value": "Proxy Aridez: 90%",
         "planetary_target": "Desierto poliextremo / Vac\u00edo",
         "similarity_score": 0.9,
-        "weight_pct": 10.0,
-        "contribution_pct": 9.0
+        "weight_pct": 8.0,
+        "contribution_pct": 7.2
       }
     ],
     "dem_statistics": {
