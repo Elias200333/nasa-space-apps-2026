@@ -25,6 +25,9 @@ Puente con la interfaz TERRAIN-X (PC y gafas XR; ver bridge.py)
     GET  /api/mission          estado de la misión
     POST /api/mission/start    «Mapear zona subterránea»: mapa nuevo + pose de partida
     POST /api/mission/finish   «Terminar recorrido»: guarda el mapa (+ <id>.mission.json)
+    GET  /api/caves            cuevas integradas en el mapa 3D (posición declarada por el operador)
+    POST /api/caves            «Integrar en el mapa 3D»: guarda dónde se colocó la cueva
+    DELETE /api/caves/{id}     quita una cueva del mapa (el escaneo no se borra)
 
 Seguridad
     - host fijo 127.0.0.1 (no accesible desde la red). Desde otro equipo (gafas) solo se entra
@@ -54,6 +57,7 @@ from ..config import Settings
 from ..lidar.live_stream import live_frame
 from ..storage.scan_store import ScanStoreError
 from .bridge import BridgeMiddleware, new_pairing_code
+from .caves import CaveError, CaveStore
 from .service import DashboardService
 
 log = logging.getLogger(__name__)
@@ -82,6 +86,7 @@ def create_app(settings: Settings, service: DashboardService | None = None,
     app.state.service = service
     app.state.pairing_code = pairing_code or new_pairing_code()
     app.add_middleware(BridgeMiddleware, code=app.state.pairing_code)
+    caves = CaveStore(settings.data_dir, service.store)
 
     def _bridged(request: Request) -> bool:
         return request.scope.get("terrainx_bridge") is not None
@@ -127,6 +132,25 @@ def create_app(settings: Settings, service: DashboardService | None = None,
             raise HTTPException(status_code=409, detail={"code": exc.code, "message": str(exc), "hint": exc.hint})
         except CaptureError as exc:
             raise HTTPException(status_code=409, detail={"code": "pose_not_ready", "message": str(exc)})
+
+    @app.get("/api/caves")
+    async def api_caves() -> list[dict[str, Any]]:
+        return await run_in_threadpool(caves.list)
+
+    @app.post("/api/caves")
+    async def api_caves_create(body: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return await run_in_threadpool(caves.create, body)
+        except CaveError as exc:
+            raise HTTPException(status_code=400, detail={"code": "invalid_cave", "message": str(exc)})
+
+    @app.delete("/api/caves/{cave_id}")
+    async def api_caves_delete(cave_id: str) -> dict[str, Any]:
+        try:
+            await run_in_threadpool(caves.delete, cave_id)
+        except CaveError as exc:
+            raise HTTPException(status_code=404, detail={"code": "no_cave", "message": str(exc)})
+        return {"deleted": cave_id}
 
     @app.post("/api/mission/finish")
     async def api_mission_finish() -> dict[str, Any]:

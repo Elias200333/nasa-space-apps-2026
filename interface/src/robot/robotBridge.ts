@@ -43,6 +43,35 @@ export interface MissionCloud {
   points: number[][];
 }
 
+/** Cueva integrada en el mapa 3D (registro del backend del robot; posición DECLARADA). */
+export interface Cave {
+  id: string;
+  number: number;
+  name: string;
+  created_utc: string;
+  scan_id: string;
+  mission_id: string | null;
+  site: MissionSite;
+  terrain_source: string | null;
+  location: { lat: number; lon: number; surface_elev_m: number };
+  heading_deg: number;
+  depth_m: number;
+  placement: string;
+  cloud: { file: string; count: number | null; cube_size_m: number | null; evidence_class: string };
+}
+
+export interface NewCave {
+  scan_id: string;
+  name?: string;
+  lat: number;
+  lon: number;
+  surface_elev_m: number;
+  heading_deg: number;
+  depth_m: number;
+  site?: MissionSite;
+  terrain_source?: string;
+}
+
 export class BridgeError extends Error {
   constructor(public status: number, public code: string, message: string, public hint?: string) {
     super(message);
@@ -108,6 +137,10 @@ export class RobotBridge {
   missionCloud(scanId: string) {
     return this.request<MissionCloud>(`/api/scans/${encodeURIComponent(scanId)}/download?format=mission`);
   }
+
+  caves() { return this.request<Cave[]>('/api/caves'); }
+  createCave(cave: NewCave) { return this.request<Cave>('/api/caves', { method: 'POST', body: JSON.stringify(cave) }); }
+  deleteCave(id: string) { return this.request<any>(`/api/caves/${encodeURIComponent(id)}`, { method: 'DELETE' }); }
 
   /** Página de la misión del backend (cámara, LiDAR acumulado y conducción) para el iframe. */
   missionPageUrl(): string {

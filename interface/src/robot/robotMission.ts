@@ -1,7 +1,8 @@
 import './robotMission.css';
 import { BridgeError, MissionCloud, MissionSite, RobotBridge } from './robotBridge';
+import { CaveLayer } from './caveMarkers';
 import { FusionView } from './fusionScene';
-import { loadTerrainFromPlotly, TerrainGrid } from './terrainGrid';
+import { elevationAt, loadTerrainFromPlotly, TerrainGrid } from './terrainGrid';
 
 /**
  * «Mapear zona subterránea»: puente entre la interfaz y la unidad terrestre (Go2, módulo robot/).
@@ -15,7 +16,10 @@ import { loadTerrainFromPlotly, TerrainGrid } from './terrainGrid';
  *   4. «Terminar recorrido»: el backend guarda el mapa (PLY + GLB + coordenadas, SHA-256) y la nube
  *      en el marco de la misión → vista previa 3D.
  *   5. «Añadir al mapa»: terreno del modelo 3D + nube bajo la superficie, a escala 1:1 en metros,
- *      con anclaje, rumbo y profundidad que declara el operador → mapa combinado descargable.
+ *      con anclaje, rumbo y profundidad que declara el operador.
+ *   6. «Integrar en el mapa 3D»: el backend guarda la cueva (dónde se colocó) y se vuelve al
+ *      «Entorno 3D», donde queda un marcador; clic en él → zoom y mapa de la cueva (caveMarkers.ts).
+ *      Se puede repetir para grabar otra cueva.
  */
 
 type Step = 'connect' | 'live' | 'preview' | 'fusion';
@@ -23,7 +27,6 @@ type Step = 'connect' | 'live' | 'preview' | 'fusion';
 const html = String.raw;
 
 export class RobotMissionController {
-  private bridge = new RobotBridge();
   private root: HTMLElement;
   private view: FusionView | null = null;
   private cloud: MissionCloud | null = null;
@@ -33,7 +36,7 @@ export class RobotMissionController {
   private busy = false;
   private cancelled = false;
 
-  constructor() {
+  constructor(private bridge: RobotBridge, private caves: CaveLayer) {
     this.root = document.createElement('div');
     this.root.id = 'robotMissionOverlay';
     this.root.className = 'rm-overlay hidden';
@@ -82,6 +85,8 @@ export class RobotMissionController {
             <aside class="rm-side" id="rmSide">
               <div id="rmPreviewInfo"></div>
               <div id="rmFusionControls" class="hidden">
+                <label>Nombre de la cueva
+                  <input type="text" id="rmCaveName" maxlength="60" placeholder="p. ej. Tubo de lava norte (opcional)" /></label>
                 <label>Rumbo al empezar <b id="rmHeadingVal">0°</b>
                   <input type="range" id="rmHeading" min="0" max="359" step="1" value="0" /></label>
                 <label>Profundidad bajo la superficie <b id="rmDepthVal">0 m</b>
@@ -102,6 +107,7 @@ export class RobotMissionController {
               <p class="rm-honest" id="rmHonest"></p>
               <div class="rm-actions">
                 <button class="rm-btn primary" id="rmAddToMap">Añadir al mapa</button>
+                <button class="rm-btn primary hidden" id="rmIntegrate">Integrar en el mapa 3D</button>
                 <button class="rm-btn hidden" id="rmVR">Ver en VR</button>
                 <button class="rm-btn hidden" id="rmDownload">Descargar mapa combinado</button>
                 <button class="rm-btn" id="rmFrameScan">Centrar en la nube</button>
@@ -151,6 +157,7 @@ export class RobotMissionController {
   // ------------------------------------------------------------------ eventos
   private wire() {
     this.$('rmClose').onclick = () => this.close();
+    this.$('rmIntegrate').onclick = () => this.integrate();
     this.$('rmRetry').onclick = () => this.start();
     this.$<HTMLFormElement>('rmPair').onsubmit = (e) => {
       e.preventDefault();
@@ -313,6 +320,7 @@ export class RobotMissionController {
       </table>`;
     this.$('rmFusionControls').classList.add('hidden');
     this.$('rmAddToMap').classList.toggle('hidden', false);
+    this.$('rmIntegrate').classList.add('hidden');
     (this.$('rmAddToMap') as HTMLButtonElement).disabled = !this.terrainUrl();
     this.$('rmDownload').classList.add('hidden');
     this.$('rmVR').classList.add('hidden');
@@ -340,6 +348,7 @@ export class RobotMissionController {
     view.setZone(60);
     this.$('rmFusionControls').classList.remove('hidden');
     this.$('rmAddToMap').classList.add('hidden');
+    this.$('rmIntegrate').classList.remove('hidden');
     this.$('rmDownload').classList.remove('hidden');
     this.$('rmPreviewInfo').innerHTML = html`
       <h3>Mapa combinado</h3>
@@ -367,11 +376,48 @@ export class RobotMissionController {
     }
   }
 
+  // ------------------------------------------------------------------ 6. integrar en el mapa 3D
+  private async integrate() {
+    const g = this.terrain, view = this.view, c = this.cloud;
+    if (!g || !view || !c || this.busy) return;
+    this.busy = true;
+    const btn = this.$<HTMLButtonElement>('rmIntegrate');
+    btn.disabled = true;
+    btn.textContent = 'Integrando…';
+    try {
+      const p = view.getPlacement();
+      const cave = await this.bridge.createCave({
+        scan_id: c.scan_id,
+        name: this.$<HTMLInputElement>('rmCaveName').value.trim() || undefined,
+        lat: g.center.lat + p.offsetN / g.mPerDegLat,
+        lon: g.center.lon + p.offsetE / g.mPerDegLon,
+        surface_elev_m: elevationAt(g, p.offsetE, p.offsetN),
+        heading_deg: ((p.headingDeg % 360) + 360) % 360,
+        depth_m: p.depthM,
+        site: this.site,
+        terrain_source: g.sourceUrl.split('?')[0],
+      });
+      this.busy = false;
+      await this.close(true);            // vuelve al «Entorno 3D» (la unidad sigue conectada)
+      await this.caves.refresh(cave.id);
+      this.caves.toast(`${cave.name} integrada en el mapa 3D · haz clic en su marcador para verla`);
+    } catch (e) {
+      const err = e as BridgeError;
+      this.toastSide(`No se pudo integrar la cueva: ${err.message}${err.hint ? ' — ' + err.hint : ''}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Integrar en el mapa 3D';
+      this.busy = false;
+    }
+  }
+
   // ------------------------------------------------------------------ cierre
-  async close() {
+  /** Cierra la ventana. `keepUnit`: tras integrar una cueva no se desconecta el robot, para poder
+   *  grabar otra enseguida (se desconecta al cerrar con ✕). */
+  async close(keepUnit = false) {
     const livePanel = this.root.querySelector('[data-panel="live"]') as HTMLElement;
     const live = !livePanel.classList.contains('hidden');
-    if (live &&!confirm('¿Cancelar el recorrido? El robot se detendrá y el mapa no se guardará.')) return;
+    if (live && !confirm('¿Cancelar el recorrido? El robot se detendrá y el mapa no se guardará.')) return;
     this.cancelled = true;
     const frame = this.$<HTMLIFrameElement>('rmFrame');
     try { frame.contentWindow?.postMessage({ type: 'terrainx-stop' }, location.origin); } catch { /* nada */ }
@@ -380,9 +426,10 @@ export class RobotMissionController {
     this.view = null;
     this.cloud = null;
     this.terrain = null;
+    this.$<HTMLInputElement>('rmCaveName').value = '';
     this.root.classList.add('hidden');
     document.body.classList.remove('rm-open');
-    if (this.connectedByUs) {
+    if (this.connectedByUs && !keepUnit) {
       this.connectedByUs = false;
       try { await this.bridge.disconnect(); } catch { /* el backend ya no está: nada que cerrar */ }
     }
@@ -393,6 +440,8 @@ export class RobotMissionController {
 export function initRobotMission() {
   const actions = document.querySelector('#terrain3DPanel .drawer-actions');
   if (!actions || document.getElementById('btnMapUnderground')) return;
+  const bridge = new RobotBridge();
+  const caves = new CaveLayer(bridge);           // marcadores de las cuevas ya integradas
   let controller: RobotMissionController | null = null;
   const btn = document.createElement('button');
   btn.id = 'btnMapUnderground';
@@ -401,7 +450,7 @@ export function initRobotMission() {
   btn.innerHTML = html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M3 18h18M5 18l3-7 4 4 3-5 4 8"/><circle cx="12" cy="7" r="2"/></svg><span>Mapear zona subterránea</span>`;
   btn.onclick = () => {
-    controller = controller || new RobotMissionController();
+    controller = controller || new RobotMissionController(bridge, caves);
     controller.open();
   };
   actions.insertBefore(btn, actions.firstChild);

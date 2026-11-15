@@ -1,0 +1,16 @@
+{
+  "ODEResults": {
+    "Error": "ODE V2.1.5 - ODE Rest requires either a combination of IHID, IID, and PT query parameters or PDSId query parameter or ODEID query parameter",
+    "QuerySummary": {
+      "Date": "2026-11-15T05:11:01.468",
+      "limit": "1",
+      "output": "JSON",
+      "pt": "MOLA_MEGDR",
+      "query": "PRODUCT",
+      "Query_Elapsed_Time": "00:00:00.0156175",
+      "results": "C",
+      "target": "mars"
+    },
+    "Status": "ERROR"
+  }
+}

@@ -255,6 +255,7 @@ El backend del robot hace de puente con la interfaz de TERRAIN-X (`interface/`).
 3. **«Terminar recorrido».** Se guarda como siempre (`.ply`, `.glb`, `.coords.json`, metadatos y SHA-256) y, además, `<id>.mission.json`: la nube en el marco de la misión. En ese marco el origen es el robot al empezar, x apunta hacia donde miraba, y a su izquierda y z arriba. Es solo un giro más una traslación, así que las distancias no cambian.
 4. **Vista previa** de la nube en 3D.
 5. **«Añadir al mapa».** Muestra el terreno del modelo 3D y, debajo, la nube, a **escala 1:1 en metros en los tres ejes** (sin la exageración vertical del Plotly). El operador declara el anclaje (desplazamiento este/norte desde el centro, rumbo y profundidad), porque el Go2 no tiene GPS ni brújula. Se descarga el **mapa combinado** (JSON con procedencia) y, si el navegador lo admite, se ve en VR a tamaño real.
+6. **«Integrar en el mapa 3D».** El backend guarda la cueva en `runtime/caves/<id>.json`: el escaneo, la posición declarada, el rumbo y la profundidad. La interfaz vuelve al «Entorno 3D», donde la cueva aparece como un **marcador** sobre el terreno, con una línea hasta su profundidad. Al hacer clic, la cámara se acerca y se abre el mapa de la cueva; «Volver» deja la vista como estaba. El robot sigue conectado para poder grabar otra cueva, y cada una añade su marcador. API: `GET/POST /api/caves` y `DELETE /api/caves/{id}` (quitar una cueva no borra su escaneo).
 
 Para que funcione:
 

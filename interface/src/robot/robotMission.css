@@ -108,3 +108,35 @@ body.rm-open { overflow: hidden; }
   .rm-side { border-left: 0; border-top: 1px solid var(--border-cyan, rgba(34, 211, 238, 0.18)); max-height: 45vh; }
   .rm-steps { display: none; }
 }
+
+/* ---- Cuevas integradas en el «Entorno 3D» (src/robot/caveMarkers.ts) ---- */
+.cv-overlay {
+  position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column;
+  background: #070b14; animation: cv-in 0.35s ease-out;
+}
+@keyframes cv-in { from { opacity: 0; transform: scale(1.03); } to { opacity: 1; transform: none; } }
+.cv-head {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px;
+  background: rgba(10, 18, 34, 0.95); border-bottom: 1px solid var(--border-cyan, rgba(34, 211, 238, 0.18));
+}
+.cv-title { flex: 1; min-width: 140px; display: flex; flex-direction: column; font-size: 0.8rem; color: var(--text-main, #f8fafc); }
+.cv-title span { color: var(--text-muted, #94a3b8); font-size: 0.72rem; }
+.cv-btn {
+  background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(56, 189, 248, 0.35); color: var(--text-main, #f8fafc);
+  border-radius: 7px; padding: 6px 10px; cursor: pointer; font-size: 0.75rem; font-weight: 600;
+}
+.cv-btn:hover { border-color: var(--cyan-glow, #22d3ee); }
+.cv-btn.danger { border-color: rgba(239, 68, 68, 0.45); color: #fca5a5; }
+.cv-btn.hidden { display: none; }
+.cv-stage { position: relative; flex: 1; min-height: 0; }
+.cv-canvas { width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
+.cv-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted, #94a3b8); font-size: 0.85rem; }
+.cv-note { margin: 0; padding: 6px 10px; font-size: 0.68rem; line-height: 1.4; color: #fde68a;
+  background: rgba(120, 83, 6, 0.18); border-top: 1px solid rgba(251, 191, 36, 0.25); }
+.cv-note code { font-size: 0.65rem; }
+.cv-toast {
+  position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 30; max-width: 90%;
+  background: rgba(8, 145, 178, 0.95); color: #fff; font-size: 0.78rem; font-weight: 600;
+  padding: 8px 14px; border-radius: 999px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4); animation: cv-in 0.3s ease-out;
+}
