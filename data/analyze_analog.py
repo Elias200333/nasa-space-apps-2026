@@ -275,14 +275,30 @@ def main():
     print_banner()
     parser = argparse.ArgumentParser(description="TERRAIN-X Planetary Analog Analyzer")
     parser.add_argument("--body", choices=["moon", "mars", "luna", "marte"], help="Target planetary body (moon or mars)")
-    parser.add_argument("--site", help="Specific Earth analog site ID (default: auto-selected best candidate)")
+    parser.add_argument("--site", help="Specific Earth analog site ID (randomly selected from 20 catalog sites if omitted)")
     parser.add_argument("--radius-m", type=float, default=100.0, help="Exploration radius in meters (default: 100.0)")
     parser.add_argument("--generate-3d", action="store_true", help="Generate 3D WebGL model and comparative atlas")
+    parser.add_argument("--random", action="store_true", help="Force random selection of planetary target and analog site")
     args = parser.parse_args()
 
-    selected_body = select_target_body(args.body)
+    custom_lat, custom_lon = None, None
+    if args.random or args.site is None:
+        from generate_terrain_3d import select_random_site
+        site_obj, body_choice, custom_lat, custom_lon = select_random_site(target_body=args.body)
+        selected_body = body_choice.lower()
+        site_id = site_obj.id
+        print(f"\n{'='*85}")
+        print(f" 🎲 [MODO ALEATORIO ACTIVO] Simulación Planetaria Dinámica")
+        print(f"    -> Cuerpo Seleccionado: {body_choice.upper()}")
+        print(f"    -> Sitio Análogo: {site_obj.name} ({site_id})")
+        print(f"    -> Coordenadas GPS de Muestreo: [{custom_lat:.5f}° N, {custom_lon:.5f}° E]")
+        print(f"    -> Radio de Exploración: {args.radius_m:.1f} metros (Área: {math.pi * (args.radius_m**2):,.1f} m²)")
+        print(f"{'='*85}\n")
+    else:
+        selected_body = select_target_body(args.body)
+        site_id = args.site
+
     target_info = PLANETARY_TARGETS[selected_body]
-    site_id = args.site or target_info["recommended_site"]
 
     print(f"\n>>> TARGET SELECTED: {target_info['name'].upper()}")
 
@@ -294,7 +310,7 @@ def main():
         print(f"(Ranking module info: {e})")
 
     print(f">>> EVALUATING SELECTED ANALOG: {site_id}")
-    time.sleep(0.5)
+    time.sleep(0.3)
 
     analyze_multidomain_analog(selected_body, site_id)
 
@@ -305,6 +321,8 @@ def main():
         engine = RealisticTerrainComparisonEngine(
             site_id=site_id,
             target_body=selected_body,
+            custom_lat=custom_lat,
+            custom_lon=custom_lon,
             exploration_radius_m=args.radius_m
         )
         engine.run_all(outdir)

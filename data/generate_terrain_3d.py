@@ -16,6 +16,7 @@ Features:
 import os
 import sys
 import math
+import random
 import argparse
 import json
 from datetime import datetime, timezone
@@ -677,29 +678,76 @@ def print_analog_ranking(target_body: str = "Moon"):
     return scored_sites
 
 
+def select_random_site(target_body: Optional[str] = None, add_jitter_m: float = 60.0):
+    """
+    Randomly selects a planetary analog site from the 20 verified catalog sites (10 Moon / 10 Mars).
+    Applies a realistic spatial jitter within the geological structure to explore a fresh 100m patch.
+    """
+    if target_body and target_body.lower() in ("moon", "luna"):
+        body = "Moon"
+    elif target_body and target_body.lower() in ("mars", "marte"):
+        body = "Mars"
+    else:
+        body = random.choice(["Moon", "Mars"])
+
+    candidates = get_sites_by_target_body(body)
+    site = random.choice(candidates)
+
+    lat_rad = math.radians(site.center_lat)
+    m_per_deg_lat = 111320.0
+    m_per_deg_lon = 111320.0 * math.cos(lat_rad)
+
+    offset_x = random.uniform(-add_jitter_m, add_jitter_m)
+    offset_y = random.uniform(-add_jitter_m, add_jitter_m)
+
+    custom_lat = round(site.center_lat + (offset_y / m_per_deg_lat), 5)
+    custom_lon = round(site.center_lon + (offset_x / m_per_deg_lon), 5)
+
+    return site, body, custom_lat, custom_lon
+
+
 def main():
     parser = argparse.ArgumentParser(description="TERRAIN-X Real Planetary Analog Verification & 3D Engine")
-    parser.add_argument("--site", type=str, default="ES_LANZAROTE_CALDERA_BLANCA", help="Catalog Site ID")
-    parser.add_argument("--body", type=str, default="Moon", choices=["Moon", "Mars", "moon", "mars"], help="Target celestial body")
+    parser.add_argument("--site", type=str, default=None, help="Catalog Site ID (randomly chosen from 20 sites if omitted)")
+    parser.add_argument("--body", type=str, default=None, choices=["Moon", "Mars", "moon", "mars"], help="Target celestial body (random if omitted)")
     parser.add_argument("--lat", type=float, default=None, help="Custom latitude")
     parser.add_argument("--lon", type=float, default=None, help="Custom longitude")
     parser.add_argument("--radius-m", type=float, default=100.0, help="Exploration radius in meters (default: 100.0m)")
     parser.add_argument("--window-m", type=float, default=800.0, help="Visual context window in meters (default: 800.0m)")
     parser.add_argument("--rank", action="store_true", help="Print ranking of candidate sites")
+    parser.add_argument("--random", action="store_true", help="Force random selection of planetary target and analog site")
     parser.add_argument("--outdir", type=str, default=None, help="Output directory")
 
     args = parser.parse_args()
     outdir = args.outdir or os.path.join(_DATA_ROOT, "output_3d")
 
     if args.rank:
-        print_analog_ranking(args.body)
+        target_body = args.body or "Moon"
+        print_analog_ranking(target_body)
         return
 
+    # Random selection logic if --site is not explicitly provided or if --random is set
+    if args.random or (args.site is None and args.lat is None and args.lon is None):
+        site, target_body, custom_lat, custom_lon = select_random_site(target_body=args.body)
+        site_id = site.id
+        print(f"\n{'='*85}")
+        print(f" 🎲 [MODO ALEATORIO ACTIVO] Simulación Planetaria Dinámica")
+        print(f"    -> Cuerpo Seleccionado: {target_body.upper()}")
+        print(f"    -> Sitio Análogo: {site.name} ({site_id})")
+        print(f"    -> Coordenadas GPS de Muestreo: [{custom_lat:.5f}° N, {custom_lon:.5f}° E]")
+        print(f"    -> Radio de Exploración: {args.radius_m:.1f} m (Área: {math.pi * (args.radius_m**2):,.1f} m²)")
+        print(f"{'='*85}\n")
+    else:
+        site_id = args.site or "ES_LANZAROTE_CALDERA_BLANCA"
+        target_body = args.body or "Moon"
+        custom_lat = args.lat
+        custom_lon = args.lon
+
     engine = RealisticTerrainComparisonEngine(
-        site_id=args.site,
-        target_body=args.body,
-        custom_lat=args.lat,
-        custom_lon=args.lon,
+        site_id=site_id,
+        target_body=target_body,
+        custom_lat=custom_lat,
+        custom_lon=custom_lon,
         exploration_radius_m=args.radius_m,
         view_window_m=args.window_m
     )
