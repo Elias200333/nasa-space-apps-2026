@@ -2,6 +2,7 @@ import './styles.css';
 import { EarthSceneManager } from './babylon/earthScene';
 import { MiniPlanetViewer } from './babylon/miniPlanets';
 import { AnalogMap2DManager } from './map/analogMap2D';
+import { AnalogDeskManager } from './desk/analogDesk';
 import { generateRandomAnalogCoordinates, PLANET_METRICS, getCandidatesForBody, ANALOG_DATABASE } from './data/analogs';
 import { sound } from './audio';
 import { CelestialBody, AnalogSite, PlanetaryLayerMode, AnalogCandidateItem } from './types';
@@ -16,6 +17,7 @@ let earthScene: EarthSceneManager;
 let miniMoon: MiniPlanetViewer;
 let miniMars: MiniPlanetViewer;
 let map2DManager: AnalogMap2DManager;
+let analogDeskManager: AnalogDeskManager;
 let isVRModeActive = false;
 
 /**
@@ -214,6 +216,11 @@ async function initApp() {
   if (earthCanvas) {
     earthScene = new EarthSceneManager(earthCanvas);
 
+    earthScene.onPlanetClicked = (planet) => {
+      sound.playClick(600);
+      selectCelestialTarget(planet);
+    };
+
     earthScene.onTextureProgress = (texName) => {
       coordinator.setStatus(`Cargando ${texName}...`);
     };
@@ -264,7 +271,13 @@ async function initApp() {
     miniMars = new MiniPlanetViewer(miniMarsCanvas, 'Mars');
   }
 
-  // 3. Inicializar cartografía 2D y HUD
+  // 3. Inicializar mesa holográfica de análogos y cartografía 2D
+  analogDeskManager = new AnalogDeskManager();
+  const defaultAnalog = ANALOG_DATABASE.find(s => s.id === 'ES_LANZAROTE_CALDERA_BLANCA') || ANALOG_DATABASE[3];
+  if (defaultAnalog) {
+    analogDeskManager.updateSite(defaultAnalog, 'Mars');
+  }
+
   init2DMapManager();
   setupUIEventListeners();
   updateLiveTelemetry(0.0000, 0.0000);
@@ -386,6 +399,9 @@ function setupUIEventListeners() {
     btnCompareMoon.addEventListener('click', (e) => {
       e.stopPropagation();
       openScienceModal('modalCompare');
+      if (earthScene && earthScene.getIsXRActive()) {
+        earthScene.openXRComparisonStation('Moon');
+      }
     });
   }
 
@@ -394,6 +410,9 @@ function setupUIEventListeners() {
     btnCompareMars.addEventListener('click', (e) => {
       e.stopPropagation();
       openScienceModal('modalCompare');
+      if (earthScene && earthScene.getIsXRActive()) {
+        earthScene.openXRComparisonStation('Mars');
+      }
     });
   }
 
@@ -440,6 +459,24 @@ function setupUIEventListeners() {
   });
 
   // 5. Barra de herramientas flotante sobre la Tierra / planeta activo
+  const btnToolOrbit = document.getElementById('btnToolOrbit');
+  if (btnToolOrbit) {
+    btnToolOrbit.addEventListener('click', () => {
+      sound.playClick(600);
+      const isAuto = earthScene.toggleAutoRotate();
+      if (isAuto) btnToolOrbit.classList.add('active');
+      else btnToolOrbit.classList.remove('active');
+    });
+  }
+
+  const btnToolMove = document.getElementById('btnToolMove');
+  if (btnToolMove) {
+    btnToolMove.addEventListener('click', () => {
+      sound.playClick(600);
+      btnToolMove.classList.toggle('active');
+    });
+  }
+
   const btnResetEarth = document.getElementById('btnResetEarth');
   if (btnResetEarth) {
     btnResetEarth.addEventListener('click', () => {
@@ -450,6 +487,23 @@ function setupUIEventListeners() {
         earthScene.resetToGlobalView();
       }
       hideTargetCard();
+    });
+  }
+
+  // Controles de la mesa holográfica de análogos (Analog Site Desk)
+  const btnDeskFitArea = document.getElementById('btnDeskFitArea');
+  if (btnDeskFitArea) {
+    btnDeskFitArea.addEventListener('click', () => {
+      sound.playClick(600);
+      earthScene.orientToCoordinates(29.0380, -13.7190);
+    });
+  }
+
+  const btnDeskToggle3D = document.getElementById('btnDeskToggle3D');
+  if (btnDeskToggle3D) {
+    btnDeskToggle3D.addEventListener('click', () => {
+      sound.playClick(650);
+      generateAndDiveToAnalog(activeBody === 'Moon' ? 'Moon' : 'Mars');
     });
   }
 
@@ -572,6 +626,10 @@ export function selectCelestialTarget(body: CelestialBody) {
       map2DManager.returnToSpaceOrbit();
     }
     hideTargetCard();
+    if (analogDeskManager) {
+      const site = ANALOG_DATABASE.find(s => s.target_body === 'Moon') || ANALOG_DATABASE[0];
+      analogDeskManager.updateSite(site, 'Moon');
+    }
   } else if (body === 'Mars') {
     marsCard?.classList.add('card-selected', 'mars-selected');
     miniMars?.spinFast();
@@ -581,9 +639,13 @@ export function selectCelestialTarget(body: CelestialBody) {
       map2DManager.returnToSpaceOrbit();
     }
     hideTargetCard();
+    if (analogDeskManager) {
+      const site = ANALOG_DATABASE.find(s => s.id === 'ES_LANZAROTE_CALDERA_BLANCA') || ANALOG_DATABASE[3];
+      analogDeskManager.updateSite(site, 'Mars');
+    }
   } else {
     // Earth
-    hidePlanetaryLayerSelector();
+    showPlanetaryLayerSelector('Earth');
     earthScene.switchPlanet('Earth');
     if (map2DManager && map2DManager.isMapActive()) {
       map2DManager.returnToSpaceOrbit();
@@ -591,22 +653,34 @@ export function selectCelestialTarget(body: CelestialBody) {
       earthScene.resetToGlobalView();
     }
     hideTargetCard();
+    if (analogDeskManager) {
+      const site = ANALOG_DATABASE.find(s => s.id === 'ES_LANZAROTE_CALDERA_BLANCA') || ANALOG_DATABASE[3];
+      analogDeskManager.updateSite(site, 'Mars');
+    }
   }
 }
 
-function showPlanetaryLayerSelector(body: 'Mars' | 'Moon') {
+function showPlanetaryLayerSelector(body: CelestialBody) {
   const selector = document.getElementById('planetLayerSelector');
   if (!selector) return;
 
-  selector.classList.remove('hidden', 'mars-theme', 'moon-theme');
-  selector.classList.add(body === 'Mars' ? 'mars-theme' : 'moon-theme');
+  selector.classList.remove('hidden', 'mars-theme', 'moon-theme', 'earth-theme');
+  if (body === 'Mars') selector.classList.add('mars-theme');
+  else if (body === 'Moon') selector.classList.add('moon-theme');
+  else selector.classList.add('earth-theme');
 
   const titleEl = document.getElementById('layerSelectorPlanetTitle');
-  if (titleEl) {
-    titleEl.textContent = `${body === 'Mars' ? 'MARTE' : 'LUNA'} • CARTOGRAFÍA NASA`;
-  }
+  const provenanceBadge = document.getElementById('layerProvenanceBadge');
+  const infoNotice = document.getElementById('layerInfoNotice');
 
-  updateLayerModeUI(body, currentLayerMode);
+  if (body === 'Earth') {
+    if (titleEl) titleEl.textContent = 'EARTH • CARTOGRAPHY (NASA/USGS)';
+    if (provenanceBadge) provenanceBadge.textContent = 'NASA/USGS (30 m/px)';
+    if (infoNotice) infoNotice.textContent = 'Global terrain, elevation and exploration layers (30 m)';
+  } else {
+    if (titleEl) titleEl.textContent = `${body === 'Mars' ? 'MARTE' : 'LUNA'} • CARTOGRAFÍA NASA`;
+    updateLayerModeUI(body as 'Mars' | 'Moon', currentLayerMode);
+  }
 }
 
 function hidePlanetaryLayerSelector() {

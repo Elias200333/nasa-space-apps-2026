@@ -247,16 +247,16 @@
           <circle cx="17" cy="12" r="2.5"></circle>
           <path d="M9.5 12h5"></path>
         </svg>
-        <span>REALIDAD VIRTUAL DETECTADA</span>
+        <span>REALIDAD MIXTA DETECTADA (PASSTHROUGH)</span>
       </div>
 
       <h1 class="vr-welcome-title">BIENVENIDO</h1>
-      <p class="vr-welcome-subtitle">SALA DE MANDO HOLOGRÁFICA ESPACIAL • NASA SPACE APPS 2026</p>
+      <p class="vr-welcome-subtitle">SALA DE MANDO HOLOGRÁFICA EN TU HABITACIÓN • NASA SPACE APPS 2026</p>
 
       <div class="vr-welcome-desc">
-        Has abierto TERRAIN-X con un visor de Realidad Virtual.
-        Al pulsar <strong>EMPEZAR</strong>, accederás a la sala inmersiva 3D con la Tierra, Marte y la Luna flotando con
-        cartografía oficial de la NASA y análogos geológicos.
+        Has abierto TERRAIN-X con un visor de Realidad Mixta (WebXR).
+        Al pulsar <strong>EMPEZAR</strong>, se activará el modo <strong>Passthrough</strong> para ver tu habitación real con
+        el holograma interactivo de la Tierra, Marte y la Luna, pedestal de telemetría y paneles de mando cercanos y accesibles.
       </div>
 
       <div class="vr-welcome-actions">
@@ -359,61 +359,59 @@
 
     <!-- Barra de Herramientas Flotante en la Tierra -->
     <div class="earth-floating-tools">
-      <button class="tool-btn" id="btnResetEarth" title="Restablecer vista orbital global">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+      <button class="tool-strip-btn active" id="btnToolOrbit" title="Modo Órbita interactiva">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M14.5 9.5L18 6m0 0h-4.5m4.5 0v4.5"></path>
         </svg>
+        <span class="tool-label">Orbit</span>
       </button>
-      <button class="tool-btn" title="Modo Desplazamiento orbital">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+      <button class="tool-strip-btn" id="btnToolMove" title="Modo Desplazamiento orbital">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
           <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
           <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
-          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15">
-          </path>
+          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
         </svg>
+        <span class="tool-label">Move</span>
       </button>
-      <button class="tool-btn active" id="btnRandomTarget"
-        title="Generar coordenadas aleatorias y sumergirse en la Tierra">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="22" y1="12" x2="18" y2="12"></line>
-          <line x1="6" y1="12" x2="2" y2="12"></line>
-          <line x1="12" y1="6" x2="12" y2="2"></line>
-          <line x1="12" y1="22" x2="12" y2="18"></line>
-        </svg>
-      </button>
-      <button class="tool-btn" id="btnZoomIn" title="Acercar zoom">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+      <button class="tool-strip-btn" id="btnZoomIn" title="Acercar zoom">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           <line x1="11" y1="8" x2="11" y2="14"></line>
           <line x1="8" y1="11" x2="14" y2="11"></line>
         </svg>
+        <span class="tool-label">Zoom +</span>
       </button>
-      <button class="tool-btn" id="btnZoomOut" title="Alejar zoom">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+      <button class="tool-strip-btn" id="btnZoomOut" title="Alejar zoom">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           <line x1="8" y1="11" x2="14" y2="11"></line>
         </svg>
+        <span class="tool-label">Zoom −</span>
       </button>
-      <button class="tool-btn" id="btnFullscreen" title="Pantalla completa">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
-          </path>
+
+      <button class="tool-strip-btn" id="btnResetEarth" title="Ajustar y encuadrar perspectiva global">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
         </svg>
+        <span class="tool-label">Fit</span>
       </button>
     </div>
 
-    <!-- Selector de Capas Cartográficas de la NASA (Visible cuando Marte o la Luna están activos) -->
-    <div id="planetLayerSelector" class="planet-layer-selector hidden">
+    <!-- Selector de Capas Cartográficas de la NASA (Callout flotante estilo NASA Control Room) -->
+    <div id="planetLayerSelector" class="planet-layer-selector">
       <div class="layer-selector-header">
         <div class="layer-selector-title">
           <span class="pulse-indicator"></span>
-          <span id="layerSelectorPlanetTitle">MARTE • CARTOGRAFÍA NASA</span>
+          <span id="layerSelectorPlanetTitle">EARTH • CARTOGRAPHY (NASA/USGS)</span>
         </div>
-        <span id="layerProvenanceBadge" class="layer-provenance-badge">Viking MDIM2.1 (232m)</span>
+        <span id="layerProvenanceBadge" class="layer-provenance-badge">NASA/USGS (30 m/px)</span>
       </div>
 
       <div class="layer-selector-buttons">
@@ -425,7 +423,7 @@
               d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
             </path>
           </svg>
-          <span>Superficie</span>
+          <span>Surface</span>
         </button>
 
         <button class="layer-btn" data-layer="topography" id="btnLayerTopography"
@@ -435,7 +433,7 @@
             <polyline points="2 17 12 22 22 17"></polyline>
             <polyline points="2 12 12 17 22 12"></polyline>
           </svg>
-          <span>Topografía</span>
+          <span>Topography</span>
         </button>
 
         <button class="layer-btn" data-layer="exploration" id="btnLayerExploration"
@@ -447,14 +445,17 @@
             <line x1="12" y1="6" x2="12" y2="2"></line>
             <line x1="12" y1="22" x2="12" y2="18"></line>
           </svg>
-          <span>Exploración</span>
+          <span>Exploration</span>
         </button>
       </div>
 
       <div class="layer-selector-footer">
-        <span id="layerInfoNotice" class="layer-info-notice">Mosaico orbital global fotográfico Viking MDIM2.1 (232
-          m/px)</span>
+        <span id="layerInfoNotice" class="layer-info-notice">Global terrain, elevation and exploration layers (30 m)</span>
       </div>
+      <svg class="cartography-callout-line" width="60" height="50" viewBox="0 0 60 50">
+        <path d="M 50 10 L 15 35 L -10 45" fill="none" stroke="rgba(34, 211, 238, 0.65)" stroke-width="1.8" stroke-dasharray="3 3" />
+        <circle cx="50" cy="10" r="3" fill="#22d3ee" />
+      </svg>
     </div>
 
     <!-- Indicador discreto de carga de teselas cartográficas NASA Trek -->
@@ -690,20 +691,121 @@
     <!-- Lectura de Coordenadas y Escala en tiempo real (Bottom Center HUD) -->
     <div class="coordinates-hud">
       <div class="hud-coords">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="22" y1="12" x2="18" y2="12"></line>
-          <line x1="6" y1="12" x2="2" y2="12"></line>
-          <line x1="12" y1="6" x2="12" y2="2"></line>
-          <line x1="12" y1="22" x2="12" y2="18"></line>
-        </svg>
-        <span id="hudCoordsText">0.0000° N, 0.0000° E</span>
+        <span class="hud-reticle-icon">⊙</span>
+        <span id="hudCoordsText">29.0393° N, 13.7165° W • WGS84</span>
       </div>
+      <div class="hud-divider">|</div>
       <div class="hud-scale">
-        <div class="scale-line"></div>
         <span>5,000 km</span>
       </div>
     </div>
+
+    <!-- Mesa Holográfica de Análisis de Análogos Terrestres (Analog Site Analysis Desk) -->
+    <div id="analogSiteDesk" class="analog-site-desk">
+      <div class="desk-header">
+        <div class="desk-title-group">
+          <div class="desk-pin-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+          </div>
+          <div class="desk-title-text">
+            <span class="desk-main-title">Analog Site Analysis</span>
+            <span class="desk-site-name" id="deskSiteName">Crater de Caldera Blanca (Lanzarote, España)</span>
+          </div>
+        </div>
+
+        <div class="desk-controls">
+          <button class="desk-btn" id="btnDeskFitArea" title="Ajustar al área del análogo">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+            <span>Fit to Area</span>
+          </button>
+          <button class="desk-btn active" id="btnDeskToggle3D" title="Alternar visualización 3D">
+            <span>🧊 3D (10 km)</span>
+            <span class="chevron">▾</span>
+          </button>
+          <button class="desk-close-btn" id="btnDeskClose" title="Minimizar mesa de análisis">✕</button>
+        </div>
+      </div>
+
+      <div class="desk-body">
+        <!-- Mitad Izquierda: Ortofoto Satelital 2D con Retícula -->
+        <div class="desk-map-pane">
+          <div class="desk-map-viewport" id="deskMapViewport">
+            <canvas id="deskMapCanvas" width="340" height="145"></canvas>
+            <div class="desk-map-reticle">
+              <div class="reticle-circle outer"></div>
+              <div class="reticle-circle inner"></div>
+              <div class="reticle-dot"></div>
+            </div>
+            <div class="desk-map-tools">
+              <button class="desk-tool-icon" id="btnDeskMapLayers" title="Capas satélite">▦</button>
+              <button class="desk-tool-icon" id="btnDeskMapInfo" title="Info satelital">ⓘ</button>
+              <div class="desk-zoom-group">
+                <button class="desk-tool-icon" id="btnDeskZoomIn">+</button>
+                <button class="desk-tool-icon" id="btnDeskZoomOut">−</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mitad Derecha: Relieve DEM 3D & Telemetría Altimétrica -->
+        <div class="desk-dem-pane">
+          <div class="desk-dem-header">
+            <span class="desk-dem-badge">3D DEM (IGN PNOA-LiDAR)</span>
+          </div>
+          <div class="desk-dem-content">
+            <div class="desk-dem-canvas-box">
+              <canvas id="deskDEMCanvas" width="190" height="122"></canvas>
+            </div>
+            <div class="desk-dem-stats">
+              <div class="desk-stat-similarity">
+                <span class="stat-sim-label" id="deskSimLabel">Similarity (vs Mars)</span>
+                <span class="stat-sim-val" id="deskSimVal">68.5%</span>
+              </div>
+              <div class="desk-stat-row">
+                <span class="s-label">Elevation:</span>
+                <span class="s-val" id="deskElevVal">261 – 265 m</span>
+              </div>
+              <div class="desk-stat-row">
+                <span class="s-label">Slope (avg.):</span>
+                <span class="s-val" id="deskSlopeVal">1.3°</span>
+              </div>
+              <div class="desk-stat-row">
+                <span class="s-label">Cavities / Tubes:</span>
+                <span class="s-val" id="deskCavitiesVal">IGN MDT05</span>
+              </div>
+              <div class="desk-stat-row">
+                <span class="s-label">Pearson (R):</span>
+                <span class="s-val" id="deskPearsonVal">0.939</span>
+              </div>
+            </div>
+            <div class="desk-elev-legend">
+              <span class="legend-unit">Elev. (m)</span>
+              <div class="legend-scale-bar"></div>
+              <div class="legend-labels">
+                <span>320</span>
+                <span>300</span>
+                <span>280</span>
+                <span>260</span>
+                <span>240</span>
+                <span>220</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Píldora de restauración cuando la mesa está minimizada -->
+    <button id="btnRestoreDesk" class="desk-restore-pill hidden" title="Mostrar Mesa de Análisis de Análogos">
+      <span class="desk-pill-dot"></span>
+      <span id="deskPillTitle">Analog Site Analysis: Caldera Blanca (68.5%)</span>
+      <span class="desk-pill-arrow">▲</span>
+    </button>
   </main>
 
 
