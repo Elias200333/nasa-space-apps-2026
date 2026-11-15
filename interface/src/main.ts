@@ -8,6 +8,7 @@ import { sound } from './audio';
 import { CelestialBody, AnalogSite, PlanetaryLayerMode, AnalogCandidateItem } from './types';
 import { formatPlanetaryCoordinates, VERIFIED_PLANETARY_POIS } from './nasa/trekProviders';
 import { XRDetector } from './xr/xrDetector';
+import { initRobotMission } from './robot/robotMission';
 
 // Estado global de la aplicación
 let activeBody: CelestialBody = 'Earth';
@@ -317,6 +318,9 @@ if (document.readyState === 'loading') {
  */
 function init2DMapManager() {
   map2DManager = new AnalogMap2DManager('map2dContainer');
+
+  // Puente con la unidad terrestre (Go2): botón «Mapear zona subterránea» del panel «Entorno 3D»
+  initRobotMission();
 
   // Callback cuando el usuario pulsa "Regresar a Órbita Espacial" desde el mapa 2D
   map2DManager.setOnReturnToOrbit((lat, lon) => {

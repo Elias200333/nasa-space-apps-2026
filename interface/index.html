@@ -255,8 +255,10 @@
 
       <div class="vr-welcome-desc">
         Has abierto TERRAIN-X con un visor de Realidad Mixta (WebXR).
-        Al pulsar <strong>EMPEZAR</strong>, se activará el modo <strong>Passthrough</strong> para ver tu habitación real con
-        el holograma interactivo de la Tierra, Marte y la Luna, pedestal de telemetría y paneles de mando cercanos y accesibles.
+        Al pulsar <strong>EMPEZAR</strong>, se activará el modo <strong>Passthrough</strong> para ver tu habitación real
+        con
+        el holograma interactivo de la Tierra, Marte y la Luna, pedestal de telemetría y paneles de mando cercanos y
+        accesibles.
       </div>
 
       <div class="vr-welcome-actions">
@@ -372,7 +374,8 @@
           <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
           <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
           <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
-          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
+          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15">
+          </path>
         </svg>
         <span class="tool-label">Move</span>
       </button>
@@ -398,7 +401,8 @@
 
       <button class="tool-strip-btn" id="btnResetEarth" title="Ajustar y encuadrar perspectiva global">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
+          </path>
         </svg>
         <span class="tool-label">Fit</span>
       </button>
@@ -450,10 +454,12 @@
       </div>
 
       <div class="layer-selector-footer">
-        <span id="layerInfoNotice" class="layer-info-notice">Global terrain, elevation and exploration layers (30 m)</span>
+        <span id="layerInfoNotice" class="layer-info-notice">Global terrain, elevation and exploration layers (30
+          m)</span>
       </div>
       <svg class="cartography-callout-line" width="60" height="50" viewBox="0 0 60 50">
-        <path d="M 50 10 L 15 35 L -10 45" fill="none" stroke="rgba(34, 211, 238, 0.65)" stroke-width="1.8" stroke-dasharray="3 3" />
+        <path d="M 50 10 L 15 35 L -10 45" fill="none" stroke="rgba(34, 211, 238, 0.65)" stroke-width="1.8"
+          stroke-dasharray="3 3" />
         <circle cx="50" cy="10" r="3" fill="#22d3ee" />
       </svg>
     </div>
@@ -719,7 +725,8 @@
         <div class="desk-controls">
           <button class="desk-btn" id="btnDeskFitArea" title="Ajustar al área del análogo">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
+              </path>
             </svg>
             <span>Fit to Area</span>
           </button>
@@ -970,6 +977,17 @@
               </svg>
             </button>
           </div>
+        </div>
+
+        <!-- Barra de acciones del panel 3D (aquí añade robotMission.ts «Mapear zona subterránea») -->
+        <div class="terrain3d-toolbar" id="terrain3DToolbar">
+          <button id="btnRegen3D" class="drawer-action-btn regen-btn"
+            title="Recalcular modelo 3D con generate_terrain_3D.py">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+            </svg>
+            <span>Recalcular</span>
+          </button>
         </div>
 
         <!-- Matriz Limpia 2x2 de Estadísticas Topográficas Clave -->

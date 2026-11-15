@@ -10,12 +10,11 @@
 1. [Overview & Scientific Rationale](#overview--scientific-rationale)
 2. [Directory Structure](#directory-structure)
 3. [Prerequisites & Installation (Windows, Linux, macOS)](#prerequisites--installation)
-4. [Live Probing of Official NASA/Planetary APIs](#live-probing-of-official-apis)
+4. [Interactive Planetary Analog Analyzer (`main.py`)](#interactive-planetary-analog-analyzer-mainpy)
 5. [CLI Usage (Ranking, Sensitivity & Inspection)](#cli-usage)
 6. [REST API Execution (Contracts 1.0)](#rest-api-execution)
-7. [Running the Automated Test Suite](#running-the-automated-test-suite)
-8. [Geospatial & Planetary Science Concepts](#geospatial--planetary-science-concepts)
-9. [Troubleshooting & FAQ](#troubleshooting--faq)
+7. [Geospatial & Planetary Science Concepts](#geospatial--planetary-science-concepts)
+8. [Troubleshooting & FAQ](#troubleshooting--faq)
 
 ---
 
@@ -39,8 +38,10 @@ nasa-space-apps-2026/data/
 ├── README.md                      <- Complete installation and user manual
 ├── requirements.txt               <- Pinned Python dependencies
 ├── pyproject.toml                 <- Modern packaging specification
-├── probe_sources.py               <- Real-time HTTP API auditor
-├── probe_results.json             <- Cached API audit output
+├── main.py                        <- Interactive planetary analog analyzer
+├── server.py                      <- Microservice and 3D visualization server
+├── generate_terrain_3d.py         <- 3D terrain reconstruction engine
+├── analyze_analog.py              <- Analog comparison script
 ├── docs/
 │   ├── SOURCES_STATUS.md          <- Official sources audit & geodetic caveats
 │   ├── SAMPLE_RESULTS.md          <- Benchmark rankings & sensitivity report
@@ -66,10 +67,8 @@ nasa-space-apps-2026/data/
 │       └── features/
 │           ├── catalog.py         <- 5 candidate Earth analog sites & controls
 │           └── extractors.py      <- Gaussian normalization & feature extraction
-├── fixtures/
-│   └── synthetic_dem.py           <- Deterministic flat, tilted & nodata test rasters
-├── cache/                         <- Local disk cache for API queries
-└── tests/                         <- Pytest test suite (18 unit/integration tests)
+├── output_3d/                     <- Generated 3D terrain models and atlases
+└── cache/                         <- Local disk cache for API queries
 ```
 
 ---
@@ -81,7 +80,7 @@ Python Version: **Python 3.10 to 3.14+**.
 
 ### Step 1: Open Terminal in the `data` directory
 ```bash
-cd "c:\Users\Usuario\OneDrive\Escritorio\github\nasa-space-apps-2026\data"
+cd "c:\Users\Usuario\Desktop\github\nasa-space-apps-2026\data"
 ```
 
 ### Step 2: Install Dependencies
@@ -95,20 +94,7 @@ python3 -m pip install -r requirements.txt
 
 ---
 
-## 4. Live Probing of Official NASA/Planetary APIs
-
-Verify live network connectivity to all official NASA, PDS, ODE, and WMTS services:
-
-```bash
-python probe_sources.py
-```
-
-Inspect the generated provenance audit report in:
-* [`docs/SOURCES_STATUS.md`](docs/SOURCES_STATUS.md)
-
----
-
-## 5. Interactive Planetary Analog Analyzer (`main.py`)
+## 4. Interactive Planetary Analog Analyzer (`main.py`)
 
 Run the interactive multi-domain scientific analyzer. Before computing, it asks you to specify whether the analysis is for **the Moon** or for **Mars**, fetches real telemetry from NASA CMR & NASA POWER, and outputs a complete scientific breakdown:
 
@@ -123,7 +109,7 @@ python main.py --body mars
 
 ---
 
-## 6. CLI Usage
+## 5. CLI Usage
 
 The command-line tool allows instant ranking and sensitivity inspection.
 
@@ -170,40 +156,7 @@ Interactive Swagger API documentation is available at `http://127.0.0.1:8000/doc
 
 ---
 
-## 7. Running the Automated Test Suite
-
-Execute the 18 automated tests covering geomorphometry, planetary guards, scoring, caching, and API contracts:
-
-```bash
-python -m pytest -v
-```
-
-Expected output:
-```text
-tests/test_api.py::test_api_list_sources PASSED
-tests/test_api.py::test_api_list_mission_profiles PASSED
-tests/test_api.py::test_api_get_site PASSED
-tests/test_api.py::test_api_post_assessment PASSED
-tests/test_cache.py::test_reproducible_disk_cache PASSED
-tests/test_dem.py::test_flat_raster_slope_is_zero PASSED
-tests/test_dem.py::test_tilted_plane_known_slope PASSED
-tests/test_dem.py::test_nodata_raster_rejection PASSED
-tests/test_dem.py::test_dem_statistics_structure PASSED
-tests/test_planetary.py::test_planetary_crs_guards_rejection PASSED
-tests/test_planetary.py::test_valid_crs_acceptance PASSED
-tests/test_planetary.py::test_cross_body_spatial_overlay_rejected PASSED
-tests/test_planetary.py::test_planetary_circumference PASSED
-tests/test_scorer.py::test_missing_essential_feature_triggers_insufficient_evidence PASSED
-tests/test_scorer.py::test_scorer_reproducibility PASSED
-tests/test_validation.py::test_positive_vs_negative_control_discrimination PASSED
-tests/test_validation.py::test_weight_sensitivity_stability PASSED
-tests/test_validation.py::test_provenance_manifest_completeness PASSED
-======================= 18 passed in 5.0s =======================
-```
-
----
-
-## 8. Geospatial & Planetary Science Concepts
+## 7. Geospatial & Planetary Science Concepts
 
 For an in-depth, plain-English tutorial explaining:
 * Digital Elevation Models (DEMs) and Rasters

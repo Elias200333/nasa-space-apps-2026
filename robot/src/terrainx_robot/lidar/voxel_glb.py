@@ -104,13 +104,6 @@ def atlas_png() -> bytes:
     return _png(atlas_rgb())
 
 
-def tile_uv_box(band: int) -> tuple[float, float, float, float]:
-    """(u0, v0, u1, v1) de la cara de esa franja en la textura (para pruebas y lectores)."""
-    r, c = divmod(int(band), COLS)
-    x0, y0 = c * CELL + PAD, r * CELL + PAD
-    return x0 / ATLAS_W, y0 / ATLAS_H, (x0 + TILE) / ATLAS_W, (y0 + TILE) / ATLAS_H
-
-
 def robot_to_gltf(xyz: np.ndarray) -> np.ndarray:
     """(x, y, z) del robot (Z arriba) → (x, z, −y) de glTF (Y arriba). Giro, sin espejo."""
     xyz = np.asarray(xyz)
@@ -199,21 +192,3 @@ def build_voxel_glb(voxels: np.ndarray, resolution: float, *, name: str = "terra
             + struct.pack("<II", len(js), _GLB_JSON) + js
             + struct.pack("<II", len(body), _GLB_BIN) + bytes(body))
     return VoxelGlb(data, n_voxels, n_faces, int(pos.shape[0]), int(tri.shape[0] // 3), res)
-
-
-def read_glb(data: bytes) -> tuple[dict, bytes]:
-    """(JSON, BIN) de un GLB. Para pruebas y comprobaciones; ValueError si no es un GLB válido."""
-    if len(data) < 20 or data[:4] != _GLB_MAGIC:
-        raise ValueError("no es un GLB")
-    version, total = struct.unpack_from("<II", data, 4)
-    if version != 2 or total != len(data):
-        raise ValueError(f"cabecera GLB inválida (versión {version}, longitud {total} ≠ {len(data)})")
-    jlen, jtype = struct.unpack_from("<II", data, 12)
-    if jtype != _GLB_JSON:
-        raise ValueError("el primer bloque no es JSON")
-    gltf = json.loads(data[20:20 + jlen].decode("utf-8"))
-    off = 20 + jlen
-    blen, btype = struct.unpack_from("<II", data, off)
-    if btype != _GLB_BIN:
-        raise ValueError("el segundo bloque no es BIN")
-    return gltf, data[off + 8:off + 8 + blen]
