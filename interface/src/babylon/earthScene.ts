@@ -1,7 +1,7 @@
 import * as BABYLON from 'babylonjs';
 import { TargetPin } from './targetPin';
 import { DeepSpaceEnvironment } from './spaceBackground';
-import { CelestialBody, PlanetaryLayerMode, PlanetaryPOI } from '../types';
+import { CelestialBody, PlanetaryLayerMode, PlanetaryPOI, AnalogSite } from '../types';
 import { PLANETARY_DETAILS, VERIFIED_PLANETARY_POIS } from '../nasa/trekProviders';
 import { XRSpatialUIManager } from '../xr/xrSpatialUI';
 
@@ -14,7 +14,11 @@ export class EarthSceneManager {
   private cloudsMesh!: BABYLON.Mesh;
   private targetPin!: TargetPin;
   private spaceEnv!: DeepSpaceEnvironment;
-  private earthRadius = 2.8;
+  private earthRadius = 2.45;
+
+  // Pedestal holográfico en la base
+  private pedestalRings: BABYLON.Mesh[] = [];
+  public onPlanetClicked?: (planet: CelestialBody) => void;
 
   // Estado planetario activo
   private currentPlanet: CelestialBody = 'Earth';
@@ -45,6 +49,7 @@ export class EarthSceneManager {
   private lastPointerY = 0;
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
   private sunDirection = new BABYLON.Vector3(-1.4, 0.15, 0.75).normalize();
+  private xrControllersSetup = false;
 
   public onCoordinatesChange?: (lat: number, lon: number, body?: CelestialBody) => void;
   public onAtmosphericEntry?: (lat: number, lon: number) => void;
@@ -79,18 +84,18 @@ export class EarthSceneManager {
     // 2. Nodo raíz que sostiene la Tierra/planeta y permite rotar el planeta directamente
     this.earthRoot = new BABYLON.TransformNode('earthRoot', this.scene);
 
-    // 3. Cámara fija en posición frontal para ver la mitad de día y la mitad de noche
+    // 3. Cámara frontal con perspectiva espaciosa y despejada
     this.camera = new BABYLON.ArcRotateCamera(
       'earthCamera',
       -Math.PI / 2,
       Math.PI / 2,
-      8.5,
-      BABYLON.Vector3.Zero(),
+      10.2,
+      new BABYLON.Vector3(0, -0.65, 0),
       this.scene
     );
     this.camera.minZ = 0.05; // Evita cualquier corte del plano cercano
-    this.camera.lowerRadiusLimit = 3.60; // Cota segura sin atravesar la superficie
-    this.camera.upperRadiusLimit = 16.0;
+    this.camera.lowerRadiusLimit = 3.20; // Cota segura sin atravesar la superficie
+    this.camera.upperRadiusLimit = 18.0;
     this.camera.wheelPrecision = 30;
     this.camera.inertia = 0.88;
 
@@ -123,10 +128,13 @@ export class EarthSceneManager {
     // 7. Balizas 3D para puntos de interés científicos de Marte y la Luna
     this.setupPlanetaryPOIMarkers();
 
-    // 8. Configuración de controles de ratón para rotar el planeta y temporizador de 30s
+    // 8. Pedestal holográfico en la base
+    this.buildHolographicPedestal();
+
+    // 9. Configuración de controles de ratón para rotar el planeta y temporizador de 30s
     this.setupPlanetRotationControls(canvas);
 
-    // 9. Bucle de renderizado
+    // 10. Bucle de renderizado
     this.setupRenderLoop();
 
     window.addEventListener('resize', () => {
@@ -300,9 +308,9 @@ export class EarthSceneManager {
    * Instancia las balizas tridimensionales en las coordenadas verificadas de accidentes geográficos
    */
   private setupPlanetaryPOIMarkers() {
-    // Marcadores para Marte (radio escalado 2.65)
+    // Marcadores para Marte
     VERIFIED_PLANETARY_POIS.Mars.forEach(poi => {
-      const pin = new TargetPin(this.scene, 2.65);
+      const pin = new TargetPin(this.scene, this.earthRadius);
       pin.getRoot().parent = this.earthRoot;
       pin.setColor(new BABYLON.Color3(0.98, 0.45, 0.09)); // Naranja marciano
       pin.setCoordinates(poi.latitude, poi.longitude);
@@ -310,14 +318,50 @@ export class EarthSceneManager {
       this.marsPOIPins.push({ poi, pin });
     });
 
-    // Marcadores para la Luna (radio escalado 2.50)
+    // Marcadores para la Luna
     VERIFIED_PLANETARY_POIS.Moon.forEach(poi => {
-      const pin = new TargetPin(this.scene, 2.50);
+      const pin = new TargetPin(this.scene, this.earthRadius);
       pin.getRoot().parent = this.earthRoot;
       pin.setColor(new BABYLON.Color3(0.75, 0.85, 0.98)); // Plata/azul lunar
       pin.setCoordinates(poi.latitude, poi.longitude);
       pin.setVisible(false);
       this.moonPOIPins.push({ poi, pin });
+    });
+  }
+
+  /**
+   * Pedestal holográfico en la base con anillos concéntricos cian NASA.
+   */
+  public setPedestalVisible(visible: boolean) {
+    this.pedestalRings.forEach(r => r.setEnabled(visible));
+  }
+
+  private buildHolographicPedestal() {
+    // Anillos concéntricos holográficos del pedestal en el suelo bajo la Tierra
+    const ringRadii = [2.2, 2.65, 3.05];
+    const ringAlphas = [0.70, 0.45, 0.25];
+    ringRadii.forEach((r, idx) => {
+      const pRing = BABYLON.MeshBuilder.CreateTorus(`scenePedestalRing_${idx}`, {
+        diameter: r * 2,
+        thickness: 0.016,
+        tessellation: 64
+      }, this.scene);
+      pRing.position = new BABYLON.Vector3(0, -2.75, 0);
+      pRing.rotation.x = Math.PI / 2;
+
+      const pMat = new BABYLON.StandardMaterial(`scenePedestalMat_${idx}`, this.scene);
+      pMat.emissiveColor = new BABYLON.Color3(0.13, 0.83, 0.94);
+      pMat.diffuseColor = new BABYLON.Color3(0.13, 0.83, 0.94);
+      pMat.alpha = ringAlphas[idx];
+      pMat.disableLighting = true;
+      pRing.material = pMat;
+      this.pedestalRings.push(pRing);
+    });
+
+    this.scene.onBeforeRenderObservable.add(() => {
+      this.pedestalRings.forEach((ring, i) => {
+        ring.rotation.z += (i % 2 === 0 ? 1 : -1) * 0.0006;
+      });
     });
   }
 
@@ -385,6 +429,17 @@ export class EarthSceneManager {
       }
     });
 
+    canvas.addEventListener('pointermove', (e) => {
+      if (!this.isPointerDown) {
+        const pick = this.scene.pick(e.clientX, e.clientY);
+        if (pick && pick.hit && pick.pickedMesh === this.earthMesh) {
+          canvas.style.cursor = 'pointer';
+        } else {
+          canvas.style.cursor = 'grab';
+        }
+      }
+    });
+
     window.addEventListener('pointermove', (e) => {
       if (!this.isPointerDown) return;
 
@@ -413,8 +468,20 @@ export class EarthSceneManager {
       this.activeDragMode = 'none';
       canvas.style.cursor = 'grab';
 
-      // Detección de clic (sin arrastre apreciable) sobre balizas de accidentes geográficos
       const dragDist = Math.hypot(e.clientX - startPointerX, e.clientY - startPointerY);
+
+      // Clic sobre cuerpo central
+      if (dragDist < 6) {
+        const pick = this.scene.pick(e.clientX, e.clientY);
+        if (pick && pick.hit && pick.pickedMesh) {
+          if (pick.pickedMesh === this.earthMesh) {
+            if (this.onPlanetClicked) this.onPlanetClicked(this.currentPlanet);
+            return;
+          }
+        }
+      }
+
+      // Detección de clic (sin arrastre apreciable) sobre balizas de accidentes geográficos
       if (dragDist < 6 && this.currentLayerMode === 'exploration') {
         const activePOIs = this.currentPlanet === 'Mars' ? this.marsPOIPins : (this.currentPlanet === 'Moon' ? this.moonPOIPins : []);
         for (const item of activePOIs) {
@@ -471,6 +538,16 @@ export class EarthSceneManager {
         if (lon < -180) lon += 360;
 
         this.onCoordinatesChange(Number(lat.toFixed(4)), Number(lon.toFixed(4)), this.currentPlanet);
+      }
+
+      // Si la interfaz holográfica WebXR está activa, actualizar el seguimiento de posición a la cámara (rotación fija absoluta)
+      if (this.isXRActive && this.xrSpatialUI && this.xrSpatialUI.isVisible()) {
+        const xrCam = this.xrExperience?.baseExperience?.camera;
+        if (xrCam) {
+          this.xrSpatialUI.updateFollowCamera(xrCam.globalPosition);
+        } else {
+          this.xrSpatialUI.updateFollowCamera(this.camera.position);
+        }
       }
 
       this.scene.render();
@@ -567,7 +644,7 @@ export class EarthSceneManager {
     const animRadius = new BABYLON.Animation('resetCamRad', 'radius', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
     animRadius.setKeys([
       { frame: 0, value: this.camera.radius },
-      { frame: 25, value: 8.5 }
+      { frame: 25, value: 10.2 }
     ]);
     const animAlpha = new BABYLON.Animation('resetCamAlpha', 'alpha', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
     animAlpha.setKeys([
@@ -579,14 +656,20 @@ export class EarthSceneManager {
       { frame: 0, value: this.camera.beta },
       { frame: 25, value: Math.PI / 2 }
     ]);
+    const animTarget = new BABYLON.Animation('resetCamTarget', 'target', 60, BABYLON.Animation.ANIMATIONTYPE_VECTOR3, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+    animTarget.setKeys([
+      { frame: 0, value: this.camera.target },
+      { frame: 25, value: new BABYLON.Vector3(0, -0.65, 0) }
+    ]);
 
     const easing = new BABYLON.CubicEase();
     easing.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
     animRadius.setEasingFunction(easing);
     animAlpha.setEasingFunction(easing);
     animBeta.setEasingFunction(easing);
+    animTarget.setEasingFunction(easing);
 
-    this.scene.beginDirectAnimation(this.camera, [animRadius, animAlpha, animBeta], 0, 25, false);
+    this.scene.beginDirectAnimation(this.camera, [animRadius, animAlpha, animBeta, animTarget], 0, 25, false);
   }
 
   public flyToPOI(lat: number, lon: number) {
@@ -810,7 +893,7 @@ export class EarthSceneManager {
     const animRadius = new BABYLON.Animation('ascendRad', 'radius', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
     animRadius.setKeys([
       { frame: 0, value: startRadius },
-      { frame: totalFrames, value: 8.5 }
+      { frame: totalFrames, value: 9.2 }
     ]);
 
     const easing = new BABYLON.CubicEase();
@@ -832,6 +915,15 @@ export class EarthSceneManager {
 
   public resetToGlobalView() {
     this.ascendToOrbit(1000);
+  }
+
+  public toggleAutoRotate(): boolean {
+    this.autoRotate = !this.autoRotate;
+    return this.autoRotate;
+  }
+
+  public getAutoRotate(): boolean {
+    return this.autoRotate;
   }
 
   public zoomIn() {
@@ -938,7 +1030,12 @@ export class EarthSceneManager {
   public async enterXREnvironment(onPlanetSwitchExternal?: (planet: CelestialBody) => void) {
     this.isXRActive = true;
 
-    // 1. Instanciar o reactivar la interfaz espacial flotante
+    // 1. Desactivar el fondo del espacio profundo para Realidad Mixta (Passthrough real)
+    this.spaceEnv.setEnabled(false);
+    this.setPedestalVisible(false);
+    this.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+
+    // 2. Instanciar o reactivar la interfaz espacial flotante
     if (!this.xrSpatialUI) {
       this.xrSpatialUI = new XRSpatialUIManager(this.scene, {
         onPlanetSwitch: (planet) => {
@@ -954,6 +1051,12 @@ export class EarthSceneManager {
         onCompareWithEarth: (target) => {
           this.switchPlanet(target, this.currentLayerMode);
           if (onPlanetSwitchExternal) onPlanetSwitchExternal(target);
+        },
+        onAnalogSiteSelect: (site) => {
+          this.orientToCoordinates(site.coordinates.latitude, site.coordinates.longitude);
+          if (this.onCoordinatesChange) {
+            this.onCoordinatesChange(site.coordinates.latitude, site.coordinates.longitude, this.currentPlanet);
+          }
         }
       });
       this.xrSpatialUI.buildSpatialInterface();
@@ -961,31 +1064,235 @@ export class EarthSceneManager {
       this.xrSpatialUI.setVisible(true);
     }
 
+    this.xrSpatialUI.setXRMode(true);
     this.xrSpatialUI.setActivePlanet(this.currentPlanet);
     this.xrSpatialUI.setActiveLayerMode(this.currentLayerMode);
 
-    // 2. Colocar la cámara en la perspectiva holográfica óptima de mando
-    this.camera.radius = 7.5;
+    // 3. Colocar la cámara en la perspectiva holográfica óptima de mando (más cercana a los paneles)
+    this.camera.radius = 6.2;
     this.camera.beta = Math.PI / 2.05;
     this.camera.alpha = -Math.PI / 2;
-    this.camera.target = new BABYLON.Vector3(0, 0.35, 0);
+    this.camera.target = new BABYLON.Vector3(0, 0.2, 0);
 
-    // 3. Iniciar sesión WebXR nativa si el dispositivo es un visor VR físico
+    // 4. Iniciar sesión WebXR nativa en Realidad Mixta (immersive-ar con passthrough o fallback immersive-vr)
     try {
+      let sessionMode: 'immersive-ar' | 'immersive-vr' = 'immersive-ar';
+      try {
+        const isARSupported = await BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-ar');
+        sessionMode = isARSupported ? 'immersive-ar' : 'immersive-vr';
+      } catch {
+        sessionMode = 'immersive-vr';
+      }
+
       if (!this.xrExperience && typeof this.scene.createDefaultXRExperienceAsync === 'function') {
         this.xrExperience = await this.scene.createDefaultXRExperienceAsync({
-          disableTeleportation: true
+          disableTeleportation: true,
+          uiOptions: {
+            sessionMode: sessionMode
+          },
+          optionalFeatures: true
         });
+
         if (this.xrExperience?.baseExperience) {
-          const isSupported = await BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-vr');
+          // Habilitar Background Remover si está disponible para asegurar transparencia de passthrough
+          try {
+            this.xrExperience.baseExperience.featuresManager.enableFeature(
+              BABYLON.WebXRFeatureName.BACKGROUND_REMOVER,
+              'latest'
+            );
+          } catch {
+            // Ignorar si no está soportado en este runtime
+          }
+
+          // Listener cuando el usuario sale de la sesión WebXR (ej. botón Oculus / cerrar)
+          this.xrExperience.baseExperience.sessionManager.onXRSessionEnded.add(() => {
+            this.exitXREnvironment();
+            if (typeof document !== 'undefined') {
+              document.body.classList.remove('vr-mode');
+            }
+          });
+
+          const isSupported = await BABYLON.WebXRSessionManager.IsSessionSupportedAsync(sessionMode);
           if (isSupported) {
-            await this.xrExperience.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
+            await this.xrExperience.baseExperience.enterXRAsync(sessionMode, 'local-floor');
+            this.setupXRControllerInteractions();
+            if (this.xrExperience.baseExperience.camera) {
+              const xrCam = this.xrExperience.baseExperience.camera;
+              xrCam.setTransformationFromNonVRCamera(this.camera);
+              const initCamPos = xrCam.globalPosition;
+              const fwd = xrCam.getForwardRay().direction;
+              // Posicionar el planeta alejado a 5.2m de distancia en el horizonte
+              this.earthRoot.position = new BABYLON.Vector3(
+                initCamPos.x + fwd.x * 5.2,
+                initCamPos.y,
+                initCamPos.z + fwd.z * 5.2
+              );
+              this.xrSpatialUI.getPedestalRootNode().position.copyFrom(this.earthRoot.position);
+
+              // Fijar la orientación absoluta inicial de los paneles para que miren al frente
+              const initialYaw = Math.atan2(fwd.x, fwd.z);
+              this.xrSpatialUI.setInitialOrientation(initialYaw);
+              this.xrSpatialUI.updateFollowCamera(initCamPos);
+            }
+          }
+        }
+      } else if (this.xrExperience?.baseExperience) {
+        const isSupported = await BABYLON.WebXRSessionManager.IsSessionSupportedAsync(sessionMode);
+        if (isSupported) {
+          await this.xrExperience.baseExperience.enterXRAsync(sessionMode, 'local-floor');
+          this.setupXRControllerInteractions();
+          if (this.xrExperience.baseExperience.camera) {
+            const xrCam = this.xrExperience.baseExperience.camera;
+            xrCam.setTransformationFromNonVRCamera(this.camera);
+            const initCamPos = xrCam.globalPosition;
+            const fwd = xrCam.getForwardRay().direction;
+            // Posicionar el planeta alejado a 5.2m de distancia en el horizonte
+            this.earthRoot.position = new BABYLON.Vector3(
+              initCamPos.x + fwd.x * 5.2,
+              initCamPos.y,
+              initCamPos.z + fwd.z * 5.2
+            );
+            this.xrSpatialUI.getPedestalRootNode().position.copyFrom(this.earthRoot.position);
+
+            const initialYaw = Math.atan2(fwd.x, fwd.z);
+            this.xrSpatialUI.setInitialOrientation(initialYaw);
+            this.xrSpatialUI.updateFollowCamera(initCamPos);
           }
         }
       }
     } catch (err) {
       console.info('Modo WebXR nativo no iniciado, ejecutando simulador espacial:', err);
     }
+  }
+
+  /**
+   * Configura las interacciones con los mandos de Realidad Virtual / Mixta:
+   * - Mando Izquierdo: click/gatillo sostenido sobre el planeta para rotarlo sobre su eje (continentes giran como con click izquierdo del ratón).
+   * - Mando Derecho: click secundario (Grip lateral / botón B) para orbitar la cámara (como con click derecho del ratón).
+   * - Thumbsticks analógicos izquierdo y derecho para rotación suave del planeta y de la cámara.
+   */
+  private setupXRControllerInteractions() {
+    if (!this.xrExperience?.input || this.xrControllersSetup) return;
+    this.xrControllersSetup = true;
+
+    const setupController = (controller: BABYLON.WebXRInputSource) => {
+      controller.onMotionControllerInitObservable.add((motionController) => {
+        const isLeft = controller.inputSource.handedness === 'left';
+        const isRight = controller.inputSource.handedness === 'right';
+
+        // 1. Thumbstick analógico
+        const thumbstick = motionController.getComponentOfType(BABYLON.WebXRControllerComponent.THUMBSTICK_TYPE);
+        if (thumbstick) {
+          thumbstick.onAxisValueChangedObservable.add((axes) => {
+            if (isLeft) {
+              // Mando izquierdo: girar el planeta sobre su propio eje (click izquierdo)
+              if (Math.abs(axes.x) > 0.08 || Math.abs(axes.y) > 0.08) {
+                this.earthRoot.rotation.y += axes.x * 0.035;
+                const newRotX = this.earthRoot.rotation.x + axes.y * 0.025;
+                this.earthRoot.rotation.x = Math.max(-Math.PI / 3.5, Math.min(Math.PI / 3.5, newRotX));
+                this.autoRotate = false;
+              }
+            } else if (isRight) {
+              // Mando derecho: girar cámara / órbita alrededor del planeta (click derecho)
+              if (Math.abs(axes.x) > 0.08 || Math.abs(axes.y) > 0.08) {
+                this.camera.alpha -= axes.x * 0.035;
+                this.camera.beta = Math.max(0.1, Math.min(Math.PI - 0.1, this.camera.beta - axes.y * 0.025));
+              }
+            }
+          });
+        }
+
+        // 2. Botones de disparo y agarre
+        const trigger = motionController.getComponentOfType(BABYLON.WebXRControllerComponent.TRIGGER_TYPE);
+        const squeeze = motionController.getComponentOfType(BABYLON.WebXRControllerComponent.SQUEEZE_TYPE);
+        const bButton = motionController.getComponent('b-button');
+        const aButton = motionController.getComponent('a-button');
+        const yButton = motionController.getComponent('y-button');
+        const xButton = motionController.getComponent('x-button');
+
+        let isLeftDraggingPlanet = false;
+        let isRightDraggingCamera = false;
+        const lastRayDir = new BABYLON.Vector3();
+
+        // Mando izquierdo: mantener pulsado sobre el planeta para rotarlo
+        if (isLeft) {
+          const bindLeftHold = (comp: any) => {
+            if (!comp) return;
+            comp.onButtonStateChangedObservable.add((c: any) => {
+              if (c.pressed) {
+                const ray = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero());
+                controller.getWorldPointerRayToRef(ray);
+                const pick = this.scene.pickWithRay(ray, (m) => {
+                  return m === this.earthMesh || m === this.cloudsMesh;
+                });
+                if (pick && pick.hit) {
+                  isLeftDraggingPlanet = true;
+                  this.autoRotate = false;
+                  lastRayDir.copyFrom(ray.direction);
+                }
+              } else {
+                isLeftDraggingPlanet = false;
+              }
+            });
+          };
+
+          if (trigger) bindLeftHold(trigger);
+          if (squeeze) bindLeftHold(squeeze);
+          if (xButton) bindLeftHold(xButton);
+          if (yButton) bindLeftHold(yButton);
+        }
+
+        // Mando derecho: click derecho (Grip / Squeeze o botón B o gatillo) para orbitar la cámara
+        if (isRight) {
+          const bindRightHold = (comp: any) => {
+            if (!comp) return;
+            comp.onButtonStateChangedObservable.add((c: any) => {
+              if (c.pressed) {
+                isRightDraggingCamera = true;
+                const ray = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero());
+                controller.getWorldPointerRayToRef(ray);
+                lastRayDir.copyFrom(ray.direction);
+              } else {
+                isRightDraggingCamera = false;
+              }
+            });
+          };
+
+          if (squeeze) bindRightHold(squeeze);
+          if (bButton) bindRightHold(bButton);
+          if (aButton) bindRightHold(aButton);
+        }
+
+        // Seguimiento continuo del arrastre por rayo
+        this.scene.onBeforeRenderObservable.add(() => {
+          if (isLeftDraggingPlanet) {
+            const ray = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero());
+            controller.getWorldPointerRayToRef(ray);
+            const deltaX = (ray.direction.x - lastRayDir.x) * 14.0;
+            const deltaY = (ray.direction.y - lastRayDir.y) * 14.0;
+            lastRayDir.copyFrom(ray.direction);
+
+            this.earthRoot.rotation.y += deltaX;
+            const newRotX = this.earthRoot.rotation.x + deltaY;
+            this.earthRoot.rotation.x = Math.max(-Math.PI / 3.5, Math.min(Math.PI / 3.5, newRotX));
+          }
+
+          if (isRightDraggingCamera) {
+            const ray = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero());
+            controller.getWorldPointerRayToRef(ray);
+            const deltaX = (ray.direction.x - lastRayDir.x) * 12.0;
+            const deltaY = (ray.direction.y - lastRayDir.y) * 12.0;
+            lastRayDir.copyFrom(ray.direction);
+
+            this.camera.alpha -= deltaX;
+            this.camera.beta = Math.max(0.1, Math.min(Math.PI - 0.1, this.camera.beta - deltaY));
+          }
+        });
+      });
+    };
+
+    this.xrExperience.input.controllers.forEach(setupController);
+    this.xrExperience.input.onControllerAddedObservable.add(setupController);
   }
 
   private handleXRCameraTool(action: 'orbit' | 'move' | 'zoomIn' | 'zoomOut' | 'fit') {
@@ -1000,10 +1307,10 @@ export class EarthSceneManager {
         this.camera.radius = Math.min(14.0, this.camera.radius + 0.8);
         break;
       case 'fit':
-        this.camera.radius = 7.5;
+        this.camera.radius = 6.2;
         this.camera.beta = Math.PI / 2.05;
         this.camera.alpha = -Math.PI / 2;
-        this.camera.target = new BABYLON.Vector3(0, 0.35, 0);
+        this.camera.target = new BABYLON.Vector3(0, 0.2, 0);
         break;
       case 'move':
         this.autoRotate = false;
@@ -1013,7 +1320,12 @@ export class EarthSceneManager {
 
   public exitXREnvironment() {
     this.isXRActive = false;
+    this.spaceEnv.setEnabled(true);
+    this.setPedestalVisible(true);
+    this.scene.clearColor = new BABYLON.Color4(0.005, 0.01, 0.02, 1.0);
+    this.earthRoot.position.set(0, 0, 0);
     if (this.xrSpatialUI) {
+      this.xrSpatialUI.setXRMode(false);
       this.xrSpatialUI.setVisible(false);
     }
     if (this.xrExperience?.baseExperience) {
@@ -1028,5 +1340,21 @@ export class EarthSceneManager {
 
   public getIsXRActive(): boolean {
     return this.isXRActive;
+  }
+
+  public openXRComparisonStation(target: 'Moon' | 'Mars') {
+    if (this.xrSpatialUI) {
+      this.xrSpatialUI.toggleStation(target, true);
+    }
+  }
+
+  public selectXRAnalogSite(site: AnalogSite) {
+    if (this.xrSpatialUI) {
+      if (site.target_body === 'Moon') {
+        this.xrSpatialUI.selectMoonCandidate(site);
+      } else {
+        this.xrSpatialUI.selectMarsCandidate(site);
+      }
+    }
   }
 }

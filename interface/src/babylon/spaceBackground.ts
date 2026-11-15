@@ -7,6 +7,7 @@ import * as BABYLON from 'babylonjs';
 export class DeepSpaceEnvironment {
   private skyDome: BABYLON.Mesh;
   private starParticles: BABYLON.PointsCloudSystem;
+  private isEnabled = true;
 
   constructor(scene: BABYLON.Scene) {
     // 1. Cúpula estelar de fondo infinito
@@ -39,12 +40,32 @@ export class DeepSpaceEnvironment {
       particle.color = new BABYLON.Color4(brightness, brightness, brightness, 0.95);
     });
 
-    this.starParticles.buildMeshAsync();
+    this.starParticles.buildMeshAsync().then((mesh) => {
+      if (!this.isEnabled && mesh) {
+        mesh.setEnabled(false);
+      }
+    });
 
     // Rotación sutil casi imperceptible de la esfera celeste
     scene.onBeforeRenderObservable.add(() => {
-      this.skyDome.rotation.y += 0.00002;
+      if (this.isEnabled && this.skyDome) {
+        this.skyDome.rotation.y += 0.00002;
+      }
     });
+  }
+
+  /**
+   * Activa o desactiva el fondo del espacio profundo y las estrellas 3D.
+   * En Realidad Mixta (Passthrough), se desactiva para mostrar la habitación real del usuario.
+   */
+  public setEnabled(visible: boolean) {
+    this.isEnabled = visible;
+    if (this.skyDome) {
+      this.skyDome.setEnabled(visible);
+    }
+    if (this.starParticles && this.starParticles.mesh) {
+      this.starParticles.mesh.setEnabled(visible);
+    }
   }
 
   private generateRealisticStarTexture(scene: BABYLON.Scene): BABYLON.DynamicTexture {
