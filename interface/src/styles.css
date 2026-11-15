@@ -1424,7 +1424,8 @@ body {
   width: auto !important;
   max-width: none !important;
   left: 0 !important;
-  right: 380px !important;
+  /* 380 px del panel derecho + 42 px de su pestaña «TOP 10 ANÁLOGOS», que si no tapa el borde */
+  right: 422px !important;
   z-index: 1045 !important;
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.85);
 }
@@ -1433,7 +1434,12 @@ body {
 .candidates-drawer-panel.collapsed ~ #terrain3DPanel.maximized,
 .map2d-wrapper.drawer-collapsed .terrain-3d-drawer-panel.maximized,
 .map2d-wrapper.drawer-collapsed #terrain3DPanel.maximized {
-  right: 0 !important;
+  right: 42px !important;   /* con el panel derecho cerrado su pestaña queda en el borde de la pantalla */
+}
+
+/* Ampliado, la pestaña propia del panel 3D quedaría encima de la del ranking: se usan ⤡ y ✕ */
+.terrain-3d-drawer-panel.maximized .terrain3d-tab-handle {
+  display: none;
 }
 
 /* Pestaña Tirador Flotante al borde derecho del panel izquierdo */
@@ -1508,6 +1514,43 @@ body {
   justify-content: space-between;
   gap: 10px;
   background: rgba(15, 23, 42, 0.5);
+}
+
+/* Cabecera del «Entorno 3D»: título a todo el ancho + ampliar/cerrar; las acciones van en la barra de debajo */
+.drawer-header.terrain3d-header {
+  padding-bottom: 8px;
+  border-bottom: none;
+}
+
+.terrain3d-header .drawer-title-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.terrain3d-header .drawer-actions .drawer-action-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+}
+
+.terrain3d-toolbar {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 0 14px 12px 14px;
+  background: rgba(15, 23, 42, 0.5);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.18);
+}
+
+.terrain3d-toolbar .drawer-action-btn {
+  padding: 8px 12px;
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.terrain3d-toolbar .rm-launch-btn {
+  flex: 1 1 auto;
+  max-width: 320px;
 }
 
 .terrain-3d-stats-grid {
@@ -1647,20 +1690,31 @@ body {
   display: flex;
   background: rgba(15, 23, 42, 0.6);
   border-bottom: 1px solid rgba(51, 65, 85, 0.4);
-  padding: 0 16px;
-  gap: 8px;
+  padding: 0 8px;
+  gap: 2px;
 }
 
 .terrain-tab {
+  flex: 1 1 auto;
+  min-width: 0;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--text-muted);
-  padding: 10px 14px;
-  font-size: 0.78rem;
+  padding: 10px 6px;
+  font-size: 0.74rem;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+/* Ampliado hay sitio de sobra: pestañas a su ancho natural, alineadas a la izquierda */
+.terrain-3d-drawer-panel.maximized .terrain-tab {
+  flex: 0 0 auto;
+  padding: 10px 14px;
 }
 
 .terrain-tab:hover {
@@ -1760,8 +1814,24 @@ body {
 
 .metrics-cards-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* Ampliado: las cuatro métricas en una fila */
+.terrain-3d-drawer-panel.maximized .metrics-cards-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* La tabla de cavidades se desplaza dentro de su recuadro, no la pestaña entera */
+.cavities-table-container {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.cavities-table th,
+.cavities-table td {
+  white-space: nowrap;
 }
 
 .metric-card {
@@ -2936,6 +3006,12 @@ body.vr-mode #targetSiteCard {
   padding: 5px 6px;
 }
 
+/* Los botones de icono no se encogen aunque falte sitio (antes quedaban en cápsulas vacías de 14 px) */
+.drawer-actions .drawer-action-btn,
+.drawer-action-btn svg {
+  flex-shrink: 0;
+}
+
 /* Conmutador Rápido de Vistas (Ranking vs Modelo 3D) */
 .drawer-view-tabs {
   display: flex;
@@ -3013,6 +3089,9 @@ body.vr-mode #targetSiteCard {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* La lista es una columna flex de alto fijo: sin esto el navegador encoge las tarjetas
+     (overflow: hidden les quita el alto mínimo) y corta el nombre por la mitad. */
+  flex-shrink: 0;
 }
 
 .candidate-card:hover {
@@ -3092,6 +3171,20 @@ body.vr-mode #targetSiteCard {
   font-weight: 700;
   color: #f1f5f9;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-site-sector {
+  margin-top: -3px;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card-coords-row {

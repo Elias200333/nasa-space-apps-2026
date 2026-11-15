@@ -83,6 +83,7 @@ export class RobotMissionController {
           <div class="rm-split">
             <canvas class="rm-canvas" id="rmCanvas"></canvas>
             <aside class="rm-side" id="rmSide">
+              <div class="rm-side-scroll" id="rmSideScroll">
               <div id="rmPreviewInfo"></div>
               <div id="rmFusionControls" class="hidden">
                 <label>Nombre de la cueva
@@ -105,6 +106,8 @@ export class RobotMissionController {
                 </div>
               </div>
               <p class="rm-honest" id="rmHonest"></p>
+              </div>
+              <!-- Pie fijo: los botones se ven siempre, aunque el contenido de arriba no quepa -->
               <div class="rm-actions">
                 <button class="rm-btn primary" id="rmAddToMap">Añadir al mapa</button>
                 <button class="rm-btn primary hidden" id="rmIntegrate">Integrar en el mapa 3D</button>
@@ -199,7 +202,9 @@ export class RobotMissionController {
   }
 
   private toastSide(text: string) {
-    this.$('rmHonest').textContent = text;
+    const note = this.$('rmHonest');
+    note.textContent = text;
+    note.scrollIntoView({ block: 'nearest' });
   }
 
   // ------------------------------------------------------------------ 1-2. conexión y misión
@@ -318,13 +323,14 @@ export class RobotMissionController {
         <tr><td>Suelo bajo el punto de partida</td><td>${c.floor_z_local_m == null ? 'no encontrado' : c.floor_z_local_m.toFixed(2) + ' m (estimado)'}</td></tr>
         <tr><td>Escaneo guardado</td><td><code>${scan.id}</code></td></tr>
       </table>`;
+    this.$('rmSideScroll').scrollTop = 0;
     this.$('rmFusionControls').classList.add('hidden');
     this.$('rmAddToMap').classList.toggle('hidden', false);
     this.$('rmIntegrate').classList.add('hidden');
     (this.$('rmAddToMap') as HTMLButtonElement).disabled = !this.terrainUrl();
     this.$('rmDownload').classList.add('hidden');
     this.$('rmVR').classList.add('hidden');
-    this.toastSide('Nube DERIVADA del LiDAR del Go2 (mapa acumulado, sin cierre de bucles). Escala real: un cubo = '
+    this.$('rmHonest').textContent = ('Nube DERIVADA del LiDAR del Go2 (mapa acumulado, sin cierre de bucles). Escala real: un cubo = '
       + `${c.cube_size_m} m. Origen = el robot al empezar; adelante = hacia donde miraba.`);
     FusionView.xrSupported().then((ok) => this.$('rmVR').classList.toggle('hidden', !ok));
   }
@@ -355,7 +361,8 @@ export class RobotMissionController {
       <p class="rm-note">Terreno de «${g.name || 'modelo 3D'}» (centro ${g.center.lat.toFixed(5)}°, ${g.center.lon.toFixed(5)}°,
         cota ${g.center.elev.toFixed(1)} m) y, debajo, la zona subterránea recorrida por el robot. Escala 1:1 en metros
         en los tres ejes (sin exageración vertical).</p>`;
-    this.toastSide(`DEMOSTRACIÓN: el anclaje (posición, rumbo y profundidad) lo declaras tú; el robot no tiene GPS ni
+    this.$('rmSideScroll').scrollTop = 0;
+    this.$('rmHonest').textContent = (`DEMOSTRACIÓN: el anclaje (posición, rumbo y profundidad) lo declaras tú; el robot no tiene GPS ni
       brújula. Terreno: resolución real ~${Math.round(g.spacingM)} m entre puntos (se dibuja interpolado). Subsuelo:
       cubos de ${this.cloud?.cube_size_m ?? 0.05} m del LiDAR (unidad m asumida: comprobar con cinta métrica).`);
   }
@@ -436,9 +443,9 @@ export class RobotMissionController {
   }
 }
 
-/** Añade el botón «Mapear zona subterránea» al panel «Entorno 3D» de la interfaz. */
+/** Añade el botón «Mapear zona subterránea» a la barra de acciones del panel «Entorno 3D». */
 export function initRobotMission() {
-  const actions = document.querySelector('#terrain3DPanel .drawer-actions');
+  const actions = document.getElementById('terrain3DToolbar') || document.querySelector('#terrain3DPanel .drawer-actions');
   if (!actions || document.getElementById('btnMapUnderground')) return;
   const bridge = new RobotBridge();
   const caves = new CaveLayer(bridge);           // marcadores de las cuevas ya integradas
@@ -447,7 +454,7 @@ export function initRobotMission() {
   btn.id = 'btnMapUnderground';
   btn.className = 'drawer-action-btn rm-launch-btn';
   btn.title = 'Conectar con la unidad terrestre (Go2) y mapear la zona subterránea con su LiDAR';
-  btn.innerHTML = html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+  btn.innerHTML = html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M3 18h18M5 18l3-7 4 4 3-5 4 8"/><circle cx="12" cy="7" r="2"/></svg><span>Mapear zona subterránea</span>`;
   btn.onclick = () => {
     controller = controller || new RobotMissionController(bridge, caves);

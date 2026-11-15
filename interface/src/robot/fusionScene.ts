@@ -48,7 +48,8 @@ export class FusionView {
   private placement: Placement = { headingDeg: 0, depthM: 0, offsetE: 0, offsetN: 0 };
   private terrainAlpha = 0.45;
   private zoneM = 60;
-  private onResize = () => this.engine.resize();
+  // Sigue el tamaño del propio lienzo (ventana, panel ampliado, paso de la misión), no solo la ventana
+  private resizeObserver: ResizeObserver;
 
   constructor(canvas: HTMLCanvasElement) {
     this.engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
@@ -65,7 +66,8 @@ export class FusionView {
     light.groundColor = new BABYLON.Color3(0.3, 0.32, 0.38);
     this.scanRoot = new BABYLON.TransformNode('scanRoot', this.scene);
     this.engine.runRenderLoop(() => this.scene.render());
-    window.addEventListener('resize', this.onResize);
+    this.resizeObserver = new ResizeObserver(() => this.engine.resize());
+    this.resizeObserver.observe(canvas);
   }
 
   resize() { this.engine.resize(); }
@@ -317,7 +319,7 @@ export class FusionView {
   }
 
   dispose() {
-    window.removeEventListener('resize', this.onResize);
+    this.resizeObserver.disconnect();
     this.terrainWire?.dispose();
     try { this.xr?.dispose(); } catch { /* nada */ }
     this.engine.stopRenderLoop();

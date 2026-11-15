@@ -798,12 +798,6 @@
             <p class="drawer-subtitle" id="terrain3dSubtitle">Radio: 100 m • IGN PNOA-LiDAR & NASA Trek</p>
           </div>
           <div class="drawer-actions">
-            <button id="btnRegen3D" class="drawer-action-btn regen-btn" title="Recalcular modelo 3D con generate_terrain_3D.py">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-              </svg>
-              <span>Recalcular</span>
-            </button>
             <button id="btnMaximize3DPanel" class="drawer-action-btn expand-btn" title="Ampliar a pantalla completa (respetando panel derecho)">
               <svg id="maximizeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="15 3 21 3 21 9"></polyline>
@@ -819,6 +813,16 @@
               </svg>
             </button>
           </div>
+        </div>
+
+        <!-- Barra de acciones del panel 3D (aquí añade robotMission.ts «Mapear zona subterránea») -->
+        <div class="terrain3d-toolbar" id="terrain3DToolbar">
+          <button id="btnRegen3D" class="drawer-action-btn regen-btn" title="Recalcular modelo 3D con generate_terrain_3D.py">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            <span>Recalcular</span>
+          </button>
         </div>
 
         <!-- Matriz Limpia 2x2 de Estadísticas Topográficas Clave -->

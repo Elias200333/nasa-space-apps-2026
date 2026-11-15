@@ -25,6 +25,7 @@ export class AnalogMap2DManager {
   private currentLat = 29.0380;
   private currentLon = -13.7190;
   private currentRadiusKm = 0.1;
+  private terrainDrawnHidden = false;   // el modelo Plotly se dibujó con el iframe oculto (ver fitTerrainIframe)
 
   // Estado planetario actual del mapa
   private currentBody: CelestialBody = 'Earth';
@@ -696,7 +697,15 @@ export class AnalogMap2DManager {
       const latDir = cand.lat >= 0 ? 'N' : 'S';
       const lonDir = cand.lon >= 0 ? 'E' : 'W';
       const coordsFmt = `${Math.abs(cand.lat).toFixed(4)}° ${latDir}, ${Math.abs(cand.lon).toFixed(4)}° ${lonDir}`;
-      const shortName = cand.name.split('(')[0].trim();
+      // «Sitio — Sector (Facies) (País)»: el sitio va en negrita y el sector debajo, en pequeño;
+      // el país ya sale en su etiqueta y el nombre completo queda en el tooltip.
+      const [sitePart, ...sectorParts] = cand.name.split(' — ');
+      const shortName = sitePart.split('(')[0].trim() || cand.name;
+      let sector = sectorParts.join(' — ').trim();
+      if (cand.country && sector.endsWith(`(${cand.country})`)) {
+        sector = sector.slice(0, -(cand.country.length + 2)).trim();
+      }
+      sector = sector.replace(/\s*\(([^()]*)\)/g, ' · $1').trim();
       const primaryAnalogy = cand.strong_analogies && cand.strong_analogies.length > 0
         ? cand.strong_analogies[0]
         : (cand.pairing || 'Análogo geomorfológico y litológico certificado.');
@@ -708,6 +717,7 @@ export class AnalogMap2DManager {
           <span class="card-score-pill">${cand.score_pct}%</span>
         </div>
         <div class="card-site-name" title="${cand.name}">${shortName}</div>
+        ${sector ? `<div class="card-site-sector" title="${cand.name}">${sector}</div>` : ''}
         <div class="card-coords-row">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -859,6 +869,22 @@ export class AnalogMap2DManager {
     const btnRegen = document.getElementById('btnRegen3D');
     const btnTab = document.getElementById('btnTerrain3DTab');
     const btnMaximize = document.getElementById('btnMaximize3DPanel');
+    const terrainIframe = document.getElementById('terrain3DIframe') as HTMLIFrameElement | null;
+
+    if (terrainIframe) {
+      terrainIframe.addEventListener('load', () => this.fitTerrainIframe(terrainIframe));
+      if (terrainIframe.contentDocument?.readyState === 'complete') this.fitTerrainIframe(terrainIframe);
+      // Plotly mide los textos al dibujar y guarda esas medidas: si el modelo se dibujó oculto (mapa 2D
+      // sin mostrar o en otra pestaña), la leyenda queda recortada aunque luego se redimensione.
+      // En cuanto el iframe se ve, se vuelve a cargar el mismo modelo.
+      new ResizeObserver(() => {
+        if (this.terrainDrawnHidden && terrainIframe.clientWidth > 0 && terrainIframe.clientHeight > 0) {
+          this.terrainDrawnHidden = false;
+          const src = terrainIframe.getAttribute('src');
+          if (src) terrainIframe.src = src;
+        }
+      }).observe(terrainIframe);
+    }
 
     if (btnTab) {
       btnTab.addEventListener('click', () => {
@@ -928,6 +954,43 @@ export class AnalogMap2DManager {
         }
       });
     });
+  }
+
+  /**
+   * Ajuste visual del modelo Plotly (terrain_3d.html) al panel, sin tocar el archivo generado:
+   * - el HTML trae `html, body {height: 100%}` con el margen por defecto de 8 px → barra de scroll;
+   * - la barra de color ocupa todo el alto y su título se monta sobre los iconos de Plotly.
+   * Solo cambia la presentación: los datos del modelo no se tocan.
+   */
+  private fitTerrainIframe(iframe: HTMLIFrameElement) {
+    try {
+      const doc = iframe.contentDocument;
+      const win = iframe.contentWindow as any;
+      if (!doc?.head || !win || !String(win.location.href).includes('terrain_3d')) return;
+      this.terrainDrawnHidden = iframe.clientWidth === 0 || iframe.clientHeight === 0;
+      if (!doc.getElementById('terrainxFit')) {
+        const style = doc.createElement('style');
+        style.id = 'terrainxFit';
+        style.textContent = 'html, body { margin: 0; height: 100%; overflow: hidden; background: #090d16; }';
+        doc.head.appendChild(style);
+      }
+      let tries = 0;
+      const tick = () => {
+        const gd = doc.querySelector('.js-plotly-plot') as any;
+        if (!win.Plotly || !gd?._fullLayout) {
+          if (++tries < 60) setTimeout(tick, 250);
+          return;
+        }
+        const surfaces = (gd.data as any[]).map((t, i) => (t.type === 'surface' && t.showscale !== false ? i : -1)).filter((i) => i >= 0);
+        const done = surfaces.length
+          ? win.Plotly.restyle(gd, { 'colorbar.len': 0.72, 'colorbar.y': 0.46, 'colorbar.thickness': 14, 'colorbar.title.side': 'right' }, surfaces)
+          : Promise.resolve();
+        Promise.resolve(done).then(() => win.Plotly.Plots.resize(gd)).catch(() => { /* el modelo sigue como venía */ });
+      };
+      tick();
+    } catch {
+      /* iframe de otro origen o aún sin documento: se deja como está */
+    }
   }
 
   public toggle3DPanel(show?: boolean) {
