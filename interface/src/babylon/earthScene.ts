@@ -1304,9 +1304,10 @@ export class EarthSceneManager {
       if (fwd.lengthSquared() < 1e-6) fwd.set(0, 0, 1);
       fwd.normalize();
       this.xrStage.position.copyFrom(head);
+      this.xrStage.position.y -= 0.28; // Bajado ergonómicamente para centrar la visualización en las gafas
       this.xrStage.rotation.set(0, Math.atan2(fwd.x, fwd.z), 0);
     } else {
-      this.xrStage.position.set(0, 0, 0);
+      this.xrStage.position.set(0, -0.28, 0);
       this.xrStage.rotation.set(0, 0, 0);
       this.setupDesktopXRCamera();
     }

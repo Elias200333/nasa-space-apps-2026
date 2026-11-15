@@ -1,13 +1,13 @@
 # TERRAIN-X: Informe de Verificación Científica de Análogos Planetarios (Radio 100 m)
 **NASA Space Apps Challenge 2026 — Validación Rigurosa de Análogos para la Luna y Marte**  
-**Fecha de Generación:** `2026-11-15T15:01:56.026609+00:00`  
+**Fecha de Generación:** `2026-11-15T19:28:39.394295+00:00`  
 **Cuerpo Planetario Objetivo:** `EARTH` | **Emparejamiento Orbital:** `Planetary Analog Target (Earth)`
 
 ---
 
 ## 1. Identificación y Parámetros del Sitio Terrestre
-- **Nombre del Sitio:** `Custom AOI (28.65000°, -13.91000°)` (ID: `ES_FUERTEVENTURA_ARENA`)
-- **Coordenadas Centrales GPS:** `28.65000° N, -13.91000° E`
+- **Nombre del Sitio:** `Custom AOI (-25.68050°, -67.81980°)` (ID: `AR_PUNA_ATACAMA`)
+- **Coordenadas Centrales GPS:** `-25.68050° N, -67.81980° E`
 - **Radio de Exploración Específico:** **`100.0 metros`** (Superficie del Área de Ensayo: `31,415.9 m²` / `3.14 ha`)
 - **Ventana Visual Contextual:** `800 × 800 metros`
 - **Sincronización Geodésica:** Sub-píxel en WGS84 (EPSG:4326) con proyección métrica local (desfase: 0 metros)
@@ -17,13 +17,13 @@
 ## 2. Métricas del Área de Exploración de 100 Metros de Radio
 | Métrica Topográfica en el Área de 100 m | Valor Medido en Datos Reales |
 | :--- | :--- |
-| **Cota Mínima** | `163.8 m` |
-| **Cota Máxima** | `172.9 m` |
-| **Cota Media** | `169.0 m` |
-| **Desnivel Local (Δz)** | `9.1 m` |
-| **Pendiente Media Local (Horn)** | `3.12°` |
-| **Pendiente Máxima Local** | `6.33°` |
-| **Puntos de Muestreo Activo en 100 m** | `69 celdas` |
+| **Cota Mínima** | `4206.3 m` |
+| **Cota Máxima** | `4257.9 m` |
+| **Cota Media** | `4231.7 m` |
+| **Desnivel Local (Δz)** | `51.6 m` |
+| **Pendiente Media Local (Horn)** | `15.76°` |
+| **Pendiente Máxima Local** | `17.64°` |
+| **Puntos de Muestreo Activo en 100 m** | `75 celdas` |
 
 ---
 
@@ -31,16 +31,16 @@
 
 | Dimensión Analógica Evaluada | Valor Medido en Tierra | Valor Objetivo de Referencia en Earth | Coeficiente $S_i$ [0-1] | Peso Asignado ($w_i$) | Contribución al Total ($w_i 	imes S_i$) |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **Rango Altimétrico y Relieve** | `41.0 m (cota 149-190 m)` | `~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))` | `0.3` | `10.0%` | **`3.0%`** |
-| **Gradiente de Pendiente (Horn)** | `0.60° (máx 2.4°)` | `8.0° ± 4.0°` | `0.18` | `15.0%` | **`2.71%`** |
-| **Rugosidad Superficial (TRI)** | `0.99 m` | `3.0 ± 1.5 m` | `0.407` | `12.0%` | **`4.88%`** |
+| **Rango Altimétrico y Relieve** | `213.0 m (cota 4098-4311 m)` | `~600 m (Martian Volcanic Flank & Sulfate Evaporite (e.g. Arsia Mons / Meridiani Planum))` | `0.561` | `10.0%` | **`5.61%`** |
+| **Gradiente de Pendiente (Horn)** | `2.50° (máx 6.5°)` | `8.0° ± 4.0°` | `0.388` | `15.0%` | **`5.82%`** |
+| **Rugosidad Superficial (TRI)** | `3.59 m` | `3.0 ± 1.5 m` | `0.925` | `12.0%` | **`11.11%`** |
 | **Curvatura Topográfica y Sumideros** | `-0.0000 m⁻¹` | `Inversión de colapso (-0.05)` | `0.2` | `8.0%` | **`1.6%`** |
 | **Tubos de Lava y Cavidades** | `Evidencia: 70% (Contexto volcánico: 90%)` | `Claraboyas intactas / Pit Craters` | `0.79` | `15.0%` | **`11.85%`** |
 | **Morfología de Conos / Cráteres** | `Índice: 60%` | `Cráteres de impacto / conos piroclásticos` | `0.6` | `10.0%` | **`6.0%`** |
 | **Composición Espectral y Mineralógica** | `Concordancia: 65%` | `Ferric Oxides (Hematite / Goethite), Jarosite sulfates & Smectite clays` | `0.65` | `20.0%` | **`13.0%`** |
 | **Extremos Ambientales e Hiperaridez** | `Proxy Aridez: 90%` | `Desierto poliextremo / Vacío` | `0.9` | `10.0%` | **`9.0%`** |
 
-| **SIMILITUD TOTAL VERIFICADA** | | | | **`100.0%`** | **`52.04%`** |
+| **SIMILITUD TOTAL VERIFICADA** | | | | **`100.0%`** | **`63.99%`** |
 
 ---
 

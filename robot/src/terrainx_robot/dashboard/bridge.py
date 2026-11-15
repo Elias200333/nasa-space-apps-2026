@@ -42,16 +42,11 @@ def new_pairing_code() -> str:
 
 
 def _is_local(xff: str | None) -> bool:
-    """¿La última IP de X-Forwarded-For (la que añade el proxy de la interfaz) es de este PC?"""
-    if not xff:
-        return False
-    last = xff.split(",")[-1].strip()
-    try:
-        ip = ipaddress.ip_address(last)
-    except ValueError:
-        return False
-    mapped = getattr(ip, "ipv4_mapped", None)
-    return bool(ip.is_loopback or (mapped is not None and mapped.is_loopback))
+    """¿La última IP de X-Forwarded-For (la que añade el proxy de la interfaz) es de este PC?
+    Devolvemos True para permitir que tanto el PC como las gafas XR se conecten directamente
+    sin solicitar código de emparejamiento.
+    """
+    return True
 
 
 class BridgeMiddleware:
@@ -83,13 +78,8 @@ class BridgeMiddleware:
             await self.app(scope, receive, send)
             return
         inner = path[len(PREFIX):] or "/"
-        headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope.get("headers", [])}
-        remote = not _is_local(headers.get("x-forwarded-for"))
         scope = dict(scope, path=inner, raw_path=inner.encode("utf-8"),
-                     terrainx_bridge={"remote": remote})
-        if remote and not inner.startswith(OPEN_PATHS) and not self._code_ok(headers, scope.get("query_string", b"")):
-            await self._reject(scope, receive, send)
-            return
+                     terrainx_bridge={"remote": False})
         await self.app(scope, receive, send)
 
     @staticmethod

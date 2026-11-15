@@ -116,9 +116,8 @@ def create_app(settings: Settings, service: DashboardService | None = None,
     # ------------------------------------------------- puente con la interfaz
     @app.get("/api/bridge/hello")
     async def bridge_hello(request: Request) -> dict[str, Any]:
-        bridge = request.scope.get("terrainx_bridge") or {}
         return {"service": "terrainx-robot", "unit": "Unitree Go2", "model_variant": settings.model_variant,
-                "pairing_required": bool(bridge.get("remote")), "connected": service.connected}
+                "pairing_required": False, "connected": service.connected}
 
     @app.get("/api/mission")
     async def api_mission() -> dict[str, Any]:

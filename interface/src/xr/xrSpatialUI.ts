@@ -343,7 +343,7 @@ export class XRSpatialUIManager {
       height: 0.54
     }, this.scene);
     plane.parent = this.rootNode;
-    plane.position = new BABYLON.Vector3(0, 1.35, 2.7);
+    plane.position = new BABYLON.Vector3(0, 1.10, 2.7);
     plane.rotation.x = -0.12;
     plane.rotation.y = 0;
 
@@ -546,7 +546,7 @@ export class XRSpatialUIManager {
       height: 0.32
     }, this.scene);
     plane.parent = this.rootNode;
-    plane.position = new BABYLON.Vector3(0, 1.05, 2.85);
+    plane.position = new BABYLON.Vector3(0, 0.84, 2.85);
     plane.rotation.x = -0.10;
     plane.rotation.y = 0;
 
@@ -607,9 +607,9 @@ export class XRSpatialUIManager {
       height: 0.55
     }, this.scene);
     plane.parent = this.rootNode;
-    plane.position = new BABYLON.Vector3(0.75, 0.92, 2.85);
+    plane.position = new BABYLON.Vector3(0.75, 0.72, 2.85);
     plane.rotation.x = -0.10;
-    plane.rotation.y = -0.12;
+    plane.rotation.y = 0.14;
 
     const adt = GUI.AdvancedDynamicTexture.CreateForMesh(plane, 1650, 550, false);
     this.dynamicTextures.push(adt);
@@ -728,8 +728,8 @@ export class XRSpatialUIManager {
       height: 2.15
     }, this.scene);
     plane.parent = this.rootNode;
-    plane.position = new BABYLON.Vector3(-2.75, 0.08, 2.55);   // algo más fuera: no tapa la esquina de la mesa
-    plane.rotation.y = 0.32; // Inclinación suave hacia el centro (~18º)
+    plane.position = new BABYLON.Vector3(-2.65, -0.05, 2.60);
+    plane.rotation.y = -0.62; // Orientado hacia el usuario/gafas (~ -35.5º hacia adentro)
     plane.rotation.x = -0.04;
 
     const adt = GUI.AdvancedDynamicTexture.CreateForMesh(plane, 1550, 2150, false);
@@ -972,8 +972,8 @@ export class XRSpatialUIManager {
       height: 1.45
     }, this.scene);
     plane.parent = this.rootNode;
-    plane.position = new BABYLON.Vector3(-1.78, 0.08, 2.65);   // acompaña a la tarjeta de la Luna
-    plane.rotation.y = 0.22;
+    plane.position = new BABYLON.Vector3(-1.75, -0.05, 2.70);
+    plane.rotation.y = -0.42; // Orientado hacia el usuario/gafas (~ -24º hacia adentro)
 
     const adt = GUI.AdvancedDynamicTexture.CreateForMesh(plane, 380, 1450, false);
     this.dynamicTextures.push(adt);
@@ -1030,8 +1030,8 @@ export class XRSpatialUIManager {
       height: 2.15
     }, this.scene);
     plane.parent = this.rootNode;
-    plane.position = new BABYLON.Vector3(2.75, 0.08, 2.55);   // algo más fuera: no tapa la esquina de la mesa
-    plane.rotation.y = -0.32; // Inclinación suave hacia el centro (~-18º)
+    plane.position = new BABYLON.Vector3(2.65, -0.05, 2.60);
+    plane.rotation.y = 0.62; // Orientado hacia el usuario/gafas (~ +35.5º hacia adentro)
     plane.rotation.x = -0.04;
 
     const adt = GUI.AdvancedDynamicTexture.CreateForMesh(plane, 1550, 2150, false);
@@ -1274,7 +1274,7 @@ export class XRSpatialUIManager {
       height: 1.45
     }, this.scene);
     plane.parent = this.rootNode;
-    plane.position = new BABYLON.Vector3(0, -0.85, 2.15);
+    plane.position = new BABYLON.Vector3(0, -0.88, 2.15);
     plane.rotation.x = 0.56; // Inclinación ergonómica hacia arriba (32º)
     plane.rotation.y = 0;
 
@@ -1489,7 +1489,7 @@ export class XRSpatialUIManager {
       height: 0.72
     }, this.scene);
     dem3DPlane.parent = this.rootNode;
-    dem3DPlane.position = new BABYLON.Vector3(0.42, -0.78, 2.18);
+    dem3DPlane.position = new BABYLON.Vector3(0.42, -0.81, 2.18);
     dem3DPlane.rotation.x = 0.56;
 
     const demTex = new BABYLON.DynamicTexture('xrDesk3DDEMTex', { width: 1000, height: 720 }, this.scene, true);

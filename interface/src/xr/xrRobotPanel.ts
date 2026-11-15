@@ -324,11 +324,9 @@ export class XRRobotPanel {
     try {
       this.lastStatus = await this.bridge.status();
       this.controlOK = !!this.lastStatus.control_available;
-    } catch (e) {
-      const err = e as BridgeError;
+    } catch {
       this.lastStatus = null;
       this.controlOK = false;
-      if (err.code === 'pairing_required' && this.phase !== 'pairing') { this.phase = 'pairing'; this.code = ''; }
     }
     if (!this.controlOK && this.driving) this.stopDriving();
     this.render();
@@ -340,12 +338,12 @@ export class XRRobotPanel {
     const batt = s?.robot_details?.battery?.soc_pct;
     this.statusTxt.text = s
       ? `${s.connected ? '● conectada' : '○ desconectada'} · batería ${batt == null ? '—' : Math.round(batt) + ' %'} · ${this.controlOK ? 'control disponible' : 'sin control'}${this.driving ? ' · CONDUCIENDO (suelta los joysticks para parar)' : ''}`
-      : (this.phase === 'pairing' ? 'El robot pide el código de emparejamiento' : 'Sin respuesta del backend del robot');
+      : 'Sin respuesta del backend del robot';
     this.statusTxt.color = this.driving ? '#fbbf24' : (s?.connected ? '#34d399' : '#94a3b8');
 
-    this.keypad.isVisible = this.phase === 'pairing';
-    if (this.camMesh) this.camMesh.setEnabled(this.phase !== 'pairing');
-    if (this.lidarMesh) this.lidarMesh.setEnabled(this.phase !== 'pairing');
+    this.keypad.isVisible = false;
+    if (this.camMesh) this.camMesh.setEnabled(true);
+    if (this.lidarMesh) this.lidarMesh.setEnabled(true);
     this.codeTxt.text = (this.code + '······').slice(0, 6).split('').join(' ');
 
     const a = this.actions;
@@ -447,8 +445,7 @@ export class XRRobotPanel {
     this.phase = 'connecting';
     this.render();
     try {
-      const hello = await this.bridge.hello();
-      if (hello.pairing_required && !this.bridge.hasCode()) { this.phase = 'pairing'; this.code = ''; this.render(); return; }
+      try { await this.bridge.hello(); } catch { /* ignorar */ }
       const st = await this.bridge.status();
       if (!st.connected) { await this.bridge.connect(); this.connectedByUs = true; }
       const m = terrainModel.current;
@@ -463,14 +460,6 @@ export class XRRobotPanel {
       this.phase = 'live';
     } catch (e) {
       const err = e as BridgeError;
-      if (err.code === 'pairing_required') {
-        this.bridge.setCode('');
-        this.phase = 'pairing';
-        this.code = '';
-        this.render();
-        this.note('Código de emparejamiento no válido (tras 10 fallos el robot bloquea 60 s).');
-        return;
-      }
       this.phase = 'idle';
       this.render();
       this.note(`No se pudo conectar: ${[err.message, err.hint].filter(Boolean).join(' — ')}`);

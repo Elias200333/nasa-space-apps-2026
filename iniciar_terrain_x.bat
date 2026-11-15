@@ -10,6 +10,9 @@ echo ====================================================================
 set "ROOT=%~dp0"
 cd /d "%ROOT%"
 
+:: Liberar puerto 8777 si hubiera instancias previas colgadas en segundo plano
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8777 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
+
 set "DATA_PY=%ROOT%data\.venv\Scripts\python.exe"
 if not exist "%DATA_PY%" set "DATA_PY=python"
 
