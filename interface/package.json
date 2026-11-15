@@ -12,6 +12,7 @@
   "dependencies": {
     "@types/leaflet": "^1.9.22",
     "babylonjs": "^7.30.0",
+    "babylonjs-gui": "^7.54.3",
     "leaflet": "^1.9.4"
   },
   "devDependencies": {

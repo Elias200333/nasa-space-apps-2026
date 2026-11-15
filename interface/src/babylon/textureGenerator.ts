@@ -13,7 +13,7 @@ export class PlanetaryTextureGenerator {
     const width = 2048;
     const height = 1024;
     const dynamicTexture = new BABYLON.DynamicTexture('earthTexture', { width, height }, scene, false);
-    const ctx = dynamicTexture.getContext();
+    const ctx = dynamicTexture.getContext() as unknown as CanvasRenderingContext2D;
 
     // 1. Océanos azul profundo con gradiente
     const oceanGrad = ctx.createLinearGradient(0, 0, 0, height);
@@ -87,7 +87,7 @@ export class PlanetaryTextureGenerator {
     const width = 1024;
     const height = 512;
     const dynamicTexture = new BABYLON.DynamicTexture('cloudsTexture', { width, height }, scene, true);
-    const ctx = dynamicTexture.getContext();
+    const ctx = dynamicTexture.getContext() as unknown as CanvasRenderingContext2D;
 
     // Fondo transparente
     ctx.clearRect(0, 0, width, height);
@@ -117,7 +117,7 @@ export class PlanetaryTextureGenerator {
     const width = 1024;
     const height = 512;
     const dynamicTexture = new BABYLON.DynamicTexture('moonTexture', { width, height }, scene, false);
-    const ctx = dynamicTexture.getContext();
+    const ctx = dynamicTexture.getContext() as unknown as CanvasRenderingContext2D;
 
     // Fondo gris regolito
     ctx.fillStyle = '#8a8d91';
@@ -168,7 +168,7 @@ export class PlanetaryTextureGenerator {
     const width = 1024;
     const height = 512;
     const dynamicTexture = new BABYLON.DynamicTexture('marsTexture', { width, height }, scene, false);
-    const ctx = dynamicTexture.getContext();
+    const ctx = dynamicTexture.getContext() as unknown as CanvasRenderingContext2D;
 
     // Fondo rojizo anaranjado marciano
     const marsGrad = ctx.createLinearGradient(0, 0, 0, height);

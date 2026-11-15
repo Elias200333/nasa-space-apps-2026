@@ -73,14 +73,15 @@ class ScientificAnalogyEngine:
     def evaluate_analog_metrics(
         dem_grid: np.ndarray,
         target_body: str,
-        site_features: Dict[str, Any]
+        site_features: Dict[str, Any],
+        custom_weights: Any = None
     ) -> Dict[str, Any]:
         """
         Computes all 8 mandatory scientific metrics and their weighted contribution.
         """
         body_key = "Moon" if target_body.lower() == "moon" else "Mars"
         bench = ScientificAnalogyEngine.BENCHMARKS[body_key]
-        weights = bench["weights"]
+        weights = custom_weights or bench["weights"]
 
         # 1. Topographic Elevation & Relief Metrics
         elev_min = float(np.min(dem_grid))

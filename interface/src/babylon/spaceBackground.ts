@@ -26,7 +26,7 @@ export class DeepSpaceEnvironment {
     this.starParticles = new BABYLON.PointsCloudSystem('starCloud', 1, scene);
     const starCount = 3000;
 
-    this.starParticles.addPoints(starCount, (particle) => {
+    this.starParticles.addPoints(starCount, (particle: any) => {
       const radius = 140 + Math.random() * 160;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos((Math.random() * 2) - 1);

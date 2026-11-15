@@ -3,6 +3,7 @@ import { TargetPin } from './targetPin';
 import { DeepSpaceEnvironment } from './spaceBackground';
 import { CelestialBody, PlanetaryLayerMode, PlanetaryPOI } from '../types';
 import { PLANETARY_DETAILS, VERIFIED_PLANETARY_POIS } from '../nasa/trekProviders';
+import { XRSpatialUIManager } from '../xr/xrSpatialUI';
 
 export class EarthSceneManager {
   private engine: BABYLON.Engine;
@@ -18,6 +19,11 @@ export class EarthSceneManager {
   // Estado planetario activo
   private currentPlanet: CelestialBody = 'Earth';
   private currentLayerMode: PlanetaryLayerMode = 'surface';
+
+  // Gestor de Realidad Virtual (WebXR)
+  private xrSpatialUI: XRSpatialUIManager | null = null;
+  private isXRActive = false;
+  private xrExperience: BABYLON.WebXRDefaultExperience | null = null;
 
   // Materiales planetarios de alta resolución (Tierra, Marte, Luna)
   private earthMat!: BABYLON.ShaderMaterial;
@@ -514,6 +520,10 @@ export class EarthSceneManager {
     // 6. Orientar hacia la ubicación de referencia del planeta
     this.orientToCoordinates(details.defaultLat, details.defaultLon);
 
+    if (this.xrSpatialUI) {
+      this.xrSpatialUI.setActivePlanet(body);
+    }
+
     if (this.onCoordinatesChange) {
       this.onCoordinatesChange(details.defaultLat, details.defaultLon, body);
     }
@@ -523,6 +533,9 @@ export class EarthSceneManager {
     this.currentLayerMode = layerMode;
     this.applyPlanetMaterial(this.currentPlanet, layerMode);
     this.updatePOIMarkersVisibility();
+    if (this.xrSpatialUI) {
+      this.xrSpatialUI.setActiveLayerMode(layerMode);
+    }
   }
 
   private applyPlanetMaterial(body: CelestialBody, layerMode: PlanetaryLayerMode) {
@@ -886,5 +899,106 @@ export class EarthSceneManager {
 
   public getEarthRoot(): BABYLON.TransformNode {
     return this.earthRoot;
+  }
+
+  /**
+   * Inicia el Entorno Espacial Holográfico WebXR:
+   * - Configura la suite de paneles 3D flotantes en el espacio (sin planetas orbitando la Tierra).
+   * - Ajusta la cámara para una visión holográfica óptima de mando aeroespacial.
+   * - Si se detecta hardware de realidad virtual (Meta Quest, Pico, VisionPro), lanza sesión WebXR nativa.
+   */
+  public async enterXREnvironment(onPlanetSwitchExternal?: (planet: CelestialBody) => void) {
+    this.isXRActive = true;
+
+    // 1. Instanciar o reactivar la interfaz espacial flotante
+    if (!this.xrSpatialUI) {
+      this.xrSpatialUI = new XRSpatialUIManager(this.scene, {
+        onPlanetSwitch: (planet) => {
+          this.switchPlanet(planet, this.currentLayerMode);
+          if (onPlanetSwitchExternal) onPlanetSwitchExternal(planet);
+        },
+        onLayerModeSwitch: (mode) => {
+          this.setLayerMode(mode);
+        },
+        onCameraTool: (action) => {
+          this.handleXRCameraTool(action);
+        },
+        onCompareWithEarth: (target) => {
+          this.switchPlanet(target, this.currentLayerMode);
+          if (onPlanetSwitchExternal) onPlanetSwitchExternal(target);
+        }
+      });
+      this.xrSpatialUI.buildSpatialInterface();
+    } else {
+      this.xrSpatialUI.setVisible(true);
+    }
+
+    this.xrSpatialUI.setActivePlanet(this.currentPlanet);
+    this.xrSpatialUI.setActiveLayerMode(this.currentLayerMode);
+
+    // 2. Colocar la cámara en la perspectiva holográfica óptima de mando
+    this.camera.radius = 7.5;
+    this.camera.beta = Math.PI / 2.05;
+    this.camera.alpha = -Math.PI / 2;
+    this.camera.target = new BABYLON.Vector3(0, 0.35, 0);
+
+    // 3. Iniciar sesión WebXR nativa si el dispositivo es un visor VR físico
+    try {
+      if (!this.xrExperience && typeof this.scene.createDefaultXRExperienceAsync === 'function') {
+        this.xrExperience = await this.scene.createDefaultXRExperienceAsync({
+          disableTeleportation: true
+        });
+        if (this.xrExperience?.baseExperience) {
+          const isSupported = await BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-vr');
+          if (isSupported) {
+            await this.xrExperience.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
+          }
+        }
+      }
+    } catch (err) {
+      console.info('Modo WebXR nativo no iniciado, ejecutando simulador espacial:', err);
+    }
+  }
+
+  private handleXRCameraTool(action: 'orbit' | 'move' | 'zoomIn' | 'zoomOut' | 'fit') {
+    switch (action) {
+      case 'orbit':
+        this.autoRotate = !this.autoRotate;
+        break;
+      case 'zoomIn':
+        this.camera.radius = Math.max(3.5, this.camera.radius - 0.8);
+        break;
+      case 'zoomOut':
+        this.camera.radius = Math.min(14.0, this.camera.radius + 0.8);
+        break;
+      case 'fit':
+        this.camera.radius = 7.5;
+        this.camera.beta = Math.PI / 2.05;
+        this.camera.alpha = -Math.PI / 2;
+        this.camera.target = new BABYLON.Vector3(0, 0.35, 0);
+        break;
+      case 'move':
+        this.autoRotate = false;
+        break;
+    }
+  }
+
+  public exitXREnvironment() {
+    this.isXRActive = false;
+    if (this.xrSpatialUI) {
+      this.xrSpatialUI.setVisible(false);
+    }
+    if (this.xrExperience?.baseExperience) {
+      try {
+        this.xrExperience.baseExperience.exitXRAsync();
+      } catch (err) {
+        // Ignorar
+      }
+    }
+    this.resetCameraToOrbit();
+  }
+
+  public getIsXRActive(): boolean {
+    return this.isXRActive;
   }
 }
