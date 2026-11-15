@@ -2,120 +2,19 @@
   "lunar_ranking": [
     {
       "rank": 1,
-      "id": "US_ARIZONA_SP_CRATER",
-      "name": "SP Crater & San Francisco Volcanic Field — Flanco de Enfriamiento Rápido (EE.UU.)",
-      "target_body": "Moon",
-      "pairing": "Marius Hills Cones / Gruithuisen Domes (Moon)",
-      "country": "EE.UU.",
-      "lat": 35.58329,
-      "lon": -111.63886,
-      "elevation_range_m": [
-        1836.8,
-        2137.8
-      ],
-      "local_utm_epsg": "EPSG:32612",
-      "score_pct": 68.05,
-      "status": "positive_control",
-      "strong_analogies": [
-        "Cono de ceniza basáltico-andesítico perfectamente simétrico con ángulo de reposo de 33° que replica conos de piroclastos lunares.",
-        "Colada de lava 'aa' en bloque de 7 km de longitud con bordes de enfriamiento nítidos y rugosidad decamétrica extrema.",
-        "Composición rica en clinopiroxeno y plagioclasa con firmas de reflectancia análogas a los domos volcánicos de Marius Hills."
-      ],
-      "analogy_limitations": [
-        "La gravedad terrestre genera conos más empinados que los conos lunares (que se dispersan más por 1/6 g y vacío).",
-        "Matorral árido disperso de enebros y artemisas en la base del cono."
-      ],
-      "mission_training_value": "Entrenamiento de astronautas Apolo 15 y 16; validación de radares de penetración de regolito (LPR) y maniobras de aterrizaje visual autónomo.",
-      "metrics_table": [
-        {
-          "id": "elevation_relief",
-          "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "301.0 m (cota 1837-2138 m)",
-          "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
-          "similarity_score": 0.859,
-          "weight_pct": 16.4,
-          "contribution_pct": 14.1
-        },
-        {
-          "id": "slope_morphometry",
-          "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "5.74° (máx 5.7°)",
-          "planetary_target": "6.5° ± 3.0°",
-          "similarity_score": 0.968,
-          "weight_pct": 15.1,
-          "contribution_pct": 14.62
-        },
-        {
-          "id": "surface_roughness_tri",
-          "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "8.21 m",
-          "planetary_target": "2.6 ± 1.2 m",
-          "similarity_score": 0.0,
-          "weight_pct": 13.2,
-          "contribution_pct": 0.0
-        },
-        {
-          "id": "curvature_profile",
-          "name": "Curvatura Topográfica y Sumideros",
-          "terrestrial_value": "0.0000 m⁻¹",
-          "planetary_target": "Inversión de colapso (-0.04)",
-          "similarity_score": 0.2,
-          "weight_pct": 9.4,
-          "contribution_pct": 1.89
-        },
-        {
-          "id": "lava_tubes_cavities",
-          "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 52% (Contexto volcánico: 90%)",
-          "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.695,
-          "weight_pct": 18.9,
-          "contribution_pct": 13.12
-        },
-        {
-          "id": "crater_morphology",
-          "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 94%",
-          "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.944,
-          "weight_pct": 9.8,
-          "contribution_pct": 9.26
-        },
-        {
-          "id": "spectral_mineralogy",
-          "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 95%",
-          "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-          "similarity_score": 0.952,
-          "weight_pct": 9.6,
-          "contribution_pct": 9.17
-        },
-        {
-          "id": "environmental_aridity",
-          "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 78%",
-          "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.78,
-          "weight_pct": 7.5,
-          "contribution_pct": 5.89
-        }
-      ]
-    },
-    {
-      "rank": 2,
       "id": "ES_FUERTEVENTURA_ARENA",
-      "name": "Malpaís de la Arena y Complejo Basal — Flanco de Enfriamiento Rápido (España)",
+      "name": "Malpaís de la Arena y Complejo Basal (Fuerteventura, Islas Canarias, España)",
       "target_body": "Moon",
       "pairing": "Lunar Mare Rough Blocky Transition Terraces (Moon)",
       "country": "España",
-      "lat": 28.65014,
-      "lon": -13.91064,
+      "lat": 28.65,
+      "lon": -13.91,
       "elevation_range_m": [
-        116.7,
-        416.7
+        120.0,
+        420.0
       ],
       "local_utm_epsg": "EPSG:32628",
-      "score_pct": 67.9,
+      "score_pct": 66.83,
       "status": "candidate",
       "strong_analogies": [
         "Campo de lava 'aa' holoceno con bloques escarpados y aristas afiladas sin cobertura vegetal, que pone a prueba la durabilidad de ruedas de rovers.",
@@ -131,11 +30,11 @@
         {
           "id": "elevation_relief",
           "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "300.0 m (cota 117-417 m)",
+          "terrestrial_value": "300.0 m (cota 120-420 m)",
           "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
           "similarity_score": 0.857,
-          "weight_pct": 16.4,
-          "contribution_pct": 14.07
+          "weight_pct": 12.0,
+          "contribution_pct": 10.28
         },
         {
           "id": "slope_morphometry",
@@ -143,8 +42,8 @@
           "terrestrial_value": "5.72° (máx 5.7°)",
           "planetary_target": "6.5° ± 3.0°",
           "similarity_score": 0.967,
-          "weight_pct": 15.1,
-          "contribution_pct": 14.59
+          "weight_pct": 16.0,
+          "contribution_pct": 15.47
         },
         {
           "id": "surface_roughness_tri",
@@ -152,7 +51,7 @@
           "terrestrial_value": "8.18 m",
           "planetary_target": "2.6 ± 1.2 m",
           "similarity_score": 0.0,
-          "weight_pct": 13.2,
+          "weight_pct": 14.0,
           "contribution_pct": 0.0
         },
         {
@@ -161,62 +60,163 @@
           "terrestrial_value": "-0.0000 m⁻¹",
           "planetary_target": "Inversión de colapso (-0.04)",
           "similarity_score": 0.2,
-          "weight_pct": 9.4,
-          "contribution_pct": 1.89
+          "weight_pct": 10.0,
+          "contribution_pct": 2.0
         },
         {
           "id": "lava_tubes_cavities",
           "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 67% (Contexto volcánico: 96%)",
+          "terrestrial_value": "Evidencia: 65% (Contexto volcánico: 93%)",
           "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.808,
-          "weight_pct": 18.9,
-          "contribution_pct": 15.24
+          "similarity_score": 0.776,
+          "weight_pct": 20.0,
+          "contribution_pct": 15.52
         },
         {
           "id": "crater_morphology",
           "name": "Morfología de Conos / Cráteres",
           "terrestrial_value": "Índice: 72%",
           "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.726,
-          "weight_pct": 9.8,
-          "contribution_pct": 7.12
+          "similarity_score": 0.72,
+          "weight_pct": 8.0,
+          "contribution_pct": 5.76
         },
         {
           "id": "spectral_mineralogy",
           "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 85%",
+          "terrestrial_value": "Concordancia: 89%",
           "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-          "similarity_score": 0.851,
-          "weight_pct": 9.6,
-          "contribution_pct": 8.18
+          "similarity_score": 0.89,
+          "weight_pct": 12.0,
+          "contribution_pct": 10.68
         },
         {
           "id": "environmental_aridity",
           "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 90%",
+          "terrestrial_value": "Proxy Aridez: 89%",
           "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.902,
-          "weight_pct": 7.5,
-          "contribution_pct": 6.81
+          "similarity_score": 0.89,
+          "weight_pct": 8.0,
+          "contribution_pct": 7.12
+        }
+      ]
+    },
+    {
+      "rank": 2,
+      "id": "US_ARIZONA_SP_CRATER",
+      "name": "SP Crater & San Francisco Volcanic Field (Arizona, EE.UU.)",
+      "target_body": "Moon",
+      "pairing": "Marius Hills Cones / Gruithuisen Domes (Moon)",
+      "country": "EE.UU.",
+      "lat": 35.582,
+      "lon": -111.638,
+      "elevation_range_m": [
+        1840.0,
+        2141.0
+      ],
+      "local_utm_epsg": "EPSG:32612",
+      "score_pct": 66.74,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Cono de ceniza basáltico-andesítico perfectamente simétrico con ángulo de reposo de 33° que replica conos de piroclastos lunares.",
+        "Colada de lava 'aa' en bloque de 7 km de longitud con bordes de enfriamiento nítidos y rugosidad decamétrica extrema.",
+        "Composición rica en clinopiroxeno y plagioclasa con firmas de reflectancia análogas a los domos volcánicos de Marius Hills."
+      ],
+      "analogy_limitations": [
+        "La gravedad terrestre genera conos más empinados que los conos lunares (que se dispersan más por 1/6 g y vacío).",
+        "Matorral árido disperso de enebros y artemisas en la base del cono."
+      ],
+      "mission_training_value": "Entrenamiento de astronautas Apolo 15 y 16; validación de radares de penetración de regolito (LPR) y maniobras de aterrizaje visual autónomo.",
+      "metrics_table": [
+        {
+          "id": "elevation_relief",
+          "name": "Rango Altimétrico y Relieve",
+          "terrestrial_value": "301.0 m (cota 1840-2141 m)",
+          "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
+          "similarity_score": 0.859,
+          "weight_pct": 12.0,
+          "contribution_pct": 10.31
+        },
+        {
+          "id": "slope_morphometry",
+          "name": "Gradiente de Pendiente (Horn)",
+          "terrestrial_value": "5.74° (máx 5.7°)",
+          "planetary_target": "6.5° ± 3.0°",
+          "similarity_score": 0.968,
+          "weight_pct": 16.0,
+          "contribution_pct": 15.49
+        },
+        {
+          "id": "surface_roughness_tri",
+          "name": "Rugosidad Superficial (TRI)",
+          "terrestrial_value": "8.21 m",
+          "planetary_target": "2.6 ± 1.2 m",
+          "similarity_score": 0.0,
+          "weight_pct": 14.0,
+          "contribution_pct": 0.0
+        },
+        {
+          "id": "curvature_profile",
+          "name": "Curvatura Topográfica y Sumideros",
+          "terrestrial_value": "0.0000 m⁻¹",
+          "planetary_target": "Inversión de colapso (-0.04)",
+          "similarity_score": 0.2,
+          "weight_pct": 10.0,
+          "contribution_pct": 2.0
+        },
+        {
+          "id": "lava_tubes_cavities",
+          "name": "Tubos de Lava y Cavidades",
+          "terrestrial_value": "Evidencia: 50% (Contexto volcánico: 96%)",
+          "planetary_target": "Claraboyas intactas / Pit Craters",
+          "similarity_score": 0.707,
+          "weight_pct": 20.0,
+          "contribution_pct": 14.14
+        },
+        {
+          "id": "crater_morphology",
+          "name": "Morfología de Conos / Cráteres",
+          "terrestrial_value": "Índice: 90%",
+          "planetary_target": "Cráteres de impacto / conos piroclásticos",
+          "similarity_score": 0.9,
+          "weight_pct": 8.0,
+          "contribution_pct": 7.2
+        },
+        {
+          "id": "spectral_mineralogy",
+          "name": "Composición Espectral y Mineralógica",
+          "terrestrial_value": "Concordancia: 92%",
+          "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
+          "similarity_score": 0.92,
+          "weight_pct": 12.0,
+          "contribution_pct": 11.04
+        },
+        {
+          "id": "environmental_aridity",
+          "name": "Extremos Ambientales e Hiperaridez",
+          "terrestrial_value": "Proxy Aridez: 82%",
+          "planetary_target": "Desierto poliextremo / Vacío",
+          "similarity_score": 0.82,
+          "weight_pct": 8.0,
+          "contribution_pct": 6.56
         }
       ]
     },
     {
       "rank": 3,
       "id": "US_HAWAII_MAUNA_KEA",
-      "name": "Mauna Kea Summit & Tephra Cones — Sector Occidental (Facies Piroclásticas) (EE.UU.)",
+      "name": "Mauna Kea Summit & Tephra Cones (Hawái, EE.UU.)",
       "target_body": "Moon",
       "pairing": "Lunar Highlands & Pyroclastic Glass Deposits (Moon)",
       "country": "EE.UU.",
-      "lat": 19.82131,
-      "lon": -155.46904,
+      "lat": 19.82,
+      "lon": -155.468,
       "elevation_range_m": [
-        3802.2,
-        4209.2
+        3800.0,
+        4207.0
       ],
       "local_utm_epsg": "EPSG:32605",
-      "score_pct": 66.28,
+      "score_pct": 64.64,
       "status": "positive_control",
       "strong_analogies": [
         "Conos de ceniza y tephra basáltica hawaiítica a 4,200 m de altitud expuestos a meteorización mecánica criogénica sin meteorización química.",
@@ -232,11 +232,11 @@
         {
           "id": "elevation_relief",
           "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "407.0 m (cota 3802-4209 m)",
+          "terrestrial_value": "407.0 m (cota 3800-4207 m)",
           "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
           "similarity_score": 0.987,
-          "weight_pct": 16.4,
-          "contribution_pct": 16.21
+          "weight_pct": 12.0,
+          "contribution_pct": 11.85
         },
         {
           "id": "slope_morphometry",
@@ -244,8 +244,8 @@
           "terrestrial_value": "7.74° (máx 7.7°)",
           "planetary_target": "6.5° ± 3.0°",
           "similarity_score": 0.918,
-          "weight_pct": 15.1,
-          "contribution_pct": 13.86
+          "weight_pct": 16.0,
+          "contribution_pct": 14.69
         },
         {
           "id": "surface_roughness_tri",
@@ -253,7 +253,7 @@
           "terrestrial_value": "11.10 m",
           "planetary_target": "2.6 ± 1.2 m",
           "similarity_score": 0.0,
-          "weight_pct": 13.2,
+          "weight_pct": 14.0,
           "contribution_pct": 0.0
         },
         {
@@ -262,163 +262,62 @@
           "terrestrial_value": "-0.0000 m⁻¹",
           "planetary_target": "Inversión de colapso (-0.04)",
           "similarity_score": 0.2,
-          "weight_pct": 9.4,
-          "contribution_pct": 1.89
+          "weight_pct": 10.0,
+          "contribution_pct": 2.0
         },
         {
           "id": "lava_tubes_cavities",
           "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 30% (Contexto volcánico: 90%)",
+          "terrestrial_value": "Evidencia: 30% (Contexto volcánico: 92%)",
           "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.577,
-          "weight_pct": 18.9,
-          "contribution_pct": 10.89
+          "similarity_score": 0.579,
+          "weight_pct": 20.0,
+          "contribution_pct": 11.58
         },
         {
           "id": "crater_morphology",
           "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 78%",
+          "terrestrial_value": "Índice: 80%",
           "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.781,
-          "weight_pct": 9.8,
-          "contribution_pct": 7.66
+          "similarity_score": 0.8,
+          "weight_pct": 8.0,
+          "contribution_pct": 6.4
         },
         {
           "id": "spectral_mineralogy",
           "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 95%",
+          "terrestrial_value": "Concordancia: 91%",
           "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-          "similarity_score": 0.954,
-          "weight_pct": 9.6,
-          "contribution_pct": 9.18
+          "similarity_score": 0.91,
+          "weight_pct": 12.0,
+          "contribution_pct": 10.92
         },
         {
           "id": "environmental_aridity",
           "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 87%",
+          "terrestrial_value": "Proxy Aridez: 90%",
           "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.873,
-          "weight_pct": 7.5,
-          "contribution_pct": 6.59
+          "similarity_score": 0.9,
+          "weight_pct": 8.0,
+          "contribution_pct": 7.2
         }
       ]
     },
     {
       "rank": 4,
-      "id": "US_LAVA_BEDS_VALENTINE",
-      "name": "Valentine Cave, Lava Beds National Monument — Sector Oriental (Llanura de Flujo Basáltico) (EE.UU.)",
-      "target_body": "Moon",
-      "pairing": "Marius Hills Pit / Philolaus Crater skylight (Moon)",
-      "country": "EE.UU.",
-      "lat": 41.7124,
-      "lon": -121.50875,
-      "elevation_range_m": [
-        1251.0,
-        1441.0
-      ],
-      "local_utm_epsg": "EPSG:32610",
-      "score_pct": 61.49,
-      "status": "positive_control",
-      "strong_analogies": [
-        "Red densa de tubos de lava basáltica bien preservados con cornisas de flujo, estafilitos y suelo de bloques caídos.",
-        "Acceso mediante colapso cenital que simula con precisión las condiciones de descenso en pit craters lunares.",
-        "Ambiente subterráneo protegido con apantallamiento térmico y de radiación cósmica."
-      ],
-      "analogy_limitations": [
-        "Presencia de humedad condensada y esteras microbianas terrestres autótrofas.",
-        "Dimensiones métricas limitadas por la resistencia a tracción del basalto bajo 1 g."
-      ],
-      "mission_training_value": "Sede del proyecto NASA BRAILLE para navegación SLAM y espectroscopía láser subterránea autónoma sin satélites GPS.",
-      "metrics_table": [
-        {
-          "id": "elevation_relief",
-          "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "190.0 m (cota 1251-1441 m)",
-          "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
-          "similarity_score": 0.629,
-          "weight_pct": 16.4,
-          "contribution_pct": 10.32
-        },
-        {
-          "id": "slope_morphometry",
-          "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "3.63° (máx 3.6°)",
-          "planetary_target": "6.5° ± 3.0°",
-          "similarity_score": 0.633,
-          "weight_pct": 15.1,
-          "contribution_pct": 9.55
-        },
-        {
-          "id": "surface_roughness_tri",
-          "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "5.18 m",
-          "planetary_target": "2.6 ± 1.2 m",
-          "similarity_score": 0.099,
-          "weight_pct": 13.2,
-          "contribution_pct": 1.31
-        },
-        {
-          "id": "curvature_profile",
-          "name": "Curvatura Topográfica y Sumideros",
-          "terrestrial_value": "-0.0000 m⁻¹",
-          "planetary_target": "Inversión de colapso (-0.04)",
-          "similarity_score": 0.2,
-          "weight_pct": 9.4,
-          "contribution_pct": 1.89
-        },
-        {
-          "id": "lava_tubes_cavities",
-          "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 98% (Contexto volcánico: 93%)",
-          "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.962,
-          "weight_pct": 18.9,
-          "contribution_pct": 18.15
-        },
-        {
-          "id": "crater_morphology",
-          "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 60%",
-          "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.603,
-          "weight_pct": 9.8,
-          "contribution_pct": 5.92
-        },
-        {
-          "id": "spectral_mineralogy",
-          "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 88%",
-          "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-          "similarity_score": 0.887,
-          "weight_pct": 9.6,
-          "contribution_pct": 8.53
-        },
-        {
-          "id": "environmental_aridity",
-          "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 77%",
-          "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.771,
-          "weight_pct": 7.5,
-          "contribution_pct": 5.82
-        }
-      ]
-    },
-    {
-      "rank": 5,
       "id": "ES_LANZAROTE_CALDERA_BLANCA",
-      "name": "Cráter de Caldera Blanca — Sector Norte (Cresta y Borde de Cráter) (España)",
+      "name": "Cráter de Caldera Blanca (Lanzarote, Islas Canarias, España)",
       "target_body": "Moon",
       "pairing": "Hyginus Crater / Schrödinger Basin volcanic vents (Moon)",
       "country": "España",
-      "lat": 29.03857,
-      "lon": -13.72027,
+      "lat": 29.038,
+      "lon": -13.719,
       "elevation_range_m": [
-        174.1,
-        327.1
+        168.0,
+        321.0
       ],
       "local_utm_epsg": "EPSG:32628",
-      "score_pct": 61.33,
+      "score_pct": 62.75,
       "status": "positive_control",
       "strong_analogies": [
         "Cráter freatomagmático de 1.2 km de diámetro con geometría de cresta circular escarpada y fondo plano árido sin cobertura vegetal.",
@@ -434,11 +333,11 @@
         {
           "id": "elevation_relief",
           "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "153.0 m (cota 174-327 m)",
+          "terrestrial_value": "153.0 m (cota 168-321 m)",
           "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
           "similarity_score": 0.546,
-          "weight_pct": 16.4,
-          "contribution_pct": 8.96
+          "weight_pct": 12.0,
+          "contribution_pct": 6.55
         },
         {
           "id": "slope_morphometry",
@@ -446,8 +345,8 @@
           "terrestrial_value": "2.92° (máx 2.9°)",
           "planetary_target": "6.5° ± 3.0°",
           "similarity_score": 0.492,
-          "weight_pct": 15.1,
-          "contribution_pct": 7.42
+          "weight_pct": 16.0,
+          "contribution_pct": 7.86
         },
         {
           "id": "surface_roughness_tri",
@@ -455,8 +354,8 @@
           "terrestrial_value": "4.17 m",
           "planetary_target": "2.6 ± 1.2 m",
           "similarity_score": 0.424,
-          "weight_pct": 13.2,
-          "contribution_pct": 5.61
+          "weight_pct": 14.0,
+          "contribution_pct": 5.94
         },
         {
           "id": "curvature_profile",
@@ -464,100 +363,100 @@
           "terrestrial_value": "0.0000 m⁻¹",
           "planetary_target": "Inversión de colapso (-0.04)",
           "similarity_score": 0.2,
-          "weight_pct": 9.4,
-          "contribution_pct": 1.89
+          "weight_pct": 10.0,
+          "contribution_pct": 2.0
         },
         {
           "id": "lava_tubes_cavities",
           "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 70% (Contexto volcánico: 88%)",
+          "terrestrial_value": "Evidencia: 70% (Contexto volcánico: 94%)",
           "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.788,
-          "weight_pct": 18.9,
-          "contribution_pct": 14.86
+          "similarity_score": 0.808,
+          "weight_pct": 20.0,
+          "contribution_pct": 16.16
         },
         {
           "id": "crater_morphology",
           "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 82%",
+          "terrestrial_value": "Índice: 85%",
           "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.82,
-          "weight_pct": 9.8,
-          "contribution_pct": 8.05
+          "similarity_score": 0.85,
+          "weight_pct": 8.0,
+          "contribution_pct": 6.8
         },
         {
           "id": "spectral_mineralogy",
           "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 83%",
+          "terrestrial_value": "Concordancia: 88%",
           "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-          "similarity_score": 0.836,
-          "weight_pct": 9.6,
-          "contribution_pct": 8.04
+          "similarity_score": 0.88,
+          "weight_pct": 12.0,
+          "contribution_pct": 10.56
         },
         {
           "id": "environmental_aridity",
           "name": "Extremos Ambientales e Hiperaridez",
           "terrestrial_value": "Proxy Aridez: 86%",
           "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.861,
-          "weight_pct": 7.5,
-          "contribution_pct": 6.5
+          "similarity_score": 0.86,
+          "weight_pct": 8.0,
+          "contribution_pct": 6.88
         }
       ]
     },
     {
-      "rank": 6,
-      "id": "ES_LANZAROTE_CORONA",
-      "name": "Volcán de la Corona & Tubo de Lava de los Verdes — Sector Occidental (Facies Piroclásticas) (España)",
+      "rank": 5,
+      "id": "US_LAVA_BEDS_VALENTINE",
+      "name": "Valentine Cave, Lava Beds National Monument (California, EE.UU.)",
       "target_body": "Moon",
-      "pairing": "Marius Hills Pit / Oceanus Procellarum rille (Moon)",
-      "country": "España",
-      "lat": 29.14858,
-      "lon": -13.45017,
+      "pairing": "Marius Hills Pit / Philolaus Crater skylight (Moon)",
+      "country": "EE.UU.",
+      "lat": 41.712,
+      "lon": -121.509,
       "elevation_range_m": [
-        7.1,
-        616.1
+        1260.0,
+        1450.0
       ],
-      "local_utm_epsg": "EPSG:32628",
-      "score_pct": 59.6,
+      "local_utm_epsg": "EPSG:32610",
+      "score_pct": 61.45,
       "status": "positive_control",
       "strong_analogies": [
-        "Tubo volcánico basáltico de 7.6 km con claraboyas de colapso ('Jameos') morfológicamente idénticas a los pit craters de Marius Hills.",
-        "Basaltos toleíticos cuaternarios sin meteorización química profunda debido a la aridez insular.",
-        "Atenuación total de radiación y estabilidad térmica en el interior de la cavidad (~18°C constante)."
+        "Red densa de tubos de lava basáltica bien preservados con cornisas de flujo, estafilitos y suelo de bloques caídos.",
+        "Acceso mediante colapso cenital que simula con precisión las condiciones de descenso en pit craters lunares.",
+        "Ambiente subterráneo protegido con apantallamiento térmico y de radiación cósmica."
       ],
       "analogy_limitations": [
-        "Gravedad terrestre (1 g frente a 0.166 g lunar); los tubos lunares pueden alcanzar diámetros de cientos de metros.",
-        "Presencia de atmósfera respirable y biota ausente en el vacío lunar."
+        "Presencia de humedad condensada y esteras microbianas terrestres autótrofas.",
+        "Dimensiones métricas limitadas por la resistencia a tracción del basalto bajo 1 g."
       ],
-      "mission_training_value": "Sede oficial del programa ESA PANGAEA de espeleología y geología para astronautas; ensayos de navegación LiDAR autónoma subterránea.",
+      "mission_training_value": "Sede del proyecto NASA BRAILLE para navegación SLAM y espectroscopía láser subterránea autónoma sin satélites GPS.",
       "metrics_table": [
         {
           "id": "elevation_relief",
           "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "609.0 m (cota 7-616 m)",
+          "terrestrial_value": "190.0 m (cota 1260-1450 m)",
           "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
-          "similarity_score": 0.841,
-          "weight_pct": 16.4,
-          "contribution_pct": 13.8
+          "similarity_score": 0.629,
+          "weight_pct": 12.0,
+          "contribution_pct": 7.55
         },
         {
           "id": "slope_morphometry",
           "name": "Gradiente de Pendiente (Horn)",
-          "terrestrial_value": "11.49° (máx 11.5°)",
+          "terrestrial_value": "3.63° (máx 3.6°)",
           "planetary_target": "6.5° ± 3.0°",
-          "similarity_score": 0.25,
-          "weight_pct": 15.1,
-          "contribution_pct": 3.78
+          "similarity_score": 0.633,
+          "weight_pct": 16.0,
+          "contribution_pct": 10.12
         },
         {
           "id": "surface_roughness_tri",
           "name": "Rugosidad Superficial (TRI)",
-          "terrestrial_value": "16.60 m",
+          "terrestrial_value": "5.18 m",
           "planetary_target": "2.6 ± 1.2 m",
-          "similarity_score": 0.0,
-          "weight_pct": 13.2,
-          "contribution_pct": 0.0
+          "similarity_score": 0.099,
+          "weight_pct": 14.0,
+          "contribution_pct": 1.39
         },
         {
           "id": "curvature_profile",
@@ -565,62 +464,62 @@
           "terrestrial_value": "-0.0000 m⁻¹",
           "planetary_target": "Inversión de colapso (-0.04)",
           "similarity_score": 0.2,
-          "weight_pct": 9.4,
-          "contribution_pct": 1.89
+          "weight_pct": 10.0,
+          "contribution_pct": 2.0
         },
         {
           "id": "lava_tubes_cavities",
           "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 100% (Contexto volcánico: 92%)",
+          "terrestrial_value": "Evidencia: 95% (Contexto volcánico: 94%)",
           "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.966,
-          "weight_pct": 18.9,
-          "contribution_pct": 18.23
+          "similarity_score": 0.946,
+          "weight_pct": 20.0,
+          "contribution_pct": 18.91
         },
         {
           "id": "crater_morphology",
           "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 67%",
+          "terrestrial_value": "Índice: 60%",
           "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.678,
-          "weight_pct": 9.8,
-          "contribution_pct": 6.65
+          "similarity_score": 0.6,
+          "weight_pct": 8.0,
+          "contribution_pct": 4.8
         },
         {
           "id": "spectral_mineralogy",
           "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 91%",
+          "terrestrial_value": "Concordancia: 89%",
           "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-          "similarity_score": 0.914,
-          "weight_pct": 9.6,
-          "contribution_pct": 8.8
+          "similarity_score": 0.89,
+          "weight_pct": 12.0,
+          "contribution_pct": 10.68
         },
         {
           "id": "environmental_aridity",
           "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 85%",
+          "terrestrial_value": "Proxy Aridez: 75%",
           "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.855,
-          "weight_pct": 7.5,
-          "contribution_pct": 6.45
+          "similarity_score": 0.75,
+          "weight_pct": 8.0,
+          "contribution_pct": 6.0
         }
       ]
     },
     {
-      "rank": 7,
+      "rank": 6,
       "id": "IN_LONAR_CRATER",
-      "name": "Lonar Impact Crater — Sector Sur (Campo de Bloques y Malpaís) (India)",
+      "name": "Lonar Impact Crater (Maharashtra, India)",
       "target_body": "Moon",
       "pairing": "Lunar Maria Impact Craters (e.g. Tycho/Copernicus in basalt) (Moon)",
       "country": "India",
-      "lat": 19.97641,
-      "lon": 76.50713,
+      "lat": 19.976,
+      "lon": 76.507,
       "elevation_range_m": [
-        479.4,
-        609.4
+        480.0,
+        610.0
       ],
       "local_utm_epsg": "EPSG:32643",
-      "score_pct": 58.12,
+      "score_pct": 59.07,
       "status": "positive_control",
       "strong_analogies": [
         "Uno de los únicos cuatro cráteres de impacto hiperveloz en roca puramente basáltica del planeta (Deccan Traps).",
@@ -636,11 +535,11 @@
         {
           "id": "elevation_relief",
           "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "130.0 m (cota 479-609 m)",
+          "terrestrial_value": "130.0 m (cota 480-610 m)",
           "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
           "similarity_score": 0.495,
-          "weight_pct": 16.4,
-          "contribution_pct": 8.13
+          "weight_pct": 12.0,
+          "contribution_pct": 5.95
         },
         {
           "id": "slope_morphometry",
@@ -648,8 +547,8 @@
           "terrestrial_value": "2.49° (máx 2.5°)",
           "planetary_target": "6.5° ± 3.0°",
           "similarity_score": 0.408,
-          "weight_pct": 15.1,
-          "contribution_pct": 6.17
+          "weight_pct": 16.0,
+          "contribution_pct": 6.54
         },
         {
           "id": "surface_roughness_tri",
@@ -657,8 +556,8 @@
           "terrestrial_value": "3.54 m",
           "planetary_target": "2.6 ± 1.2 m",
           "similarity_score": 0.734,
-          "weight_pct": 13.2,
-          "contribution_pct": 9.69
+          "weight_pct": 14.0,
+          "contribution_pct": 10.27
         },
         {
           "id": "curvature_profile",
@@ -666,62 +565,163 @@
           "terrestrial_value": "0.0000 m⁻¹",
           "planetary_target": "Inversión de colapso (-0.04)",
           "similarity_score": 0.2,
-          "weight_pct": 9.4,
-          "contribution_pct": 1.89
+          "weight_pct": 10.0,
+          "contribution_pct": 2.0
         },
         {
           "id": "lava_tubes_cavities",
           "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 31% (Contexto volcánico: 81%)",
+          "terrestrial_value": "Evidencia: 30% (Contexto volcánico: 85%)",
           "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.542,
-          "weight_pct": 18.9,
-          "contribution_pct": 10.22
+          "similarity_score": 0.547,
+          "weight_pct": 20.0,
+          "contribution_pct": 10.95
         },
         {
           "id": "crater_morphology",
           "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 90%",
+          "terrestrial_value": "Índice: 96%",
           "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.908,
-          "weight_pct": 9.8,
-          "contribution_pct": 8.91
+          "similarity_score": 0.96,
+          "weight_pct": 8.0,
+          "contribution_pct": 7.68
         },
         {
           "id": "spectral_mineralogy",
           "name": "Composición Espectral y Mineralógica",
           "terrestrial_value": "Concordancia: 94%",
           "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-          "similarity_score": 0.947,
-          "weight_pct": 9.6,
-          "contribution_pct": 9.11
+          "similarity_score": 0.94,
+          "weight_pct": 12.0,
+          "contribution_pct": 11.28
         },
         {
           "id": "environmental_aridity",
           "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 53%",
+          "terrestrial_value": "Proxy Aridez: 55%",
           "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.53,
-          "weight_pct": 7.5,
+          "similarity_score": 0.55,
+          "weight_pct": 8.0,
+          "contribution_pct": 4.4
+        }
+      ]
+    },
+    {
+      "rank": 7,
+      "id": "ES_LANZAROTE_CORONA",
+      "name": "Volcán de la Corona & Tubo de Lava de los Verdes (Lanzarote, Islas Canarias, España)",
+      "target_body": "Moon",
+      "pairing": "Marius Hills Pit / Oceanus Procellarum rille (Moon)",
+      "country": "España",
+      "lat": 29.148,
+      "lon": -13.45,
+      "elevation_range_m": [
+        0.0,
+        609.0
+      ],
+      "local_utm_epsg": "EPSG:32628",
+      "score_pct": 58.46,
+      "status": "positive_control",
+      "strong_analogies": [
+        "Tubo volcánico basáltico de 7.6 km con claraboyas de colapso ('Jameos') morfológicamente idénticas a los pit craters de Marius Hills.",
+        "Basaltos toleíticos cuaternarios sin meteorización química profunda debido a la aridez insular.",
+        "Atenuación total de radiación y estabilidad térmica en el interior de la cavidad (~18°C constante)."
+      ],
+      "analogy_limitations": [
+        "Gravedad terrestre (1 g frente a 0.166 g lunar); los tubos lunares pueden alcanzar diámetros de cientos de metros.",
+        "Presencia de atmósfera respirable y biota ausente en el vacío lunar."
+      ],
+      "mission_training_value": "Sede oficial del programa ESA PANGAEA de espeleología y geología para astronautas; ensayos de navegación LiDAR autónoma subterránea.",
+      "metrics_table": [
+        {
+          "id": "elevation_relief",
+          "name": "Rango Altimétrico y Relieve",
+          "terrestrial_value": "609.0 m (cota 0-609 m)",
+          "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
+          "similarity_score": 0.841,
+          "weight_pct": 12.0,
+          "contribution_pct": 10.09
+        },
+        {
+          "id": "slope_morphometry",
+          "name": "Gradiente de Pendiente (Horn)",
+          "terrestrial_value": "11.49° (máx 11.5°)",
+          "planetary_target": "6.5° ± 3.0°",
+          "similarity_score": 0.25,
+          "weight_pct": 16.0,
           "contribution_pct": 4.0
+        },
+        {
+          "id": "surface_roughness_tri",
+          "name": "Rugosidad Superficial (TRI)",
+          "terrestrial_value": "16.60 m",
+          "planetary_target": "2.6 ± 1.2 m",
+          "similarity_score": 0.0,
+          "weight_pct": 14.0,
+          "contribution_pct": 0.0
+        },
+        {
+          "id": "curvature_profile",
+          "name": "Curvatura Topográfica y Sumideros",
+          "terrestrial_value": "0.0000 m⁻¹",
+          "planetary_target": "Inversión de colapso (-0.04)",
+          "similarity_score": 0.2,
+          "weight_pct": 10.0,
+          "contribution_pct": 2.0
+        },
+        {
+          "id": "lava_tubes_cavities",
+          "name": "Tubos de Lava y Cavidades",
+          "terrestrial_value": "Evidencia: 98% (Contexto volcánico: 95%)",
+          "planetary_target": "Claraboyas intactas / Pit Craters",
+          "similarity_score": 0.967,
+          "weight_pct": 20.0,
+          "contribution_pct": 19.33
+        },
+        {
+          "id": "crater_morphology",
+          "name": "Morfología de Conos / Cráteres",
+          "terrestrial_value": "Índice: 65%",
+          "planetary_target": "Cráteres de impacto / conos piroclásticos",
+          "similarity_score": 0.65,
+          "weight_pct": 8.0,
+          "contribution_pct": 5.2
+        },
+        {
+          "id": "spectral_mineralogy",
+          "name": "Composición Espectral y Mineralógica",
+          "terrestrial_value": "Concordancia: 90%",
+          "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
+          "similarity_score": 0.9,
+          "weight_pct": 12.0,
+          "contribution_pct": 10.8
+        },
+        {
+          "id": "environmental_aridity",
+          "name": "Extremos Ambientales e Hiperaridez",
+          "terrestrial_value": "Proxy Aridez: 88%",
+          "planetary_target": "Desierto poliextremo / Vacío",
+          "similarity_score": 0.88,
+          "weight_pct": 8.0,
+          "contribution_pct": 7.04
         }
       ]
     },
     {
       "rank": 8,
       "id": "US_ARIZONA_METEOR_CRATER",
-      "name": "Meteor Crater / Barringer Meteorite Crater — Sector Occidental (Facies Piroclásticas) (EE.UU.)",
+      "name": "Meteor Crater / Barringer Meteorite Crater (Arizona, EE.UU.)",
       "target_body": "Moon",
       "pairing": "Linné Crater / Cone Crater, Fra Mauro (Moon)",
       "country": "EE.UU.",
-      "lat": 35.02623,
-      "lon": -111.02421,
+      "lat": 35.0275,
+      "lon": -111.0225,
       "elevation_range_m": [
-        1560.9,
-        1740.9
+        1560.0,
+        1740.0
       ],
       "local_utm_epsg": "EPSG:32612",
-      "score_pct": 50.62,
+      "score_pct": 49.17,
       "status": "positive_control",
       "strong_analogies": [
         "Cráter de impacto simple por hipervelocidad mejor preservado de la Tierra (1.2 km diámetro, 170 m profundidad).",
@@ -737,11 +737,11 @@
         {
           "id": "elevation_relief",
           "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "180.0 m (cota 1561-1741 m)",
+          "terrestrial_value": "180.0 m (cota 1560-1740 m)",
           "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
           "similarity_score": 0.607,
-          "weight_pct": 16.4,
-          "contribution_pct": 9.96
+          "weight_pct": 12.0,
+          "contribution_pct": 7.28
         },
         {
           "id": "slope_morphometry",
@@ -749,8 +749,8 @@
           "terrestrial_value": "3.44° (máx 3.4°)",
           "planetary_target": "6.5° ± 3.0°",
           "similarity_score": 0.594,
-          "weight_pct": 15.1,
-          "contribution_pct": 8.97
+          "weight_pct": 16.0,
+          "contribution_pct": 9.51
         },
         {
           "id": "surface_roughness_tri",
@@ -758,8 +758,8 @@
           "terrestrial_value": "4.91 m",
           "planetary_target": "2.6 ± 1.2 m",
           "similarity_score": 0.158,
-          "weight_pct": 13.2,
-          "contribution_pct": 2.08
+          "weight_pct": 14.0,
+          "contribution_pct": 2.21
         },
         {
           "id": "curvature_profile",
@@ -767,62 +767,62 @@
           "terrestrial_value": "0.0000 m⁻¹",
           "planetary_target": "Inversión de colapso (-0.04)",
           "similarity_score": 0.2,
-          "weight_pct": 9.4,
-          "contribution_pct": 1.89
+          "weight_pct": 10.0,
+          "contribution_pct": 2.0
         },
         {
           "id": "lava_tubes_cavities",
           "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 33% (Contexto volcánico: 19%)",
+          "terrestrial_value": "Evidencia: 35% (Contexto volcánico: 20%)",
           "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.27,
-          "weight_pct": 18.9,
-          "contribution_pct": 5.09
+          "similarity_score": 0.283,
+          "weight_pct": 20.0,
+          "contribution_pct": 5.65
         },
         {
           "id": "crater_morphology",
           "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 100%",
+          "terrestrial_value": "Índice: 99%",
           "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 1.0,
-          "weight_pct": 9.8,
-          "contribution_pct": 9.81
+          "similarity_score": 0.99,
+          "weight_pct": 8.0,
+          "contribution_pct": 7.92
         },
         {
           "id": "spectral_mineralogy",
           "name": "Composición Espectral y Mineralógica",
           "terrestrial_value": "Concordancia: 65%",
           "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-          "similarity_score": 0.659,
-          "weight_pct": 9.6,
-          "contribution_pct": 6.34
+          "similarity_score": 0.65,
+          "weight_pct": 12.0,
+          "contribution_pct": 7.8
         },
         {
           "id": "environmental_aridity",
           "name": "Extremos Ambientales e Hiperaridez",
           "terrestrial_value": "Proxy Aridez: 85%",
           "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.859,
-          "weight_pct": 7.5,
-          "contribution_pct": 6.48
+          "similarity_score": 0.85,
+          "weight_pct": 8.0,
+          "contribution_pct": 6.8
         }
       ]
     },
     {
       "rank": 9,
       "id": "CA_SUDBURY_BASIN",
-      "name": "Estructura de Impacto de Sudbury / Formación Onaping — Sector Oriental (Llanura de Flujo Basáltico) (Canadá)",
+      "name": "Estructura de Impacto de Sudbury / Formación Onaping (Ontario, Canadá)",
       "target_body": "Moon",
       "pairing": "South Pole-Aitken Basin / Lunar Impact Melt Sheets (Moon)",
       "country": "Canadá",
-      "lat": 46.60126,
-      "lon": -81.17962,
+      "lat": 46.6,
+      "lon": -81.18,
       "elevation_range_m": [
-        270.3,
-        440.3
+        280.0,
+        450.0
       ],
       "local_utm_epsg": "EPSG:32617",
-      "score_pct": 47.95,
+      "score_pct": 46.94,
       "status": "positive_control",
       "strong_analogies": [
         "Estructura de impacto gigante de 200 km de diámetro que preserva la mayor lámina de fundido diferenciada de la Tierra.",
@@ -838,11 +838,11 @@
         {
           "id": "elevation_relief",
           "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "170.0 m (cota 270-440 m)",
+          "terrestrial_value": "170.0 m (cota 280-450 m)",
           "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
           "similarity_score": 0.584,
-          "weight_pct": 16.4,
-          "contribution_pct": 9.59
+          "weight_pct": 12.0,
+          "contribution_pct": 7.01
         },
         {
           "id": "slope_morphometry",
@@ -850,8 +850,8 @@
           "terrestrial_value": "3.25° (máx 3.2°)",
           "planetary_target": "6.5° ± 3.0°",
           "similarity_score": 0.556,
-          "weight_pct": 15.1,
-          "contribution_pct": 8.39
+          "weight_pct": 16.0,
+          "contribution_pct": 8.89
         },
         {
           "id": "surface_roughness_tri",
@@ -859,8 +859,8 @@
           "terrestrial_value": "4.63 m",
           "planetary_target": "2.6 ± 1.2 m",
           "similarity_score": 0.238,
-          "weight_pct": 13.2,
-          "contribution_pct": 3.14
+          "weight_pct": 14.0,
+          "contribution_pct": 3.33
         },
         {
           "id": "curvature_profile",
@@ -868,62 +868,62 @@
           "terrestrial_value": "0.0000 m⁻¹",
           "planetary_target": "Inversión de colapso (-0.04)",
           "similarity_score": 0.2,
-          "weight_pct": 9.4,
-          "contribution_pct": 1.89
+          "weight_pct": 10.0,
+          "contribution_pct": 2.0
         },
         {
           "id": "lava_tubes_cavities",
           "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 25% (Contexto volcánico: 39%)",
+          "terrestrial_value": "Evidencia: 25% (Contexto volcánico: 40%)",
           "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.317,
-          "weight_pct": 18.9,
-          "contribution_pct": 5.99
+          "similarity_score": 0.318,
+          "weight_pct": 20.0,
+          "contribution_pct": 6.35
         },
         {
           "id": "crater_morphology",
           "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 89%",
+          "terrestrial_value": "Índice: 92%",
           "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.899,
-          "weight_pct": 9.8,
-          "contribution_pct": 8.82
+          "similarity_score": 0.92,
+          "weight_pct": 8.0,
+          "contribution_pct": 7.36
         },
         {
           "id": "spectral_mineralogy",
           "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 68%",
+          "terrestrial_value": "Concordancia: 70%",
           "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-          "similarity_score": 0.687,
-          "weight_pct": 9.6,
-          "contribution_pct": 6.61
+          "similarity_score": 0.7,
+          "weight_pct": 12.0,
+          "contribution_pct": 8.4
         },
         {
           "id": "environmental_aridity",
           "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 46%",
+          "terrestrial_value": "Proxy Aridez: 45%",
           "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.466,
-          "weight_pct": 7.5,
-          "contribution_pct": 3.52
+          "similarity_score": 0.45,
+          "weight_pct": 8.0,
+          "contribution_pct": 3.6
         }
       ]
     },
     {
       "rank": 10,
       "id": "IS_ASKJA_HOLUHRAUN",
-      "name": "Caldera de Askja & Campo de Lava Holuhraun — Flanco de Enfriamiento Rápido (Islandia)",
+      "name": "Caldera de Askja & Campo de Lava Holuhraun (Tierras Altas de Islandia)",
       "target_body": "Moon",
       "pairing": "Mare Imbrium / Oceanus Procellarum basalt plains (Moon)",
       "country": "Islandia",
-      "lat": 64.85089,
-      "lon": -16.82725,
+      "lat": 64.85,
+      "lon": -16.83,
       "elevation_range_m": [
-        757.4,
-        1517.4
+        750.0,
+        1510.0
       ],
       "local_utm_epsg": "EPSG:32628",
-      "score_pct": 44.67,
+      "score_pct": 45.8,
       "status": "positive_control",
       "strong_analogies": [
         "Extenso desierto de arena basáltica negra y coladas de inundación fisural reciente (Holuhraun 2014) sin rastro de vegetación.",
@@ -939,11 +939,11 @@
         {
           "id": "elevation_relief",
           "name": "Rango Altimétrico y Relieve",
-          "terrestrial_value": "760.0 m (cota 757-1517 m)",
+          "terrestrial_value": "760.0 m (cota 750-1510 m)",
           "planetary_target": "~450 m (Lunar Mare Basalt & Lava Tube Pit Crater (e.g. Marius Hills Pit))",
           "similarity_score": 0.517,
-          "weight_pct": 16.4,
-          "contribution_pct": 8.49
+          "weight_pct": 12.0,
+          "contribution_pct": 6.21
         },
         {
           "id": "slope_morphometry",
@@ -951,8 +951,8 @@
           "terrestrial_value": "14.24° (máx 14.2°)",
           "planetary_target": "6.5° ± 3.0°",
           "similarity_score": 0.036,
-          "weight_pct": 15.1,
-          "contribution_pct": 0.54
+          "weight_pct": 16.0,
+          "contribution_pct": 0.57
         },
         {
           "id": "surface_roughness_tri",
@@ -960,7 +960,7 @@
           "terrestrial_value": "20.72 m",
           "planetary_target": "2.6 ± 1.2 m",
           "similarity_score": 0.0,
-          "weight_pct": 13.2,
+          "weight_pct": 14.0,
           "contribution_pct": 0.0
         },
         {
@@ -969,44 +969,44 @@
           "terrestrial_value": "-0.0000 m⁻¹",
           "planetary_target": "Inversión de colapso (-0.04)",
           "similarity_score": 0.2,
-          "weight_pct": 9.4,
-          "contribution_pct": 1.89
+          "weight_pct": 10.0,
+          "contribution_pct": 2.0
         },
         {
           "id": "lava_tubes_cavities",
           "name": "Tubos de Lava y Cavidades",
-          "terrestrial_value": "Evidencia: 38% (Contexto volcánico: 100%)",
+          "terrestrial_value": "Evidencia: 40% (Contexto volcánico: 98%)",
           "planetary_target": "Claraboyas intactas / Pit Craters",
-          "similarity_score": 0.662,
-          "weight_pct": 18.9,
-          "contribution_pct": 12.48
+          "similarity_score": 0.661,
+          "weight_pct": 20.0,
+          "contribution_pct": 13.22
         },
         {
           "id": "crater_morphology",
           "name": "Morfología de Conos / Cráteres",
-          "terrestrial_value": "Índice: 66%",
+          "terrestrial_value": "Índice: 70%",
           "planetary_target": "Cráteres de impacto / conos piroclásticos",
-          "similarity_score": 0.661,
-          "weight_pct": 9.8,
-          "contribution_pct": 6.48
+          "similarity_score": 0.7,
+          "weight_pct": 8.0,
+          "contribution_pct": 5.6
         },
         {
           "id": "spectral_mineralogy",
           "name": "Composición Espectral y Mineralógica",
-          "terrestrial_value": "Concordancia: 90%",
+          "terrestrial_value": "Concordancia: 95%",
           "planetary_target": "Basaltic (Tholeiitic / Ilmenite / High-Ti & Low-Ti clinopyroxene)",
-          "similarity_score": 0.908,
-          "weight_pct": 9.6,
-          "contribution_pct": 8.74
+          "similarity_score": 0.95,
+          "weight_pct": 12.0,
+          "contribution_pct": 11.4
         },
         {
           "id": "environmental_aridity",
           "name": "Extremos Ambientales e Hiperaridez",
-          "terrestrial_value": "Proxy Aridez: 80%",
+          "terrestrial_value": "Proxy Aridez: 85%",
           "planetary_target": "Desierto poliextremo / Vacío",
-          "similarity_score": 0.802,
-          "weight_pct": 7.5,
-          "contribution_pct": 6.05
+          "similarity_score": 0.85,
+          "weight_pct": 8.0,
+          "contribution_pct": 6.8
         }
       ]
     }

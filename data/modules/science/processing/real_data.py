@@ -113,7 +113,7 @@ class IGNPnoaLidarFetcher:
         except Exception:
             pass
 
-        return False, "MDT01 (1m) disponible como descarga MTN25 en CNIG; servicio WCS continuo opera en MDT05 (5m PNOA-LiDAR)."
+        return False, "MDT01 (1m) available as MTN25 sheet download on CNIG; continuous WCS service operates on MDT05 (5m PNOA-LiDAR)."
 
     @classmethod
     def fetch_ign_lidar_dem(
@@ -133,7 +133,7 @@ class IGNPnoaLidarFetcher:
 
         if not cls.is_in_spanish_territory(center_lat, center_lon):
             raise ValueError(
-                f"Coordenadas [{center_lat:.5f}°N, {center_lon:.5f}°E] fuera de la cobertura de IGN PNOA-LiDAR (España)."
+                f"Coordinates [{center_lat:.5f}°N, {center_lon:.5f}°E] are outside IGN PNOA-LiDAR coverage area (Spain)."
             )
 
         has_mdt01, mdt_msg = cls.check_mdt01_availability(min_lat, max_lat, min_lon, max_lon)
@@ -521,7 +521,7 @@ class RealEarthDataFetcher:
                 cls._last_dem_metadata = meta
                 return lats, lons, grid
             except Exception as e:
-                print(f"      [!] Aviso IGN WCS: {e}. Evaluando fallback oficial...")
+                print(f"      [!] IGN WCS Notice: {e}. Evaluating official fallback...")
 
         # -------------------------------------------------------------
         # 2. International / Global Territory: Copernicus DEM / SRTM
@@ -657,8 +657,8 @@ class RealEarthDataFetcher:
             print(f"[DEM Fallback Notice] {e}")
 
         raise RuntimeError(
-            f"No se pudieron obtener datos topográficos reales de las fuentes oficiales (IGN PNOA-LiDAR / Copernicus / SRTM) "
-            f"para las coordenadas [{center_lat:.5f}, {center_lon:.5f}]. Por principio científico, no se generan geometrías sintéticas."
+            f"Could not retrieve real topographic data from official sources (IGN PNOA-LiDAR / Copernicus / SRTM) "
+            f"for coordinates [{center_lat:.5f}, {center_lon:.5f}]. Based on strict scientific principles, synthetic geometries are not generated."
         )
 
 

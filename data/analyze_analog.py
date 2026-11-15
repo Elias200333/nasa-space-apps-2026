@@ -288,11 +288,11 @@ def main():
         selected_body = body_choice.lower()
         site_id = site_obj.id
         print(f"\n{'='*85}")
-        print(f" 🎲 [MODO ALEATORIO ACTIVO] Simulación Planetaria Dinámica")
-        print(f"    -> Cuerpo Seleccionado: {body_choice.upper()}")
-        print(f"    -> Sitio Análogo: {site_obj.name} ({site_id})")
-        print(f"    -> Coordenadas GPS de Muestreo: [{custom_lat:.5f}° N, {custom_lon:.5f}° E]")
-        print(f"    -> Radio de Exploración: {args.radius_m:.1f} metros (Área: {math.pi * (args.radius_m**2):,.1f} m²)")
+        print(f" 🎲 [RANDOM SELECTION ACTIVE] Dynamic Planetary Simulation")
+        print(f"    -> Selected Body: {body_choice.upper()}")
+        print(f"    -> Analog Site: {site_obj.name} ({site_id})")
+        print(f"    -> Sample GPS Coordinates: [{custom_lat:.5f}° N, {custom_lon:.5f}° E]")
+        print(f"    -> Exploration Radius: {args.radius_m:.1f} meters (Area: {math.pi * (args.radius_m**2):,.1f} m²)")
         print(f"{'='*85}\n")
     else:
         selected_body = select_target_body(args.body)
